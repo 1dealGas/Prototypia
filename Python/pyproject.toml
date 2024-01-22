@@ -1,0 +1,21 @@
+[build-system]
+requires = [ "setuptools" ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Prototypia"
+dynamic = [ "version" ]
+keywords = [ "aerials", "prototypia", "rhythm-game-charting" ]
+authors = [
+    { name = "1dealGas", email = "i@1dea1.cc" }
+]
+description = "Aerials Chart[fumen] Writer & Compiler"
+readme = "__README__"
+requires-python = ">=3.12"
+license = { file = "__LICENSE__" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [ "flatbuffers" ]
