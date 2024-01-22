@@ -1,0 +1,139 @@
+- name: Arf2
+  type: table
+  members:
+
+
+  - name: InitArf
+    type: function
+    parameters:
+    - name: str
+      type: string
+    - name: is_auto
+      type: boolean
+    returns:
+    - name: before
+      type: number
+    - name: total_hints
+      type: number
+    - name: wgo_required
+      type: number
+    - name: hgo_required
+      type: number
+  - name: SetVecs
+    type: function
+    parameters:
+    - name: wish_pos
+      type: table
+    - name: hint_pos
+      type: table
+    - name: anim_pos
+      type: table
+    - name: hint_tint
+      type: table
+    - name: anim_tint
+      type: table
+
+
+  - name: UpdateArf
+    type: function
+    parameters:
+    - name: mstime
+      type: number
+    - name: wish_screentime
+      type: table
+    - name: anim_info
+      type: table
+    returns:
+    - name: hint_lost
+      type: number
+    - name: wgo_used
+      type: number
+    - name: hgo_used
+      type: number
+    - name: ago_used
+      type: number
+
+
+  - name: SetTouches
+    type: function
+    parameters:
+    - name: v3__no1_to_no10
+      type: Vector3
+  - name: SetIDelta
+    type: function
+    parameters:
+    - name: idelta
+      type: number
+  - name: JudgeArf
+    type: function
+    parameters:
+    - name: mstime
+      type: number
+    - name: any_pressed
+      type: boolean
+    - name: any_released
+      type: boolean
+    returns:
+    - name: hint_hit
+      type: number
+    - name: hint_lost
+      type: number
+    - name: special_hint_judged
+      type: boolean
+
+
+  - name: FinalArf
+    type: function
+
+  - name: SetXScale
+    type: function
+    parameters:
+    - name: xscale
+      type: number
+
+  - name: SetYScale
+    type: function
+    parameters:
+    - name: yscale
+      type: number
+
+  - name: SetXDelta
+    type: function
+    parameters:
+    - name: xdelta
+      type: number
+
+  - name: SetYDelta
+    type: function
+    parameters:
+    - name: ydelta
+      type: number
+
+  - name: SetRotDeg
+    type: function
+    parameters:
+    - name: rotdeg
+      type: number
+  
+  - name: SetDaymode
+    type: function
+    parameters:
+    - name: is_daymode
+      type: boolean
+
+  - name: SetAnmitsu
+    type: function
+    parameters:
+    - name: is_daymode
+      type: boolean
+
+  - name: NewTable
+    type: function
+    parameters:
+    - name: narr
+      type: number
+    - name: nrec
+      type: number
+    returns:
+    - name: new_table
+      type: table
