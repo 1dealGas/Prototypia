@@ -426,8 +426,12 @@ static inline int UpdateArf(lua_State *L)
 
 			uint8_t et = (uint8_t)( (current_node>>44) & 0b11 );
 			if(et) {
-				float curve_init = (current_node>>55) * 0.001953125f;
-				float curve_end = ( (current_node>>46) & 0x1ff ) * 0.001953125f;
+				float curve_init = (current_node>>55) * 0.001956947162f;
+				{	if(curve_init > 1.0f)			curve_init = 1.0f;
+					else if(curve_init < 0.0f)		curve_init = 0.0f;	}
+				float curve_end = ( (current_node>>46) & 0x1ff ) * 0.001956947162f;
+				{	if(curve_end > 1.0f)			curve_end = 1.0f;
+					else if(curve_end < 0.0f)		curve_end = 0.0f;	}
 				switch(et) {
 					case 1:
 						uint16_t curve_ratio = (uint16_t)
@@ -724,7 +728,7 @@ static inline int UpdateArf(lua_State *L)
 							atint -> setW( 0.17199f + tintw );
 						}
 						else {
-							float tintw = (pt-73) * RCP[296];   // "/297.0f"
+							float tintw = (pt-73) * 0.003367003367f;   // "/297.0f"
 							tintw = 0.637f * tintw * (2.f - tintw);
 							atint -> setW( 0.637f - tintw );
 						}
@@ -763,7 +767,7 @@ static inline int UpdateArf(lua_State *L)
 							atint -> setW( 0.17199f + tintw );
 						}
 						else {
-							float tintw = (dt-73) * RCP[296];   // "/297.0f"
+							float tintw = (dt-73) * 0.003367003367f;   // "/297.0f"
 							tintw = 0.637f * tintw * (2.f - tintw);
 							atint -> setW( 0.637f - tintw );
 						}
