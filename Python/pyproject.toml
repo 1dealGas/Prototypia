@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Prototypia"
-dynamic = [ "version" ]
+version = "0.1"
 keywords = [ "aerials", "prototypia", "rhythm-game-charting" ]
 authors = [
     { name = "1dealGas", email = "i@1dea1.cc" }
