@@ -29,7 +29,7 @@ def NonManual(f) -> FunctionType:
 	return decorated
 
 @functools.cmp_to_key
-def PosNodeSorter(a,b) -> int:
+def PosNodeSorter(a, b) -> int:
 	if a.bartime > b.bartime: return 1
 	elif a.bartime < b.bartime: return -1
 	elif id(a) == id(b): return 0
@@ -68,13 +68,13 @@ class Hint:
 		'''
 		The type of Ref is "WishGroup".
 		'''
-		self.bartime = Bartime
+		self.bartime:float = Bartime
 		self.ref = Ref
-		self.is_special = False
+		self.is_special:bool = False
 
-		self._ms = 0
-		self._x = 0
-		self._y = 0
+		self._ms:int = 0
+		self._x:float = 0
+		self._y:float = 0
 
 class PosNode:
 	'''
@@ -82,18 +82,18 @@ class PosNode:
 	'''
 	@NonManual
 	def __init__(self, Bartime:float, X:float, Y:float, EaseType:int, CurveInit:float, CurveEnd:float) -> None:
-		self.bartime = Bartime
-		self.x = X
-		self.y = Y
+		self.bartime:float = Bartime
+		self.x:float = X
+		self.y:float = Y
 		if EaseType == 4:
-			self.easetype = 3
-			self.curve_init = CurveEnd
-			self.curve_end = CurveInit
+			self.easetype:int = 3
+			self.curve_init:float = CurveEnd
+			self.curve_end:float = CurveInit
 		else:
-			self.easetype = EaseType
-			self.curve_init = CurveInit
-			self.curve_end = CurveEnd
-		self._ms = 0
+			self.easetype:int = EaseType
+			self.curve_init:float = CurveInit
+			self.curve_end:float = CurveEnd
+		self._ms:int = 0
 
 class WishChild:
 	'''
@@ -101,15 +101,16 @@ class WishChild:
 	in a polar-coordinate-like way.
 	'''
 	@NonManual
-	def __init__(self, Bartime:float) -> None:
+	def __init__(self, Bartime:float, DefaultAngle:int) -> None:
 		self.bartime = Bartime
 		self.is_default_angle:bool = True
-		self.anodes = [
+		self.anodes:list[Tuple[float,int,int]] = [
 			# AngleNode: Tuple(Bartime, Angle, EaseType)
-			(0, Arf2Prototype._current_angle, WishChild.STASIS)
+			# An.STASIS == 0
+			(0, DefaultAngle, 0)
 		]
-		self._dt = 0
-		self._final_anodes = []
+		self._dt:float = 0
+		self._final_anodes:list[Tuple[float,int,int]] = []
 
 
 class WishGroup:
@@ -127,15 +128,15 @@ class WishGroup:
 		self.__useless:bool = False
 
 	# Several Methods for the WishGroup instance
-	def n(self, bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1) -> Self:
+	def n(self, bar:float, nmr:int = 0, dnm:int = 1, x:float = 0, y:float = 0, easetype:int = 0, curve_init:float = 0, curve_end:float = 1) -> Self:
 		'''
 		Add a PosNode to the calling WishGroup.
 		PosNodes will be sorted automatically.
 
 		Args:
 			bar (float): Bartime integer or the Original Bartime
-			nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
-			dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+			nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+			dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
 			x (float): The x-axis position of the PosNode. Range[-16,32]
 			y (float): The y-axis position of the PosNode. Range[-8,16]
 			easetype (int): EaseType of the AngleNode. Use Pn.* Series.
@@ -145,18 +146,26 @@ class WishGroup:
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
 		'''
-		bartime = bar+nmr/float(dnm)
-		if bartime<0:
+		bartime = float(bar) + float(nmr) / float(dnm)
+		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
-		if x<-16 or x>32:
+		
+		x = float(x)
+		y = float(y)
+		if x < -16  or  x > 32:
 			raise ValueError("X-Axis Position out of Range [-16,32].")
-		if y<-8 or y>16:
+		if y < -8  or  y > 16:
 			raise ValueError("Y-Axis Position out of Range [-8,16].")
-		if easetype not in [0,1,2,3,4]:
+		
+		easetype = int(easetype)
+		if easetype < 0  or  easetype > 4:
 			raise TypeError("Invalid PosNode EaseType. Use Pn.* Series.")
-		if curve_init<0 or curve_init>1:
+		
+		curve_init = float(curve_init)
+		curve_end = float(curve_end)
+		if curve_init < 0  or  curve_init > 1:
 			raise ValueError("CurveInit out of Range [0,1].")
-		if curve_end<0 or curve_end>1:
+		if curve_end < 0  or  curve_end > 1:
 			raise ValueError("CurveEnd out of Range [0,1].")
 		if curve_init >= curve_end:
 			raise ValueError("CurveEnd Value must be larger than CurveInit Value.")
@@ -166,34 +175,59 @@ class WishGroup:
 		self.__nodes.sort(key = PosNodeSorter)
 		return self
 
-	def c(self, bar:float, nmr:int=0, dnm:int=1, angle:int=Arf2Prototype._current_angle) -> Self:
+	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:int = Arf2Prototype._current_angle) -> Self:
 		'''
-		Under Construction
+		Add a WishChild to the calling WishGroup.
+		WishChilds will be sorted automatically.
+
+		Args:
+			bar (float): Bartime integer or the Original Bartime
+			nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+			dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
+			angle (int): The default angle degree value of the newly-created WishChild. Range [-1800,1800]
+
+		Returns:
+			Self (WishGroup): for Method Chaining Usage.
 		'''
+		bartime = float(bar) + float(nmr) / float(dnm)
+		angle = int(angle)
+		if bartime < 0:
+			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+		if angle < -1800  or  angle > 1800:
+			raise ValueError("Degree of AngleNode out of Range [-1800,1800].")
+		
+		c = WishChild(bartime, angle)
+		self.__last_child = c
+		self.__childs.append(c)
+		self.__childs.sort( key = lambda wc: wc.bartime )
 		return self
 
-	def a(self, bar:float, nmr:int=0, dnm:int=1, degree:int=90, easetype:int=0) -> Self:
+	def a(self, bar:float, nmr:int = 0, dnm:int = 1, degree:int = 90, easetype:int = 0) -> Self:
 		'''
-		Add an AngleNode to the last WishChild of current WishGroup.
+		Add an AngleNode to the last-created WishChild of calling WishGroup.
 		AngleNodes will be sorted automatically.
 
 		Args:
 			bar (float): Bartime integer or the Original Bartime
-			nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
-			dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+			nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+			dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
 			degree (int): The polar coordinate angle value in degree form.
 			easetype (int): EaseType of the AngleNode. Use An.* Series.
 
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
 		'''
-		bartime = bar+nmr/float(dnm)
-		if bartime<0:
+		bartime = float(bar) + float(nmr) / float(dnm)
+		degree = int(degree)
+		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
-		if degree<-1800 or degree>1800:
+		if degree < -1800  or  degree > 1800:
 			raise ValueError("Degree of AngleNode out of Range [-1800,1800].")
-		if easetype not in [0,1,2,3]:
+		
+		easetype = int(easetype)
+		if easetype < 0  or  easetype > 3:
 			raise TypeError("Invalid AngleNode EaseType. Use An.* Series.")
+		
 		if self.__last_child == None:
 			raise RuntimeError("Please attach at least one WishChild on the WishGroup before creating a AngleNode.")
 
@@ -206,20 +240,21 @@ class WishGroup:
 			_lc.anodes.sort(key = lambda a: a[0])
 		return self
 
+
 	def manual_hint(self, bar:float, nmr:int=0, dnm:int=1) -> Self:
 		'''
 		Manually create a Hint referring to the calling WishGroup.
 
 		Args:
 			bar (float): Bartime integer or the Original Bartime
-			nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
-			dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+			nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+			dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
 
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
 		'''
 		bartime = bar+nmr/float(dnm)
-		if bartime<0:
+		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 
 		h = Hint(bartime, self)
@@ -242,7 +277,7 @@ class WishGroup:
 		self.__useless = useless
 		return self
 	
-	
+
 	@NonManual
 	def _EXPORT_(self) -> dict: return {
 		"nodes" : self.__nodes,
@@ -258,7 +293,7 @@ class WishGroup:
 def Arf2Compile() -> None:
 	'''
 	This function processes the data contained in the Arf2Prototype class,
-	and then encode it into a *.arf file.
+	And then encode it into a *.arf file.
 	'''
 	pass
 

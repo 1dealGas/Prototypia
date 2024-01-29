@@ -255,7 +255,7 @@ def w(of_layer2:bool = False, max_visible_distance:float = 7) -> WishGroup:
 	'''
 	max_visible_distance = float(max_visible_distance)
 	if max_visible_distance < 0  or  max_visible_distance > 8:
-		raise ValueError("MaxVisibleDistance out of Range [0,8).")
+		raise ValueError("MaxVisibleDistance out of Range [0,8].")
 	elif max_visible_distance > 7.9990234375:
 		max_visible_distance = 7.9990234375
 	_w = WishGroup(of_layer2, max_visible_distance)
@@ -309,4 +309,4 @@ def wn2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, c
 	return w(True, max_visible_distance).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end)
 
 
-# Official Patterns
+# Official Tools & Patterns
