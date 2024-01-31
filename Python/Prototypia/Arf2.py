@@ -19,6 +19,8 @@ from . import WishGroup as WishGroupFb
 E = Exception
 class BPMInvalidError			(E):pass
 class ScaleInvalidError			(E):pass
+class InterpolationError		(E):pass
+class PseudoDecoratorError		(E):pass
 class ManualProhibition			(E):pass
 class OverlapProhibition		(E):pass
 
@@ -41,20 +43,18 @@ class Arf2Prototype:
 	'''
 	A rough Singeleton class of the Prototype Data of an Arf2 chart[fumen].
 	'''
-	_wgo_required:int							= 255   		# [0,255]
-	_hgo_required:int							= 255   		# [0,255]
-	_hint:list									= []			# Type: list[Hint]
-	_wish:list									= []			# Type: list[WishGroup]
+	wgo_required:int							= 255   		# [0,255]
+	hgo_required:int							= 255   		# [0,255]
+	hint:list									= []			# Type: list[Hint]
+	wish:list									= []			# Type: list[WishGroup]
 
-	_offset:int									= 0				# A ms value (>=0)
-	_bpms:list[Tuple[float,float]]				= []			# (Bartime, BPM)
-	_scales_layer1:list[Tuple[float,float]]		= [(0,1)]		# (Bartime, Scale)
-	_scales_layer2:list[Tuple[float,float]]		= [(0,1)]		# Bartime>=0   BPM>0
+	offset:int									= 0				# A ms value (>=0)
+	bpms:list[Tuple[float,float]]				= []			# (Bartime, BPM)
+	scales_layer1:list[Tuple[float,float]]		= [(0,1)]		# (Bartime, Scale)
+	scales_layer2:list[Tuple[float,float]]		= [(0,1)]		# Bartime>=0   BPM>0
 
-	_current_angle:int							= 90			# Degree [-1800,1800]
-	_last_hint									= None			# Type: Hint
-	_sc1_dflt:bool								= True
-	_sc2_dflt:bool								= True
+	current_angle:int							= 90			# Degree [-1800,1800]
+	last_hint									= None			# Type: Hint
 
 
 # Arf2 Data Structure Classes
@@ -127,7 +127,44 @@ class WishGroup:
 		self.__last_child:WishChild = None
 		self.__useless:bool = False
 
-	# Several Methods for the WishGroup instance
+	@NonManual
+	def __call__(self) -> dict:
+		'''
+		A compromise considering both the auto-completing and the exporting.
+		'''
+		return {
+			"nodes" : self.__nodes,
+			"childs" : self.__childs,
+			"of_layer2" : self.__of_layer2,
+			"max_visible_distance" : self.__max_visible_distance,
+			"last_child" : self.__last_child,
+			"useless" : self.__useless
+		}
+
+	def __truediv__(self, func) -> Self:
+		'''
+		With PseudoDecorator, you may add custom chaining methods for WishGroup instances
+		outside the WishGroup class like this:
+
+			def pattern1(param1,param2···):
+				def rtn(w):
+					# Do some stuff to the WishGroup w
+					# Returns of the function "rtn" will be discarded.
+				return rtn
+
+		Call your customized methods using "/" instead of "." ,
+		For example:
+
+			wgvar / pattern1(param1,param2···) / pattern2(param1,param2···)
+
+		'''
+		if type(func) != FunctionType:
+			raise PseudoDecoratorError("""The PseudoDecorator must return a function with the method signature "func(w : WishGroup) -> None". """)
+		func(self)
+		return self
+
+
+	# Compositional Methods for WishGroup instances
 	def n(self, bar:float, nmr:int = 0, dnm:int = 1, x:float = 0, y:float = 0, easetype:int = 0, curve_init:float = 0, curve_end:float = 1) -> Self:
 		'''
 		Add a PosNode to the calling WishGroup.
@@ -149,18 +186,18 @@ class WishGroup:
 		bartime = float(bar) + float(nmr) / float(dnm)
 		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
-		
+
 		x = float(x)
 		y = float(y)
 		if x < -16  or  x > 32:
 			raise ValueError("X-Axis Position out of Range [-16,32].")
 		if y < -8  or  y > 16:
 			raise ValueError("Y-Axis Position out of Range [-8,16].")
-		
+
 		easetype = int(easetype)
 		if easetype < 0  or  easetype > 4:
 			raise TypeError("Invalid PosNode EaseType. Use Pn.* Series.")
-		
+
 		curve_init = float(curve_init)
 		curve_end = float(curve_end)
 		if curve_init < 0  or  curve_init > 1:
@@ -175,7 +212,7 @@ class WishGroup:
 		self.__nodes.sort(key = PosNodeSorter)
 		return self
 
-	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:int = Arf2Prototype._current_angle) -> Self:
+	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:int = Arf2Prototype.current_angle) -> Self:
 		'''
 		Add a WishChild to the calling WishGroup.
 		WishChilds will be sorted automatically.
@@ -195,7 +232,7 @@ class WishGroup:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 		if angle < -1800  or  angle > 1800:
 			raise ValueError("Degree of AngleNode out of Range [-1800,1800].")
-		
+
 		c = WishChild(bartime, angle)
 		self.__last_child = c
 		self.__childs.append(c)
@@ -223,11 +260,11 @@ class WishGroup:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 		if degree < -1800  or  degree > 1800:
 			raise ValueError("Degree of AngleNode out of Range [-1800,1800].")
-		
+
 		easetype = int(easetype)
 		if easetype < 0  or  easetype > 3:
 			raise TypeError("Invalid AngleNode EaseType. Use An.* Series.")
-		
+
 		if self.__last_child == None:
 			raise RuntimeError("Please attach at least one WishChild on the WishGroup before creating a AngleNode.")
 
@@ -241,6 +278,7 @@ class WishGroup:
 		return self
 
 
+	# Tool Methods for WishGroup instances
 	def manual_hint(self, bar:float, nmr:int=0, dnm:int=1) -> Self:
 		'''
 		Manually create a Hint referring to the calling WishGroup.
@@ -253,13 +291,13 @@ class WishGroup:
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
 		'''
-		bartime = bar+nmr/float(dnm)
+		bartime = float(bar) + float(nmr) / float(dnm)
 		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 
 		h = Hint(bartime, self)
-		Arf2Prototype._hint.append(h)
-		Arf2Prototype._last_hint = h
+		Arf2Prototype.hint.append(h)
+		Arf2Prototype.last_hint = h
 		return self
 
 	def set_useless(self, useless:bool) -> Self:
@@ -274,19 +312,61 @@ class WishGroup:
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
 		'''
-		self.__useless = useless
+		self.__useless = bool(useless)
 		return self
 	
+	def GET(self, bartime:float) -> Union[ None, Tuple[float,float,float,float,PosNode,PosNode] ]:
+		'''
+		--------
+		Not suitable for method chaining
+		This method doesn't return the WishGroup instance "Self".
+		--------
 
-	@NonManual
-	def _EXPORT_(self) -> dict: return {
-		"nodes" : self.__nodes,
-		"childs" : self.__childs,
-		"of_layer2" : self.__of_layer2,
-		"max_visible_distance" : self.__max_visible_distance,
-		"last_child" : self.__last_child,
-		"useless" : self.__useless
-	}
+		Get the interpolation result accoring to the Bartime input.
+		Mostly used internally.
+
+		Args:
+			bartime (float): the Original Bartime
+		
+		Returns:
+			None  ->  if the interpolation fails
+			Tuple ->  (x, y, original_ratio, actual_ratio, current_posnode, next_posnode)
+		'''
+		pnsize = len(self.__nodes)
+		if pnsize < 2:
+			raise InterpolationError("At least 2 PosNodes are required to complete an interpolation.")
+		
+		if bartime < 0:
+			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+		elif bartime < self.__nodes[0].bartime: return
+		elif bartime >= self.__nodes[-1].bartime: return
+
+		for i in range(pnsize-1):
+			current_posnode = self.__nodes[i]
+			next_posnode = self.__nodes[i+1]
+
+			t0 = current_posnode.bartime
+			if bartime < t0: continue
+
+			x0 = current_posnode.x
+			y0 = current_posnode.y
+			dx = next_posnode.x - x0
+			dy = next_posnode.y - y0
+			dt = next_posnode.bartime - t0
+			original_ratio = float(bartime - t0) / float(dt)
+
+			# Evaluating the ease_ratio
+			easetype = current_posnode.easetype
+			ci = current_posnode.curve_init
+			ce = current_posnode.curve_end
+			if easetype == 0:
+				ease_ratio = 0
+			
+
+
+
+		return
+		
 
 
 # Arf2 Compiler Function

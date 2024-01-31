@@ -1,16 +1,16 @@
 '''
-Methods Provided:   # See also  GitHub.com/1dealGas/Prototypia  . 
+Methods Provided:   # See also  GitHub.com/1dealGas/Prototypia  .
     "An", "Pn", "REQUIRE",
     "OFFSET", "BEATS_PER_MINUTE", "BARS_PER_MINUTE", "SC_LAYER1", "SC_LAYER2",
-    "CURRENT_ANGLE", "specialize_last_hint", "w", "wn1", "wn2",
+    "CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2",
 
 '''
 
 from .Arf2 import *
 __all__ = [
-    "An", "Pn", "REQUIRE",
-    "OFFSET", "BEATS_PER_MINUTE", "BARS_PER_MINUTE", "SC_LAYER1", "SC_LAYER2",
-    "CURRENT_ANGLE", "specialize_last_hint", "w", "wn1", "wn2",
+	"An", "Pn", "REQUIRE",
+	"OFFSET", "BEATS_PER_MINUTE", "BARS_PER_MINUTE", "SC_LAYER1", "SC_LAYER2",
+	"CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2",
 
 ]
 
@@ -36,12 +36,12 @@ class __R:
 		if __R.__cnt == 0:
 			__idx = int(idx)
 			if __idx < 0 or __idx > 255: raise ValueError("""Don't require less than 0 objects or more than 255 objects.""")
-			Arf2Prototype._wgo_required = __idx
+			Arf2Prototype.wgo_required = __idx
 			__R.__cnt = 1
 		elif __R.__cnt == 1:
 			__idx = int(idx)
 			if __idx < 0 or __idx > 255: raise ValueError("""Don't require less than 0 objects or more than 255 objects.""")
-			Arf2Prototype._hgo_required = __idx
+			Arf2Prototype.hgo_required = __idx
 			__R.__cnt = 2
 		return self
 REQUIRE = __R()
@@ -64,7 +64,7 @@ def OFFSET(ms:int) -> None:
 	Returns:
 		None
 	'''
-	Arf2Prototype._offset = int(ms)
+	Arf2Prototype.offset = int(ms)
 
 def BEATS_PER_MINUTE(*args) -> None:
 	'''
@@ -75,6 +75,7 @@ def BEATS_PER_MINUTE(*args) -> None:
 		BEATS_PER_MINUTE(
 			0,	200,   # in Bar 0~50, the tempo of the song is 200(in 4/4 beats-per-minute form).
 			50,	190    # since Bar 50, the tempo of the song is 190(in 4/4 beats-per-minute form).
+		)
 
 	Args:
 		*args (float): Pass BarPosition & Tempo(in 4/4 beats-per-minute form) alternately.
@@ -85,6 +86,7 @@ def BEATS_PER_MINUTE(*args) -> None:
 	__len = len(args)
 	if __len == 0  or  __len % 2 == 1 :
 		raise BPMInvalidError("Pass BarPosition & Tempo(in 4/4 beats-per-minute form) alternately.")
+	Arf2Prototype.bpms = []
 	for i in range(0, __len, 2):
 		__bar = float(args[i])
 		__bpm = float(args[i+1]) / 4
@@ -94,8 +96,8 @@ def BEATS_PER_MINUTE(*args) -> None:
 			raise ValueError("The 1st BarTime must be 0.")
 		if __bpm <= 0:
 			raise ValueError("BPM must be larger than 0.")
-		Arf2Prototype._bpms.append( (__bar,__bpm) )
-	Arf2Prototype._bpms.sort(key = lambda bpmtpl: bpmtpl[0])
+		Arf2Prototype.bpms.append( (__bar,__bpm) )
+	Arf2Prototype.bpms.sort(key = lambda bpmtpl: bpmtpl[0])
 
 def BARS_PER_MINUTE(*args) -> None:
 	'''
@@ -106,6 +108,7 @@ def BARS_PER_MINUTE(*args) -> None:
 		BEATS_PER_MINUTE(
 			0,	50,   # in Bar 0~50, the tempo of the song is 50(in bars-per-minute form).
 			50,	47.5   # since Bar 50, the tempo of the song is 47.5(in bars-per-minute form).
+		)
 
 	Args:
 		*args (float): Pass BarPosition & Tempo(in bars-per-minute form) alternately.
@@ -116,6 +119,7 @@ def BARS_PER_MINUTE(*args) -> None:
 	__len = len(args)
 	if __len == 0  or  __len % 2 == 1 :
 		raise BPMInvalidError("Pass BarPosition & Tempo(in bars-per-minute form) alternately.")
+	Arf2Prototype.bpms = []
 	for i in range(0, __len, 2):
 		__bar = float(args[i])
 		__bpm = float(args[i+1])
@@ -125,8 +129,8 @@ def BARS_PER_MINUTE(*args) -> None:
 			raise ValueError("The 1st BarTime must be 0.")
 		if __bpm <= 0:
 			raise ValueError("BPM must be larger than 0.")
-		Arf2Prototype._bpms.append( (__bar,__bpm) )
-	Arf2Prototype._bpms.sort(key = lambda bpmtpl: bpmtpl[0])
+		Arf2Prototype.bpms.append( (__bar,__bpm) )
+	Arf2Prototype.bpms.sort(key = lambda bpmtpl: bpmtpl[0])
 
 def SC_LAYER1(*args) -> None:
 	'''
@@ -137,6 +141,7 @@ def SC_LAYER1(*args) -> None:
 		SC_LAYER1(
 			0,	1,   # in Bar 0~50, the Speed Scale of layer 1 is 1.
 			50,	1.05   # since Bar 50, the Speed Scale of layer 1 is 1.05 .
+		)
 
 	Args:
 		*args (float): Pass BarPosition & SpeedScale alternately.
@@ -147,6 +152,7 @@ def SC_LAYER1(*args) -> None:
 	__len = len(args)
 	if __len == 0  or  __len % 2 == 1 :
 		raise ScaleInvalidError("Pass BarPosition & Scale alternately.")
+	Arf2Prototype.scales_layer1 = []
 	for i in range(0, __len, 2):
 		__bar = float(args[i])
 		__scl = float(args[i+1])
@@ -156,11 +162,8 @@ def SC_LAYER1(*args) -> None:
 			raise ValueError("The 1st BarTime must be 0.")
 		if __scl <= 0 and i == 0:
 			raise ValueError("The 1st SpeedScale must be larger than 0.")
-		if Arf2Prototype._sc1_dflt:
-			Arf2Prototype._scales_layer1.pop()
-			Arf2Prototype._sc1_dflt = False
-		Arf2Prototype._scales_layer1.append( (__bar,__scl) )
-	Arf2Prototype._scales_layer1.sort(key = lambda sctpl: sctpl[0])
+		Arf2Prototype.scales_layer1.append( (__bar,__scl) )
+	Arf2Prototype.scales_layer1.sort(key = lambda sctpl: sctpl[0])
 
 def SC_LAYER2(*args) -> None:
 	'''
@@ -171,6 +174,7 @@ def SC_LAYER2(*args) -> None:
 		SC_LAYER1(
 			0,	1,   # in Bar 0~50, the Speed Scale of layer 2 is 1.
 			50,	1.05   # since Bar 50, the Speed Scale of layer 2 is 1.05 .
+		)
 
 	Args:
 		*args (float): Pass BarPosition & SpeedScale alternately.
@@ -181,6 +185,7 @@ def SC_LAYER2(*args) -> None:
 	__len = len(args)
 	if __len == 0  or  __len % 2 == 1 :
 		raise ScaleInvalidError("Pass BarPosition & Scale alternately.")
+	Arf2Prototype.scales_layer2 = []
 	for i in range(0, __len, 2):
 		__bar = float(args[i])
 		__scl = float(args[i+1])
@@ -190,11 +195,8 @@ def SC_LAYER2(*args) -> None:
 			raise ValueError("The 1st BarTime must be 0.")
 		if __scl <= 0 and i == 0:
 			raise ValueError("The 1st SpeedScale must be larger than 0.")
-		if Arf2Prototype._sc2_dflt:
-			Arf2Prototype._scales_layer2.pop()
-			Arf2Prototype._sc2_dflt = False
-		Arf2Prototype._scales_layer2.append( (__bar,__scl) )
-	Arf2Prototype._scales_layer2.sort(key = lambda sctpl: sctpl[0])
+		Arf2Prototype.scales_layer2.append( (__bar,__scl) )
+	Arf2Prototype.scales_layer2.sort(key = lambda sctpl: sctpl[0])
 
 
 # Composational Functions
@@ -217,7 +219,7 @@ def CURRENT_ANGLE(degree:int) -> None:
 	degree = int(degree)
 	if degree < -1800  or  degree > 1800:
 		raise ValueError("Degree of AngleNode out of Range [-1800,1800].")
-	Arf2Prototype._current_angle = degree
+	Arf2Prototype.current_angle = degree
 
 def specialize_last_hint() -> None:
 	'''
@@ -236,7 +238,7 @@ def specialize_last_hint() -> None:
 	Returns:
 		None
 	'''
-	Arf2Prototype._last_hint.is_special = True
+	Arf2Prototype.last_hint.is_special = True
 
 def w(of_layer2:bool = False, max_visible_distance:float = 7) -> WishGroup:
 	'''
@@ -259,10 +261,10 @@ def w(of_layer2:bool = False, max_visible_distance:float = 7) -> WishGroup:
 	elif max_visible_distance > 7.9990234375:
 		max_visible_distance = 7.9990234375
 	_w = WishGroup(of_layer2, max_visible_distance)
-	Arf2Prototype._wish.append(_w)
+	Arf2Prototype.wish.append(_w)
 	return _w
 
-def wn1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7) -> WishGroup:
+def n1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7) -> WishGroup:
 	'''
 	A shorthand to create a Wish in layer 1 and then attach a PosNode with given arguments.
 
@@ -285,7 +287,7 @@ def wn1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, c
 	'''
 	return w(False, max_visible_distance).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end)
 
-def wn2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7) -> WishGroup:
+def n2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7) -> WishGroup:
 	'''
 	A shorthand to create a Wish in layer 2 and then attach a PosNode with given arguments.
 
