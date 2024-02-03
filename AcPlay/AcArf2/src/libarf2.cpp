@@ -168,7 +168,7 @@ enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
        HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
 
 // Recommended Usage of "SetTouches"
-//     local v3,T = vmath.vector3(), Arf2.NewTable(10,0);    for i=1,10 do T[i]=v3() end
+//     local v3,T = vmath.vector3, Arf2.NewTable(10,0);    for i=1,10 do T[i]=v3() end
 //     Arf2.SetTouches( T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10] )
 // Should be done in the initialization of the Game.
 static inline int SetTouches(lua_State *L) {
@@ -336,6 +336,16 @@ static inline int InitArf(lua_State *L)
 	return 4;
 }
 // SetVecs(table_wpos/hpos/apos/htint/atint)
+// Recommended Usage:
+// local wpos,hpos,apos,htint,atint
+//     if b then
+//         wpos = Arf2.NewTable(w,0);		for i=1,w do wpos[i] = vmath.vector3() end
+//         hpos = Arf2.NewTable(h,0);		for i=1,h do hpos[i] = vmath.vector3() end
+//         apos = Arf2.NewTable(h,0);		for i=1,h do apos[i] = vmath.vector3() end
+//         htint = Arf2.NewTable(h,0);		for i=1,h do htint[i] = vmath.vector4() end
+//         atint = Arf2.NewTable(h,0);		for i=1,h do atint[i] = vmath.vector4() end
+//     end
+// Before calling FinalArf(), DO NOT deref these Tables.
 static inline int SetVecs(lua_State *L)
 { if( !ArfSize || T_WPOS!=nullptr ) return 0;
 
@@ -348,15 +358,15 @@ static inline int SetVecs(lua_State *L)
 	T_HTINT = (v4p*)malloc( sizeof(v4p) * hgo_required );
 	T_ATINT = (v4p*)malloc( sizeof(v4p) * hgo_required );
 
-	DM_LUA_STACK_CHECK(L, 5);
+	DM_LUA_STACK_CHECK(L, 4);
 	for( uint8_t i=0; i<wgo_required; i++ ) {
 		lua_rawgeti(L, 1, i+1);		T_WPOS[i] = dmScript::CheckVector3(L, 7);		lua_pop(L, 1);
 	}
-	for( uint8_t i=0; i<hgo_required; i++ ) {
-		lua_rawgeti(L, 2, i+1);		T_HPOS[i] = dmScript::CheckVector3(L, 7);
-		lua_rawgeti(L, 3, i+1);		T_APOS[i] = dmScript::CheckVector3(L, 8);
-		lua_rawgeti(L, 4, i+1);		T_HTINT[i] = dmScript::CheckVector4(L, 9);		T_HTINT[i] -> setW(1.0f);
-		lua_rawgeti(L, 5, i+1);		T_ATINT[i] = dmScript::CheckVector4(L, 10);		lua_pop(L, 4);
+	for( uint8_t i=0 ii=1; i<hgo_required; {i++; ii++;} ) {
+		lua_rawgeti(L, 2, ii);		T_HPOS[i] = dmScript::CheckVector3(L, 7);
+		lua_rawgeti(L, 3, ii);		T_APOS[i] = dmScript::CheckVector3(L, 8);
+		lua_rawgeti(L, 4, ii);		T_HTINT[i] = dmScript::CheckVector4(L, 9);		T_HTINT[i] -> setW(1.0f);
+		lua_rawgeti(L, 5, ii);		T_ATINT[i] = dmScript::CheckVector4(L, 10);		lua_pop(L, 4);
 	}
 	return 0;
 }
