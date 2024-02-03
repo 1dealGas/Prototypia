@@ -35,6 +35,7 @@
 // Includes & Caches
 #include <dmsdk/sdk.h>
 #include <dmsdk/dlib/vmath.h>
+#include <dmsdk/dlib/buffer.h>
 #include <dmsdk/script/script.h>
 #include <arf2_generated.h>
 #include <unordered_map>
@@ -44,8 +45,8 @@ extern const double DSIN[901], DCOS[901],
 
 // Data & Globals
 // For Safety Concern, Nothing will happen if !ArfSize.
-static size_t ArfSize = 0;
-static unsigned char* ArfBuf = nullptr;
+static uint32_t ArfSize = 0;
+static uint8_t* ArfBuf = nullptr;
 static float xscale, yscale, xdelta, ydelta, rotsin, rotcos;
 static bool daymode, allow_anmitsu;
 
@@ -58,7 +59,10 @@ static std::vector<uint32_t> blnums;
 
 
 // Assistant Ease Functions
+struct pdp {float p; float dp;} ;
+static std::unordered_map<int16_t,pdp> orig_cache;
 static inline uint16_t mod_degree( uint64_t deg ) {
+	// Actually while(xxx)···
 	do {
 		if(deg > 7200) { if(deg > 14400) deg-=14400;	else deg-=7200; }
 		else deg-=3600;
@@ -89,6 +93,71 @@ static inline void GetSINCOS(const double degree) {
 		}
 	}
 }
+static inline void GetORIG(const float p1, const float p2, uint8_t et, const bool for_y,
+						   float curve_init, float curve_end, float &p, float &dp) {
+
+	// EaseType in this func:
+	// 0 -> ESIN   1 -> ECOS   2 -> InQuad   3 -> OutQuad
+
+	if(for_y) {
+		// if(et==1) -> 1.ECOS
+		if(et==2) et = 0;   // 0.ESIN
+		else if(et==3) {
+			if(curve_init >= curve_end) {   // 3.OutQuad
+				float _swap;				curve_init = _swap;
+				curve_init = curve_end;		curve_end = _swap;
+			}
+			else et = 2;   // 2.Inquad
+		}
+	}
+	else {
+		if(et==3) {
+			if(curve_init >= curve_end) {   // 3.OutQuad
+				float _swap;				curve_init = _swap;
+				curve_init = curve_end;		curve_end = _swap;
+			}
+			else et = 2;   // 2.InQuad
+		}
+		else et -= 1;   // 0.ESIN & 1.ECOS
+	}
+
+	int16_t ocnum = (int16_t)(p1*131) + (int16_t)(p2*137) +
+					(int16_t)(curve_init*521) + (int16_t)(curve_end*523) + (int16_t)(et*1009);
+	if( orig_cache.count(ocnum) ) {
+		pdp orig_pdp = orig_cache[ocnum];
+		p = orig_pdp.p;
+		dp = orig_pdp.dp;
+	}
+	else {
+		double fci = curve_init;		double fce = curve_end;
+		switch(et) {
+			case 0:
+				fci = ESIN[ (uint16_t)(1000 * fci) ];
+				fce = ESIN[ (uint16_t)(1000 * fce) ];
+				break;
+			case 1:
+				fci = ECOS[ (uint16_t)(1000 * fci) ];
+				fce = ECOS[ (uint16_t)(1000 * fce) ];
+				break;
+			case 2:
+				fci *= fci;		fce *= fce;		break;
+			case 3:
+				fci = 1.0 - fci;		fci = 1.0 - fci * fci;
+				fce = 1.0 - fce;		fce = 1.0 - fce * fce;
+		}
+
+		// To control the scale of the precision loss, the divisions here won't be optimized.
+		// The orig_cache should work.
+		double dnm = fce - fci;
+		p = (float)( (fce*p1 - fci*p2) / dnm );
+		dp = (float)( (p2 - p1) / dnm );
+
+		pdp orig_pdp;
+		orig_pdp.p = p;
+		orig_pdp.dp = dp;
+		orig_cache[ocnum] = orig_pdp;
+	}
+}
 
 
 // Input Functions
@@ -101,6 +170,7 @@ enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
 // Recommended Usage of "SetTouches"
 //     local v3,T = vmath.vector3(), Arf2.NewTable(10,0);    for i=1,10 do T[i]=v3() end
 //     Arf2.SetTouches( T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10] )
+// Should be done in the initialization of the Game.
 static inline int SetTouches(lua_State *L) {
 	for( uint8_t i=0; i<10; i++)  T[i] = dmScript::CheckVector3(L, i+1);
 	return 0;
@@ -167,7 +237,7 @@ static inline bool is_safe_to_anmitsu( const uint64_t hint ){
 	u = hint & 0x1fff;			int16_t hint_l = (int16_t)u - 384;		int16_t hint_r = (int16_t)u + 384;
 	u = (hint>>13) & 0xfff;		int16_t hint_d = (int16_t)u - 384;		int16_t hint_u = (int16_t)u + 384;
 
-	// Safe when blnums.size==0. The circulation is to be skipped then.
+	// Safe when blnums.size()==0. The circulation is to be skipped then.
 	// For registered Hints,
 	uint16_t bs = blnums.size();
 	for( uint16_t i=0; i<bs; i++ ){
@@ -188,7 +258,7 @@ static inline bool is_safe_to_anmitsu( const uint64_t hint ){
 	u = hint & 0x1ffffff;
 	blnums.push_back( (uint32_t)u );
 	return true;
-	
+
 }
 static inline uint8_t HStatus(uint64_t Hint){
 	Hint >>= 44;
@@ -217,10 +287,11 @@ static v3p *T_WPOS = nullptr, *T_HPOS = nullptr, *T_APOS = nullptr;
 static v4p *T_HTINT = nullptr, *T_ATINT = nullptr;
 #define S if( !ArfSize || T_WPOS==nullptr ) return 0;
 
-// InitArf(str, is_auto) -> before, total_hints, wgo_required, hgo_required
-// Recommended Usage:
-//     local b,t,w,h = InitArf( sys.load_resource( "Arf/1011.ar" ) )
-//     collectgarbage()
+// InitArf(buf, is_auto) -> before, total_hints, wgo_required, hgo_required
+// Recommended Usage (Requires Defold 1.6.4 or Newer):
+//     local buf = sys.load_buffer( "Arf/1011.ar" )   -- Also allows a path on your disk.
+//     local b,t,w,h = InitArf(buf)
+// Before calling FinalArf(), DO NOT remove the reference of the Arf2 buffer.
 static inline int InitArf(lua_State *L)
 { if(ArfSize) return 0;
 
@@ -233,13 +304,19 @@ static inline int InitArf(lua_State *L)
 
 	// Ensure a clean Initialization
 	last_wgo.clear();
+	orig_cache.clear();
 	blnums.clear();
 
-	// For Defold hasn't exposed something like dmResource::LoadResource(),
-	// there we copy the Lua String returned by sys.load_resource() to acquire a mutable buffer.
-	const char* B = luaL_checklstring(L, 1, &ArfSize);
-	if(!ArfSize) return 0;					ArfBuf = (unsigned char*)malloc(ArfSize);
-	memcpy(ArfBuf, B, ArfSize);
+	// DEPRECATED
+	// Copy the Lua String returned by sys.load_resource() to acquire a mutable buffer.
+	// const char* B = luaL_checklstring(L, 1, &ArfSize);
+	// if(!ArfSize) return 0;					ArfBuf = (unsigned char*)malloc(ArfSize);
+	// memcpy(ArfBuf, B, ArfSize);
+
+	// Switched to the Defold Buffer.
+	dmBuffer::HBuffer B = dmScript::CheckBufferUnpack(L, 1);
+	dmBuffer::GetBytes(B, ArfBuf, &ArfSize);
+	if(!ArfSize) return 0;
 
 	// Register Arf  &  Set Auto Status
 	Arf = GetMutableArf2( ArfBuf );			int total_hints = Arf -> hint() -> size();
@@ -402,7 +479,7 @@ static inline int UpdateArf(lua_State *L)
 			// 1. Info & Judgement
 			uint64_t next_node = nodes -> Get(node_progress+1);
 			uint64_t current_node = nodes -> Get(node_progress);
-			
+
 			uint32_t next_ms = (uint32_t)(next_node & 0x7ffff);
 					 current_ms = (uint32_t)(current_node & 0x7ffff);
 
@@ -419,19 +496,35 @@ static inline int UpdateArf(lua_State *L)
 				else					node_ratio = (mstime-current_ms) / (float)difms;
 			}
 
-		{	float x1 = ( (current_node>>31)&0x1fff - 2048 ) * 0.0078125f;
-			float y1 = ( (current_node>>19)&0xfff - 1024 ) * 0.0078125f;
-			float dx = ( (next_node>>31)&0x1fff - 2048 ) * 0.0078125f - x1;
-			float dy = ( (next_node>>19)&0xfff - 1024 ) * 0.0078125f - y1;
-
-			uint8_t et = (uint8_t)( (current_node>>44) & 0b11 );
+		{	uint8_t et = (uint8_t)( (current_node>>44) & 0b11 );
 			if(et) {
+				float x1, y1, dx, dy;
 				float curve_init = (current_node>>55) * 0.001956947162f;
 				{	if(curve_init > 1.0f)			curve_init = 1.0f;
 					else if(curve_init < 0.0f)		curve_init = 0.0f;	}
 				float curve_end = ( (current_node>>46) & 0x1ff ) * 0.001956947162f;
 				{	if(curve_end > 1.0f)			curve_end = 1.0f;
 					else if(curve_end < 0.0f)		curve_end = 0.0f;	}
+
+				if( curve_init==0.0f && curve_end==1.0f ) {
+					x1 = ( (current_node>>31)&0x1fff - 2048 ) * 0.0078125f;
+					y1 = ( (current_node>>19)&0xfff - 1024 ) * 0.0078125f;
+					dx = ( (next_node>>31)&0x1fff - 2048 ) * 0.0078125f - x1;
+					dy = ( (next_node>>19)&0xfff - 1024 ) * 0.0078125f - y1;
+				}
+				else {
+					// Get the true x1,dx
+					float fm_x1 = ( (current_node>>31)&0x1fff - 2048 ) * 0.0078125f;
+					float fm_x2 = ( (next_node>>31)&0x1fff - 2048 ) * 0.0078125f;
+					GetORIG(fm_x1, fm_x2, et, false, curve_init, curve_end, x1, dx);
+
+					// Get the true y1,dy
+					float fm_y1 = ( (current_node>>19)&0xfff - 1024 ) * 0.0078125f;
+					float fm_y2 = ( (next_node>>19)&0xfff - 1024 ) * 0.0078125f;
+					GetORIG(fm_y1, fm_y2, et, true, curve_init, curve_end, y1, dy);
+				}
+
+
 				switch(et) {
 					case 1:
 						uint16_t curve_ratio = (uint16_t)
@@ -461,8 +554,14 @@ static inline int UpdateArf(lua_State *L)
 						node_y = y1 + dy * ease_ratio;
 				}
 			}
-			else {  node_x = x1 + dx * node_ratio;
-					node_y = y1 + dy * node_ratio;  }
+			else {
+				float x1 = ( (current_node>>31)&0x1fff - 2048 ) * 0.0078125f;
+				float y1 = ( (current_node>>19)&0xfff - 1024 ) * 0.0078125f;
+				float dx = ( (next_node>>31)&0x1fff - 2048 ) * 0.0078125f - x1;
+				float dy = ( (next_node>>19)&0xfff - 1024 ) * 0.0078125f - y1;
+				node_x = x1 + dx * node_ratio;
+				node_y = y1 + dy * node_ratio;
+			}
 		}
 		{	// 3. Param Setting
 			float px,py;
@@ -502,7 +601,7 @@ static inline int UpdateArf(lua_State *L)
 
 			if(how_many_childs) {
 				double current_dt = of_layer2 ? dt2 : dt1 ;
-			
+
 				// Verify Child Progress I
 				bool has_child_to_search = true;
 				if( (child_progress+1) >= how_many_childs ) {
@@ -940,8 +1039,11 @@ static inline int JudgeArf(lua_State *L)
 
 static inline int FinalArf(lua_State *L)
 {S
-	Arf = nullptr;
-	free(ArfBuf);		ArfBuf = nullptr;
+	orig_cache.clear();
+	Arf = ArfBuf = nullptr;
+
+	// Deleted the free(ArfBuf) call.
+	// Deref the Buffer Handle in Lua, and the Buffer will be GCed.
 	free(T_WPOS);		T_WPOS = nullptr;
 	free(T_HPOS);		T_HPOS = nullptr;
 	free(T_APOS);		T_APOS = nullptr;
