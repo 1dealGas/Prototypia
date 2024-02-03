@@ -99,27 +99,18 @@ static inline void GetORIG(const float p1, const float p2, uint8_t et, const boo
 	// EaseType in this func:
 	// 0 -> ESIN   1 -> ECOS   2 -> InQuad   3 -> OutQuad
 
-	if(for_y) {
-		// if(et==1) -> 1.ECOS
-		if(et==2) et = 0;   // 0.ESIN
-		else if(et==3) {
-			if(curve_init >= curve_end) {   // 3.OutQuad
-				float _swap;				curve_init = _swap;
-				curve_init = curve_end;		curve_end = _swap;
-			}
-			else et = 2;   // 2.Inquad
+	if(et == 3) {
+		if(curve_init >= curve_end) {   // 3.OutQuad
+			float _swap;				curve_init = _swap;
+			curve_init = curve_end;		curve_end = _swap;
 		}
+		else et = 2;   // 2.Inquad
 	}
-	else {
-		if(et==3) {
-			if(curve_init >= curve_end) {   // 3.OutQuad
-				float _swap;				curve_init = _swap;
-				curve_init = curve_end;		curve_end = _swap;
-			}
-			else et = 2;   // 2.InQuad
-		}
-		else et -= 1;   // 0.ESIN & 1.ECOS
+	else if(for_y) {
+		// if(et == 1) -> 1.ECOS  for y
+		if(et == 2) et = 0;   // 0.ESIN  for y
 	}
+	else et -= 1;   // 0.ESIN & 1.ECOS  for x
 
 	int16_t ocnum = (int16_t)(p1*131) + (int16_t)(p2*137) +
 					(int16_t)(curve_init*521) + (int16_t)(curve_end*523) + (int16_t)(et*1009);
@@ -307,8 +298,7 @@ static inline int InitArf(lua_State *L)
 	orig_cache.clear();
 	blnums.clear();
 
-	// DEPRECATED
-	// Copy the Lua String returned by sys.load_resource() to acquire a mutable buffer.
+	// (DEPRECATED) Copy the Lua String returned by sys.load_resource() to acquire a mutable buffer.
 	// const char* B = luaL_checklstring(L, 1, &ArfSize);
 	// if(!ArfSize) return 0;					ArfBuf = (unsigned char*)malloc(ArfSize);
 	// memcpy(ArfBuf, B, ArfSize);
@@ -1040,8 +1030,7 @@ static inline int JudgeArf(lua_State *L)
 	}
 
 	// No need to check the stack size since we popped 4 Lua values.
-	lua_pushnumber(L, hint_hit);
-	lua_pushnumber(L, hint_lost);
+	lua_pushnumber(L, hint_hit);		lua_pushnumber(L, hint_lost);
 	lua_pushboolean(L, special_hint_judged);
 	return 3;
 }
@@ -1092,8 +1081,7 @@ static const luaL_reg M[] =   // Considering Adding a "JudgeArfController" Funct
 	{0, 0}
 };
 static inline dmExtension::Result LuaInit(dmExtension::Params* p) {
-	luaL_register(p -> m_L, "Arf2", M);
-	return dmExtension::RESULT_OK;
+	luaL_register(p -> m_L, "Arf2", M);		return dmExtension::RESULT_OK;
 }
 static inline dmExtension::Result OK(dmExtension::Params* params) { return dmExtension::RESULT_OK; }
 static inline dmExtension::Result APPOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
