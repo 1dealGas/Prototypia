@@ -116,8 +116,7 @@ static inline void GetORIG(const float p1, const float p2, uint8_t et, const boo
 					(int16_t)(curve_init*521) + (int16_t)(curve_end*523) + (int16_t)(et*1009);
 	if( orig_cache.count(ocnum) ) {
 		pdp orig_pdp = orig_cache[ocnum];
-		p = orig_pdp.p;
-		dp = orig_pdp.dp;
+		p = orig_pdp.p;		dp = orig_pdp.dp;
 	}
 	else {
 		double fci = curve_init;		double fce = curve_end;
@@ -144,8 +143,7 @@ static inline void GetORIG(const float p1, const float p2, uint8_t et, const boo
 		dp = (float)( (p2 - p1) / dnm );
 
 		pdp orig_pdp;
-		orig_pdp.p = p;
-		orig_pdp.dp = dp;
+		orig_pdp.p = p;		orig_pdp.dp = dp;
 		orig_cache[ocnum] = orig_pdp;
 	}
 }
@@ -325,15 +323,17 @@ static inline int InitArf(lua_State *L)
 	lua_pushnumber( L, Arf->wgo_required() );		lua_pushnumber( L, Arf->hgo_required() );
 	return 4;
 }
+
 // SetVecs(table_wpos/hpos/apos/htint/atint)
 // Recommended Usage:
-// local wpos,hpos,apos,htint,atint
-//     if b then
+//     local wpos,hpos,apos,htint,atint
+//     if b then   -- Don't forget the judging.
 //         wpos = Arf2.NewTable(w,0);		for i=1,w do wpos[i] = vmath.vector3() end
 //         hpos = Arf2.NewTable(h,0);		for i=1,h do hpos[i] = vmath.vector3() end
 //         apos = Arf2.NewTable(h,0);		for i=1,h do apos[i] = vmath.vector3() end
 //         htint = Arf2.NewTable(h,0);		for i=1,h do htint[i] = vmath.vector4() end
 //         atint = Arf2.NewTable(h,0);		for i=1,h do atint[i] = vmath.vector4() end
+//         SetVecs(wpos,hpos,apos,htint,atint)
 //     end
 // Before calling FinalArf(), DO NOT deref these Tables.
 static inline int SetVecs(lua_State *L)
@@ -371,7 +371,7 @@ static inline int UpdateArf(lua_State *L)
 	uint8_t wgo_used, hgo_used, ago_used;			uint16_t hint_lost;
 	uint32_t mstime = (uint32_t)luaL_checknumber(L, 1);
 	{
-		if(!mstime)								mstime = 1;
+		if(mstime < 2)							mstime = 2;
 		else if( mstime >= Arf->before() )		return 0;
 	}
 
