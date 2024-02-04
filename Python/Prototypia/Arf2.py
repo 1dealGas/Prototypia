@@ -1,5 +1,6 @@
 # Common Imports
 from ast import *
+from math import *
 from typing import *
 
 import sys
@@ -24,11 +25,41 @@ class PseudoDecoratorError		(E):pass
 class ManualProhibition			(E):pass
 class OverlapProhibition		(E):pass
 
-def NonManual(f) -> FunctionType:
+def NonManual(f:FunctionType) -> FunctionType:
 	def decorated(*args, **kwargs) -> None:
 		if inspect.stack()[1].function == "<module>" : raise ManualProhibition('''This method is prohibited to call manually.''')
 		return f(*args, **kwargs)
 	return decorated
+
+half_pi = pi / 2
+def ESIN(ratio:float) -> float:
+	ratio = float(ratio)
+	ratio = ratio if ratio>0 else 0
+	ratio = ratio if ratio<1 else 1
+	return sin(ratio * half_pi)
+def ECOS(ratio:float) -> float:
+	ratio = float(ratio)
+	ratio = ratio if ratio>0 else 0
+	ratio = ratio if ratio<1 else 1
+	return 1 - cos(ratio * half_pi)
+def InQuad(ratio:float) -> float:
+	ratio = float(ratio)
+	ratio = ratio if ratio>0 else 0
+	ratio = ratio if ratio<1 else 1
+	return ratio * ratio
+def OutQuad(ratio:float) -> float:
+	ratio = float(ratio)
+	ratio = ratio if ratio>0 else 0
+	ratio = ratio if ratio<1 else 1
+	ratio = 1 - ratio
+	return 1 - ratio * ratio
+def get_original(p1:float, p2:float, curve_init:float, curve_end:float, ease_func:FunctionType) -> Tuple[float,float]:
+	fci = ease_func(curve_init)
+	fce = ease_func(curve_end)
+	dnm = fce - fci
+	p = (fce*p1 - fci*p2) / dnm
+	dp = (p2 - p1) / dnm
+	return (p,dp)
 
 @functools.cmp_to_key
 def PosNodeSorter(a, b) -> int:
@@ -162,6 +193,109 @@ class WishGroup:
 			raise PseudoDecoratorError("""The PseudoDecorator must return a function with the method signature "func(w : WishGroup) -> None". """)
 		func(self)
 		return self
+
+	def GET(self, bartime:float) -> Union[ None, Tuple[float,float,float,float,PosNode,PosNode] ]:
+		'''
+		--------
+		Not suitable for method chaining
+		This method doesn't return the WishGroup instance "Self".
+		--------
+
+		Get the interpolation result accoring to the Bartime input.
+		Mostly used internally.
+
+		Args:
+			bartime (float): the Original Bartime
+
+		Returns:
+			None  ->  if the interpolation fails
+			Tuple ->  (x, y, original_ratio, actual_ratio, current_posnode, next_posnode)
+		'''
+		pnsize = len(self.__nodes)
+		if pnsize < 2:
+			raise InterpolationError("At least 2 PosNodes are required to complete an interpolation.")
+
+		bartime = float(bartime)
+		if bartime < 0:
+			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+		elif bartime < self.__nodes[0].bartime: return
+		elif bartime >= self.__nodes[-1].bartime: return
+
+		for i in range(pnsize-1):
+			current_posnode = self.__nodes[i]
+			next_posnode = self.__nodes[i+1]
+
+			# bartime [t1,t2)
+			t1 = current_posnode.bartime
+			t2 = next_posnode.bartime
+			if bartime < t1  or  bartime >= t2: continue
+
+			original_ratio = (bartime - t1) / (t2 - t1)
+			easetype = current_posnode.easetype
+			if easetype:
+
+				x0 = y0 = dx = dy = actual_ratio = 0
+				ci = current_posnode.curve_init
+				ce = current_posnode.curve_end
+				x1 = current_posnode.x
+				y1 = current_posnode.y
+				x2 = next_posnode.x
+				y2 = next_posnode.y
+
+				return_x = return_y = 0
+				if ci == 0 and ce == 1:
+					dx = x2 - x1
+					dy = y2 - y1
+					actual_ratio = original_ratio
+
+					if easetype == 1:
+						return_x = x1 + dx * ESIN(actual_ratio)
+						return_y = y1 + dy * ECOS(actual_ratio)
+					elif easetype == 2:
+						return_x = x1 + dx * ECOS(actual_ratio)
+						return_y = y1 + dy * ESIN(actual_ratio)
+					elif ci > ce:
+						return_x = x1 + dx * OutQuad(actual_ratio)
+						return_y = y1 + dy * OutQuad(actual_ratio)
+					else:
+						return_x = x1 + dx * InQuad(actual_ratio)
+						return_y = y1 + dy * InQuad(actual_ratio)
+
+				elif easetype == 1:
+					x0,dx = get_original(x1, x2, ci, ce, ESIN)
+					y0,dy = get_original(y1, y2, ci, ce, ECOS)
+					actual_ratio = ci + original_ratio * ( ce - ci )
+					return_x = x0 + dx * ESIN(actual_ratio)
+					return_y = y0 + dy * ECOS(actual_ratio)
+				elif easetype == 2:
+					x0,dx = get_original(x1, x2, ci, ce, ECOS)
+					y0,dy = get_original(y1, y2, ci, ce, ESIN)
+					actual_ratio = ci + original_ratio * ( ce - ci )
+					return_x = x0 + dx * ECOS(actual_ratio)
+					return_y = y0 + dy * ESIN(actual_ratio)
+				elif ci > ce:
+					x0,dx = get_original(x1, x2, ce, ci, OutQuad)
+					y0,dy = get_original(y1, y2, ce, ci, OutQuad)
+					actual_ratio = ce + original_ratio * ( ci - ce )
+					return_x = x0 + dx * OutQuad(actual_ratio)
+					return_y = y0 + dy * OutQuad(actual_ratio)
+				else:
+					x0,dx = get_original(x1, x2, ci, ce, InQuad)
+					y0,dy = get_original(y1, y2, ci, ce, InQuad)
+					actual_ratio = ci + original_ratio * ( ce - ci )
+					return_x = x0 + dx * InQuad(actual_ratio)
+					return_y = y0 + dy * InQuad(actual_ratio)
+
+				return (return_x, return_y, original_ratio, actual_ratio, current_posnode, next_posnode)
+
+			else:
+				x0 = current_posnode.x
+				y0 = current_posnode.y
+				dx = next_posnode.x - x0
+				dy = next_posnode.y - y0
+				return (x0+dx*original_ratio, y0+dy*original_ratio, original_ratio, original_ratio, current_posnode, next_posnode)
+
+		return
 
 
 	# Compositional Methods for WishGroup instances
@@ -314,59 +448,46 @@ class WishGroup:
 		'''
 		self.__useless = bool(useless)
 		return self
-	
-	def GET(self, bartime:float) -> Union[ None, Tuple[float,float,float,float,PosNode,PosNode] ]:
-		'''
-		--------
-		Not suitable for method chaining
-		This method doesn't return the WishGroup instance "Self".
-		--------
 
-		Get the interpolation result accoring to the Bartime input.
-		Mostly used internally.
+	def try_interpolate(self, bar:float, nmr:int=0, dnm:int=1) -> Self:
+		'''
+		Try to add a PosNode based on the interpolation result,
+		accoring to the Bartime input and the current PosNode list.
+
+		When the interpolation fails, no modification will be applied to the calling WishGroup.
+		Generally used to correct the trajectory of Wishes under BPM changes.
 
 		Args:
-			bartime (float): the Original Bartime
-		
+			bar (float): Bartime integer or the Original Bartime
+			nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+			dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
+
 		Returns:
-			None  ->  if the interpolation fails
-			Tuple ->  (x, y, original_ratio, actual_ratio, current_posnode, next_posnode)
+			Self (WishGroup): for Method Chaining Usage.
 		'''
-		pnsize = len(self.__nodes)
-		if pnsize < 2:
-			raise InterpolationError("At least 2 PosNodes are required to complete an interpolation.")
-		
+		bartime = float(bar) + float(nmr) / float(dnm)
 		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
-		elif bartime < self.__nodes[0].bartime: return
-		elif bartime >= self.__nodes[-1].bartime: return
 
-		for i in range(pnsize-1):
-			current_posnode = self.__nodes[i]
-			next_posnode = self.__nodes[i+1]
+		i_result = self.GET(bartime)
+		if i_result == None: return self
+		elif bartime == i_result[4].bartime  or  bartime == i_result[5].bartime: return self
+		else:
 
-			t0 = current_posnode.bartime
-			if bartime < t0: continue
+			ip_x = i_result[0]
+			ip_y = i_result[1]
+			actual_ratio = i_result[3]
+			current_node = i_result[4]
+			former_ci = current_node.curve_init
+			former_ce = current_node.curve_end
 
-			x0 = current_posnode.x
-			y0 = current_posnode.y
-			dx = next_posnode.x - x0
-			dy = next_posnode.y - y0
-			dt = next_posnode.bartime - t0
-			original_ratio = float(bartime - t0) / float(dt)
+			if former_ci > former_ce:   # Reversed; et==3
+				current_node.curve_init = actual_ratio
+				return self.n(bartime,0,1, ip_x, ip_y, 4, actual_ratio, former_ci)   # former_ce < actual_ratio < former_ci
+			else:
+				current_node.curve_end = actual_ratio
+				return self.n(bartime,0,1, ip_x, ip_y, current_node.easetype, actual_ratio, former_ce)
 
-			# Evaluating the ease_ratio
-			easetype = current_posnode.easetype
-			ci = current_posnode.curve_init
-			ce = current_posnode.curve_end
-			if easetype == 0:
-				ease_ratio = 0
-			
-
-
-
-		return
-		
 
 
 # Arf2 Compiler Function
