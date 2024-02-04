@@ -540,8 +540,9 @@ static inline int UpdateArf(lua_State *L)
 						break;
 					default:   // case 3
 						float ease_ratio; {
-							if(curve_init>curve_end) {
-								ease_ratio = curve_init + (curve_init - curve_end) * node_ratio;
+							if(curve_init > curve_end) {
+								// The ACTUAL init ratio of the curve IS "curve_end" here
+								ease_ratio = curve_end + (curve_init - curve_end) * node_ratio;
 								ease_ratio = 1.0f - ease_ratio;
 								ease_ratio = 1.0f - ease_ratio * ease_ratio;
 							}
@@ -1068,7 +1069,6 @@ static inline int NewTable(lua_State *L) {
 }
 static inline int SetDaymode(lua_State *L) { daymode		= lua_toboolean(L, 1);	return 0; }
 static inline int SetAnmitsu(lua_State *L) { allow_anmitsu	= lua_toboolean(L, 1);	return 0; }
-
 
 // Defold Binding Related Stuff
 static const luaL_reg M[] =   // Considering Adding a "JudgeArfController" Function.
