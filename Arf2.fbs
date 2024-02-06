@@ -69,25 +69,21 @@ table Arf2 {
 
 	// Info
 	before:uint32;
-	wgo_required:uint8;
-	hgo_required:uint8;
-
-	// Traits
-	special_hint:uint16;
 	dts_layer1:[uint64];
 	dts_layer2:[uint64];
-	index:[Arf2Index];
 
 	// Wishes
 	wish:[WishGroup];
 	widx:[uint16];
+	wgo_required:uint8;
 
 	// Hints
 	hint:[uint64];
 	hidx:[uint16];
+	hgo_required:uint8;
+	special_hint:uint16;
 
-	// New object type(s) coming in future
-}
+}   // New object type(s) coming in future
 root_type Arf2;
 
 
