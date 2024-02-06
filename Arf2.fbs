@@ -7,7 +7,7 @@
 // flatc --python Arf2.fbs
 
 
-// 1. EaseType       ESIN: Sin (ratio * π/2)      ECOS: 1 - Cos (ratio * π/2)
+// 1. EaseType       ESIN: Sin (ratio * π/2)       ECOS: 1 - Cos (ratio * π/2)
 //    |       | 0      | 1      | 2      | 3                                 |
 //    |:-----:|:------:|:------:|:------:|:--------------------------------: |
 //    | PosX  | Linear |  ESIN  |  ECOS  | InQuad if sgn >= 0 , OutQuad else |
@@ -63,27 +63,31 @@ table WishGroup {
 	childs:[WishChild];   // WishChilds
 }
 
+table Arf2Index {
+	widx:[uint16];
+	hidx:[uint16];
+}
+
 
 // 5. Root Type
 table Arf2 {
 
 	// Info
 	before:uint32;
+	wgo_required:uint8;
+	hgo_required:uint8;
+
+	// Traits
+	special_hint:uint16;
 	dts_layer1:[uint64];
 	dts_layer2:[uint64];
+	index:[Arf2Index];
 
-	// Wishes
-	wish:[WishGroup];
-	widx:[uint16];
-	wgo_required:uint8;
+	// Chart[fumen] body
+	wish:[WishGroup];   // WishGroups
+	hint:[uint64];   // Hints
 
-	// Hints
-	hint:[uint64];
-	hidx:[uint16];
-	hgo_required:uint8;
-	special_hint:uint16;
-
-}   // New object type(s) coming in future
+}   // New object type(s) coming in future.
 root_type Arf2;
 
 
