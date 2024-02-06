@@ -20,8 +20,8 @@ class An:
 	'''EaseType Enums for AngleNodes.'''
 	STASIS = 0
 	LINEAR = 1
-	ESIN = 2
-	ECOS = 3
+	INQUAD = 2
+	OUTQUAD = 3
 class Pn:
 	'''EaseType Enums for PosNodes.'''
 	LINEAR = 0
@@ -312,3 +312,7 @@ def n2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 
 
 # Official Tools & Patterns
+# def collide_to
+# def multi
+# def i1
+# def i2

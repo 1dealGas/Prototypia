@@ -18,12 +18,14 @@ from . import WishGroup as WishGroupFb
 
 # Error Handling & Tools
 E = Exception
-class BPMInvalidError			(E):pass
-class ScaleInvalidError			(E):pass
-class InterpolationError		(E):pass
-class PseudoDecoratorError		(E):pass
-class ManualProhibition			(E):pass
-class OverlapProhibition		(E):pass
+class MoveError						(E):pass
+class BPMInvalidError				(E):pass
+class ScaleInvalidError				(E):pass
+class InterpolationError			(E):pass
+class PseudoDecoratorError			(E):pass
+class ManualProhibition				(E):pass
+class OverlapProhibition			(E):pass
+class MirrorLRAngleProhibition		(E):pass
 
 def NonManual(f:FunctionType) -> FunctionType:
 	def decorated(*args, **kwargs) -> None:
@@ -153,6 +155,7 @@ class WishGroup:
 	def __init__(self, ofLayer2:bool = False, MaxVisibleDistance:float = 7) -> None:
 		self.__nodes:list[PosNode] = []
 		self.__childs:list[WishChild] = []
+		self.__mhints:list[Hint] = []
 		self.__of_layer2 = ofLayer2
 		self.__max_visible_distance = MaxVisibleDistance
 		self.__last_child:WishChild = None
@@ -166,6 +169,7 @@ class WishGroup:
 		return {
 			"nodes" : self.__nodes,
 			"childs" : self.__childs,
+			"mhints" : self.__mhints,
 			"of_layer2" : self.__of_layer2,
 			"max_visible_distance" : self.__max_visible_distance,
 			"last_child" : self.__last_child,
@@ -367,6 +371,7 @@ class WishGroup:
 		if angle < -1800  or  angle > 1800:
 			raise ValueError("Degree of AngleNode out of Range [-1800,1800].")
 
+		# Hint(s) will be added in the compiling process.
 		c = WishChild(bartime, angle)
 		self.__last_child = c
 		self.__childs.append(c)
@@ -430,8 +435,25 @@ class WishGroup:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 
 		h = Hint(bartime, self)
-		Arf2Prototype.hint.append(h)
 		Arf2Prototype.last_hint = h
+		Arf2Prototype.hint.append(h)   # Hints in the Arf2Protorype class will be sorted in the compling process.
+
+		self.__mhints.append(h)
+		self.__mhints.sort(key = lambda ht: ht.bartime)
+
+		return self
+
+	def set_of_layer2(self, of_layer2:bool) -> Self:
+		'''
+		Set which layer the WishGroup belongs to.
+
+		Args:
+			of_layer2 (bool): Whether the WishGroup belongs to Layer2.
+
+		Returns:
+			Self (WishGroup): for Method Chaining Usage.
+		'''
+		self.__of_layer2 = bool(of_layer2)
 		return self
 
 	def set_useless(self, useless:bool) -> Self:
@@ -488,6 +510,156 @@ class WishGroup:
 				current_node.curve_end = actual_ratio
 				return self.n(bartime,0,1, ip_x, ip_y, current_node.easetype, actual_ratio, former_ce)
 
+	def mirror_lr(self, mirror_angle:bool = True) -> Self:
+		'''
+		Turn the Wish mirrord along the Y-Axis.
+
+		Args:
+			mirror_angle (bool): Whether to mirror the path of Childs of this WishGroup.
+								 Be sure that every AngleNode degree of each WishChild not smaller than -1620.
+
+		Returns:
+			Self (WishGroup): for Method Chaining Usage.
+		'''
+		for node in self.__nodes:
+			node.x = 16.0 - node.x
+		if mirror_angle:
+			for child in self.__childs:
+				a = child.anodes
+				l = len(a)
+				for i in range(l):
+					# AngleNode: Tuple(Bartime, Angle, EaseType)
+					if a[i][1] < -1620:
+						raise MirrorLRAngleProhibition("Can't acquire the mirrored angle for angles in range [-1800,-1620).")
+					else:
+						b = a[i][0]
+						d = 180 - a[i][1]
+						e = a[i][2]
+						a[i] = (b,d,e)
+		return self
+
+	def mirror_ud(self, mirror_angle:bool = True) -> Self:
+		'''
+		Turn the Wish mirrord along the X-Axis.
+
+		Args:
+			mirror_angle (bool): Whether to mirror the path of Childs of this WishGroup.
+
+		Returns:
+			Self (WishGroup): for Method Chaining Usage.
+		'''
+		for node in self.__nodes:
+			node.y = 8.0 - node.y
+		if mirror_angle:
+			for child in self.__childs:
+				a = child.anodes
+				l = len(a)
+				for i in range(l):
+					# AngleNode: Tuple(Bartime, Angle, EaseType)
+					b = a[i][0]
+					d = -(a[i][1])
+					e = a[i][2]
+					a[i] = (b,d,e)
+
+	def move(self, delta_bar:float, delta_nmr:int = 0, delta_dnm:int = 1, dx:float = 0, dy:float = 0, trim_by_interpolating:bool = True) -> Self:
+		'''
+		Move the calling WishGroup, and its WishChilds, AngleNodes, related Hints,
+		with several delta arguments specified.
+
+		Args:
+			delta_bar (float): Delta Bartime integer or the Original Delta Bartime
+			delta_nmr (int): Numerator to specify the internal position after a delta bar.
+							 Example 5/16 -> 5
+			delta_dnm (int): Denominator to specify the internal position after a deltabar.
+							 Example 5/16 -> 16
+			dx (float): The delta x-axis position of the PosNode. Range[-16,32]
+			dy (float): The delta y-axis position of the PosNode. Range[-8,16]
+			trim_by_interpolating (bool): Whether interpolate PosNode and AngleNodes before
+										  trimming Nodes with bartime smaller than 0.
+
+		Returns:
+			Self (WishGroup): for Method Chaining Usage.
+		'''
+		dbt = float(delta_bar) + float(delta_nmr) / float(delta_dnm)
+		dx = float(dx)
+		dy = float(dy)
+		if dx < -16  or  dx > 32:
+			raise ValueError("X-Axis Position out of Range [-16,32].")
+		if dy < -8  or  dy > 16:
+			raise ValueError("Y-Axis Position out of Range [-8,16].")
+
+		# Simple Updating
+		for node in self.__nodes:
+			node.bartime += dbt
+			node.x += dx
+			node.y += dy
+			if node.x < -16  or  node.x > 32:
+				raise ValueError("X-Axis Position out of Range [-16,32] after the moving.")
+			if node.y < -8  or  node.y > 16:
+				raise ValueError("Y-Axis Position out of Range [-8,16] after the moving.")
+		for child in self.__childs:
+			child.bartime += dbt
+		for hint in self.__mhints:
+			hint.bartime += dbt
+
+		# Simple Checking
+		if self.__nodes[0].bartime < 0:
+			if trim_by_interpolating:
+				self.try_interpolate(0)
+			while len(self.__nodes) > 2  and  self.__nodes[0].bartime < 0:
+				self.__nodes.pop(0)
+			if len(self.__nodes) < 2  or  self.__nodes[0].bartime < 0:
+				raise MoveError("After the Triming Process, No enough PosNode(s) remain(s).")
+		while len(self.__childs) > 0  and  self.__childs[0].bartime < 0:
+			self.__childs.pop(0)
+		while len(self.__mhints) > 0  and  self.__mhints[0].bartime < 0:
+			self.__mhints.pop(0)
+
+		# Complex Checking
+		for child in self.__childs:
+			a = child.anodes
+			l = len(a)
+
+			# AngleNode: Tuple(Bartime, Angle, EaseType)
+			if l < 2: a[0] = ( 0, a[0][1], 0 )
+			elif a[0][0] < 0:
+				if trim_by_interpolating:
+					for i in range(l-1):
+						current_anode = a[i]
+						next_anode = a[i+1]
+
+						t1 = current_anode[0]
+						t2 = next_anode[0]
+						if t2 < 0: continue
+
+						angle_0 = current_anode[1]
+						d_angle = next_anode[1] - angle_0
+
+						ratio = (0-t1) / (t2-t1)
+						et = current_anode[2]
+						if et == 0:   # An.STASIS
+							ratio = 0
+						elif et == 1:   # An.LINEAR
+							pass
+						elif et == 2:   # An.INQUAD
+							ratio *= ratio
+						else:   # An.OUTQUAD
+							ratio = 1.0 - ratio
+							ratio = 1.0 - ratio * ratio
+
+						a.append( (0, angle_0 + d_angle * ratio, et) )
+						break
+					a.sort(key = lambda a: a[0])
+
+				while len(a) > 1  and  a[0][0] < 0: a.pop(0)
+				if l < 2: a[0] = ( 0, a[0][1], 0 )
+
+		return self
+
+	# def input
+	# def input_dr3
+	# And other chart[fumen] makers?
+
 
 
 # Arf2 Compiler Function
@@ -496,6 +668,13 @@ def Arf2Compile() -> None:
 	This function processes the data contained in the Arf2Prototype class,
 	And then encode it into a *.arf file.
 	'''
+	# Merge Bartimes and Dts
+	# Add WishChilds-related Hints
+	# Calculate Object Params
+	# Final Sortings
+	# Produce Group Indexes
+	# Encode the Flatbuffers binary data
+	# File Backup & Export
 	pass
 
 
