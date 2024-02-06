@@ -7,12 +7,12 @@
 // flatc --python Arf2.fbs
 
 
-// 1. EaseType      ESIN: Sin (ratio * π/2)     ECOS: 1 - Cos (ratio * π/2)
-//    |       | 0      | 1      | 2    | 3                                |
-//    |:-----:|:------:|:------:|:----:|:--------------------------------:|
-//    | PosX  | Linear |  ESIN  | ECOS | InQuad if sgn >= 0, OutQuad else |
-//    | PosY  | Linear |  ECOS  | ESIN | InQuad if sgn >= 0, OutQuad else |
-//    | Angle | Stasis | Linear | ESIN |               ECOS               |
+// 1. EaseType       ESIN: Sin (ratio * π/2)      ECOS: 1 - Cos (ratio * π/2)
+//    |       | 0      | 1      | 2      | 3                                 |
+//    |:-----:|:------:|:------:|:------:|:--------------------------------: |
+//    | PosX  | Linear |  ESIN  |  ECOS  | InQuad if sgn >= 0 , OutQuad else |
+//    | PosY  | Linear |  ECOS  |  ESIN  | InQuad if sgn >= 0 , OutQuad else |
+//    | Angle | Stasis | Linear | InQuad |              OutQuad              |
 
 
 // 2. DTime System
@@ -52,41 +52,46 @@
 
 // 4. Incompressible Structs
 table WishChild {
-    p:uint8 = 255;     //                        Runtime Only
-    dt:uint32;         // DTime * (10^5) * 0.5
-    anodes:[uint32];   // AngleNodes
+	p:uint8 = 255;     //                        Runtime Only
+	dt:uint32;         // DTime * (10^5) * 0.5
+	anodes:[uint32];   // AngleNodes
 }
 
 table WishGroup {
-    info:uint32 = 4294967295;   // WishGroup Info
-    nodes:[uint64];   // PosNodes
-    childs:[WishChild];   // WishChilds
+	info:uint32 = 4294967295;   // WishGroup Info
+	nodes:[uint64];   // PosNodes
+	childs:[WishChild];   // WishChilds
 }
 
 table Arf2Index {
-    widx:[uint16];
-    hidx:[uint16];
+	widx:[uint16];
+	hidx:[uint16];
 }
 
 
 // 5. Root Type
 table Arf2 {
 
-    // Info
-    before:uint32;
-    wgo_required:uint8;
-    hgo_required:uint8;
+	// Info
+	before:uint32;
+	wgo_required:uint8;
+	hgo_required:uint8;
 
-    // Chart[fumen] body
-    wish:[WishGroup];   // WishGroups
-    hint:[uint64];   // Hints
+	// Traits
+	special_hint:uint16;
+	dts_layer1:[uint64];
+	dts_layer2:[uint64];
+	index:[Arf2Index];
 
-    // Traits
-    special_hint:uint16;
-    dts_layer1:[uint64];
-    dts_layer2:[uint64];
-    index:[Arf2Index];
+	// Wishes
+	wish:[WishGroup];
+	widx:[uint16];
 
+	// Hints
+	hint:[uint64];
+	hidx:[uint16];
+
+	// New object type(s) coming in future
 }
 root_type Arf2;
 
