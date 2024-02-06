@@ -37,6 +37,7 @@
 #include <dmsdk/dlib/vmath.h>
 #include <dmsdk/dlib/buffer.h>
 #include <dmsdk/script/script.h>
+#include <dmsdk/gameobject/gameobject.h>
 #include <arf2_generated.h>
 #include <unordered_map>
 #include <vector>
@@ -154,7 +155,7 @@ static dmVMath::Vector3* T[10];
 typedef dmVMath::Vector3 v3, *v3p;
 typedef dmVMath::Vector4 v4, *v4p;
 enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
-       HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
+	   HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
 
 // Recommended Usage of "SetTouches"
 //     local v3,T = vmath.vector3, Arf2.NewTable(10,0);    for i=1,10 do T[i]=v3() end
@@ -303,7 +304,7 @@ static inline int InitArf(lua_State *L)
 
 	// Switched to the Defold Buffer.
 	dmBuffer::HBuffer B = dmScript::CheckBufferUnpack(L, 1);
-	dmBuffer::GetBytes(B, ArfBuf, &ArfSize);
+	dmBuffer::GetBytes(B, (void**)ArfBuf, &ArfSize);
 	if(!ArfSize) return 0;
 
 	// Register Arf  &  Set Auto Status
@@ -352,7 +353,7 @@ static inline int SetVecs(lua_State *L)
 	for( uint8_t i=0; i<wgo_required; i++ ) {
 		lua_rawgeti(L, 1, i+1);		T_WPOS[i] = dmScript::CheckVector3(L, 7);		lua_pop(L, 1);
 	}
-	for( uint8_t i=0 ii=1; i<hgo_required; {i++; ii++;} ) {
+	for( uint8_t i=0, ii=1; i<hgo_required; ii = ++i ) {
 		lua_rawgeti(L, 2, ii);		T_HPOS[i] = dmScript::CheckVector3(L, 7);
 		lua_rawgeti(L, 3, ii);		T_APOS[i] = dmScript::CheckVector3(L, 8);
 		lua_rawgeti(L, 4, ii);		T_HTINT[i] = dmScript::CheckVector4(L, 9);		T_HTINT[i] -> setW(1.0f);
@@ -704,15 +705,18 @@ static inline int UpdateArf(lua_State *L)
 														current_degree = a1 - 1800.0;
 														break;
 													case 1:
-														current_degree = a1 + da*a_ratio;
+														current_degree = a1 + da * a_ratio;
 														current_degree -= 1800.0;
 														break;
 													case 2:
-														current_degree = a1 + da*ESIN[(uint16_t)(a_ratio*1000)];
+														a_ratio *= a_ratio;
+														current_degree = a1 + da * a_ratio;
 														current_degree -= 1800.0;
 														break;
 													case 3:
-														current_degree = a1 + da*ECOS[(uint16_t)(a_ratio*1000)];
+														a_ratio = 1.0f - a_ratio;
+														a_ratio = 1.0f - a_ratio * a_ratio;
+														current_degree = a1 + da * a_ratio;
 														current_degree -= 1800.0;
 														break;
 												}	break;
@@ -1040,10 +1044,7 @@ static inline int JudgeArf(lua_State *L)
 static inline int FinalArf(lua_State *L)
 {S
 	orig_cache.clear();
-	Arf = ArfBuf = nullptr;
-
-	// Deleted the free(ArfBuf) call.
-	// Deref the Buffer Handle in Lua, and the Buffer will be GCed.
+	ArfBuf = nullptr;	Arf = nullptr;   // The Buffer will be GCed after derefing its Handle in Lua.
 	free(T_WPOS);		T_WPOS = nullptr;
 	free(T_HPOS);		T_HPOS = nullptr;
 	free(T_APOS);		T_APOS = nullptr;
@@ -1077,8 +1078,7 @@ static const luaL_reg M[] =   // Considering Adding a "JudgeArfController" Funct
 	{"InitArf", InitArf}, {"SetVecs", SetVecs}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
 	{"SetTouches", SetTouches}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArf},
 	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
-	{"NewTable", NewTable},
-	{0, 0}
+	{"NewTable", NewTable}, {0, 0}
 };
 static inline dmExtension::Result LuaInit(dmExtension::Params* p) {
 	luaL_register(p -> m_L, "Arf2", M);		return dmExtension::RESULT_OK;
