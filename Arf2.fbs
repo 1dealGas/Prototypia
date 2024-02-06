@@ -63,11 +63,6 @@ table WishGroup {
 	childs:[WishChild];   // WishChilds
 }
 
-table Arf2Index {
-	widx:[uint16];
-	hidx:[uint16];
-}
-
 
 // 5. Root Type
 table Arf2 {
