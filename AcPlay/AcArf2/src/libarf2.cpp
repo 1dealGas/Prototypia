@@ -968,7 +968,7 @@ static inline int JudgeArf(lua_State *L)
 								if( dt>=mindt && dt<=maxdt )	hint_hit += 1;
 								else							hint_lost += 1;
 
-								hint -> Mutate(current_hint_id, (uint64_t)(mstime << 44) +
+								hint -> Mutate(current_hint_id, ( (uint64_t)mstime << 44 ) +
 								(current_hint & 0xfffffffffff) + 0x8000000000000000 );
 
 								if( current_hint_id == special_hint )
@@ -980,7 +980,7 @@ static inline int JudgeArf(lua_State *L)
 								if( dt>=mindt && dt<=maxdt )	hint_hit += 1;
 								else							hint_lost += 1;
 
-								hint -> Mutate(current_hint_id, (uint64_t)(mstime << 44) +
+								hint -> Mutate(current_hint_id, ( (uint64_t)mstime << 44 ) +
 								(current_hint & 0xfffffffffff) + 0x8000000000000000 );
 
 								if( current_hint_id == special_hint )
