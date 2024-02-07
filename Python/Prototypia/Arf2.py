@@ -33,6 +33,24 @@ def NonManual(f:FunctionType) -> FunctionType:
 		return f(*args, **kwargs)
 	return decorated
 
+VERSE = []
+def NEW_VERSE() -> None:
+	'''
+	You may use the symbol "VERSE" to operate a series of WishGroup included in,
+	this helps you to maneuver things like copy results more easily for a bit.
+
+	The "NEWVERSE" method creates a new "VERSE" list, and discards the former one.
+	It's not necessary to explicitly create an initial "VERSE" before writing something.
+
+	Args:
+		None
+
+	Returns:
+		None
+	'''
+	global VERSE
+	VERSE = []
+
 half_pi = pi / 2
 def ESIN(ratio:float) -> float:
 	ratio = float(ratio)
@@ -566,6 +584,20 @@ class WishGroup:
 		Move the calling WishGroup, and its WishChilds, AngleNodes, related Hints,
 		with several delta arguments specified.
 
+		Prototypia won't provide a explicit copy function, and we suggest you to do
+		this manually.
+
+		Example:
+			NEW_VERSE()
+
+			# Some Copied Stuff
+			n1(1,0,1, 8, 4).n(2,0,1, 4, 8)   # ······
+			n1(1,0,1, 7, 3).n(2,0,1, 3, 7)   # ······
+
+			for i in VERSE:
+				i.move(16,0,1)
+				i.mirror_lr()
+
 		Args:
 			delta_bar (float): Delta Bartime integer or the Original Delta Bartime
 			delta_nmr (int): Numerator to specify the internal position after a delta bar.
@@ -656,8 +688,72 @@ class WishGroup:
 
 		return self
 
-	# def input
-	# def input_dr3
+	def input(self, *args:Tuple[float]) -> Self:
+		'''
+		A Shorthand to add multiple WishChild to the calling WishGroup.
+		Each argument refers to an accurate Bartime, and all angle data of
+		newly-created WishChild(s) will be set by default.
+
+		Example:   # 1/8 Taterendas falling down
+			CURRENT_ANGLE(90)
+			n1(1,,, 3, 5).n(2,,, 7, 3).input(1.125,1.25,1.375,1.5,1.625,1.75,1.875)
+
+		Args:
+			*args (Tuple[float]): A series of accurate Bartime(s).
+
+		Returns:
+			Self (WishGroup): for Method Chaining Usage.
+		'''
+		for t in args: self.c( float(t),0,1 )
+		return self
+
+	def input_drm(self, text:str, *, type:Union[int,None] = None, left:Union[float,None] = None, mid:Union[float,None] = None, width:Union[float,None] = None, init:Union[float,None] = None, end:Union[float,None] = None) -> Self:
+		'''
+		Parse Bartimes from a chart[fumen] text created by DRMaker, and use
+		these Bartimes to create WishChild(s) on the calling WishGroup.
+
+		-- Center&End Notes will be filtered.
+
+		-- Several optional filters are provided,
+		   but you need to pass them with their keywords.
+
+		Args:
+			text (str): Chart[fumen] text created by DRMaker
+			type (int): Note Type Filter, declare it like "type=0"
+			left (float): Left Position Filter, declare it like "left=0"
+			mid (float): Middle Position Filter, declare it like "mid=2"
+			width (float): Note Width Filter, declare it like "width=4"
+			init (float): Init Bartime Filter, declare it like "init=1"
+			End (float): End Bartime Filter, declare it like "end=2"
+
+		Returns:
+			Self (WishGroup): for Method Chaining Usage.
+		'''
+		drm_lines = text.splitlines()   # <id><type><bartime><left><width><nsc_scale><parentid><LRHP>
+		drm_elems = []
+		for l in drm_lines:
+			if not l.startswith("<"): continue
+			l.removesuffix(">")
+			l.replace("<","")
+			drm_elems.append( l.split(">") )
+		for e in drm_elems:
+			if int(e[6]) != 0: continue
+
+			__type = int(e[1])
+			__bartime = float(e[2])
+			__left = float(e[3])
+			__width = float(e[4])
+			__mid = __left + 0.5 * __width
+
+			if type and  __type != type: continue
+			elif left and  __left != left: continue
+			elif mid and  __mid != mid: continue
+			elif width and  __width != width: continue
+			elif init and  __bartime < init: continue
+			elif end and  __bartime > end: continue
+
+			self.c(__bartime,0,1)
+		return self
 	# And other chart[fumen] makers?
 
 

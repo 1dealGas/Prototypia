@@ -1,17 +1,17 @@
 '''
 Methods Provided:   # See also  GitHub.com/1dealGas/Prototypia  .
-    "An", "Pn", "REQUIRE",
+    "An", "Pn", "VERSE", "NEW_VERSE", "REQUIRE",
     "OFFSET", "BEATS_PER_MINUTE", "BARS_PER_MINUTE", "SC_LAYER1", "SC_LAYER2",
-    "CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2",
-
+    "CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2", "i1", "i2",
+    "Origin", "collide_to", "m"
 '''
 
 from .Arf2 import *
 __all__ = [
-	"An", "Pn", "REQUIRE",
+	"An", "Pn", "VERSE", "NEW_VERSE", "REQUIRE",
 	"OFFSET", "BEATS_PER_MINUTE", "BARS_PER_MINUTE", "SC_LAYER1", "SC_LAYER2",
-	"CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2",
-
+	"CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2", "i1", "i2",
+	"Origin", "collide_to", "m"
 ]
 
 
@@ -250,18 +250,19 @@ def w(of_layer2:bool = False, max_visible_distance:float = 7) -> WishGroup:
 
 	Args:
 		of_layer2 (bool): Is this WishGroup belongs to layer 2?  By default, newly-created WishGroup belongs to layer 1.
-		max_visible_distance (float): The max visible distance for WishChilds, Range [0,8].
+		max_visible_distance (float): The max visible distance for WishChilds, Range (0,8].
 
 	Returns:
 		new_wish (WishGroup): The newly-created WishGroup.
 	'''
 	max_visible_distance = float(max_visible_distance)
-	if max_visible_distance < 0  or  max_visible_distance > 8:
-		raise ValueError("MaxVisibleDistance out of Range [0,8].")
+	if max_visible_distance <= 0  or  max_visible_distance > 8:
+		raise ValueError("MaxVisibleDistance out of Range (0,8].")
 	elif max_visible_distance > 7.9990234375:
 		max_visible_distance = 7.9990234375
 	_w = WishGroup(of_layer2, max_visible_distance)
 	Arf2Prototype.wish.append(_w)
+	VERSE.append(_w)
 	return _w
 
 def n1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7) -> WishGroup:
@@ -269,7 +270,7 @@ def n1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 	A shorthand to create a Wish in layer 1 and then attach a PosNode with given arguments.
 
 	Example:
-		wn1(some_bartime,x=1,y=1)
+		n1(some_bartime,x=1,y=1)
 
 	Args:
 		bar (float): Bartime integer or the Original Bartime
@@ -277,7 +278,7 @@ def n1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 		dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
 		x (float): The x-axis position of the PosNode. Range[-16,32]
 		y (float): The y-axis position of the PosNode. Range[-8,16]
-		easetype (int): EaseType of the AngleNode. Use Pn.* Series.
+		easetype (int): EaseType of the PosNode. Use Pn.* Series.
 		curve_init (float): The initial ratio of the easing curve. Range[0,1]
 		curve_end (float): The end ratio of the easing curve. Range[0,1]
 		max_visible_distance (float): The max visible distance for WishChilds.
@@ -285,6 +286,7 @@ def n1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 	Returns:
 		new_wish (WishGroup): The newly-created WishGroup.
 	'''
+	# Args checking are finished in the method "w" and "h".
 	return w(False, max_visible_distance).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end)
 
 def n2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7) -> WishGroup:
@@ -292,7 +294,7 @@ def n2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 	A shorthand to create a Wish in layer 2 and then attach a PosNode with given arguments.
 
 	Example:
-		wn2(some_bartime,x=1,y=1)
+		n2(some_bartime,x=1,y=1)
 
 	Args:
 		bar (float): Bartime integer or the Original Bartime
@@ -300,7 +302,7 @@ def n2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 		dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
 		x (float): The x-axis position of the PosNode. Range[-16,32]
 		y (float): The y-axis position of the PosNode. Range[-8,16]
-		easetype (int): EaseType of the AngleNode. Use Pn.* Series.
+		easetype (int): EaseType of the PosNode. Use Pn.* Series.
 		curve_init (float): The initial ratio of the easing curve. Range[0,1]
 		curve_end (float): The end ratio of the easing curve. Range[0,1]
 		max_visible_distance (float): The max visible distance for WishChilds.
@@ -310,9 +312,194 @@ def n2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 	'''
 	return w(True, max_visible_distance).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end)
 
+def i1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7, ahead:Union[float,None] = None) -> WishGroup:
+	'''
+	A shorthand to create a Wish in layer 1, attach a PosNode with given arguments and its prefix PosNode,
+	And then create a WishChild with the default angle degree on the newly-created WishGroup.
+
+	Example:
+		i1(some_bartime,x=1,y=1)
+
+	Args:
+		bar (float): Bartime integer or the Original Bartime
+		nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
+		dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+		x (float): The x-axis position of the PosNode. Range[-16,32]
+		y (float): The y-axis position of the PosNode. Range[-8,16]
+		easetype (int): EaseType of the PosNode. Use Pn.* Series.
+		curve_init (float): The initial ratio of the easing curve. Range[0,1]
+		curve_end (float): The end ratio of the easing curve. Range[0,1]
+		max_visible_distance (float): The max visible distance for WishChilds.
+		ahead (Union[float,None]): Specify the ahead-visible-bartime
+								   before the Wish and its WishChild collide.
+
+	Returns:
+		new_wish (WishGroup): The newly-created WishGroup.
+	'''
+	# Args checking are finished in the method "w" and "h".
+	if ahead == None:
+		ahead = float(max_visible_distance) / 16.0
+	return w(False, max_visible_distance).n(bar-ahead, nmr, dnm, x, y).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end).c(bar, nmr, dnm)
+
+def i2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, curve_init:float=0, curve_end:float=1, max_visible_distance:float = 7, ahead:Union[float,None] = None) -> WishGroup:
+	'''
+	A shorthand to create a Wish in layer 2, attach a PosNode with given arguments and its prefix PosNode,
+	And then create a WishChild with the default angle degree on the newly-created WishGroup.
+
+	Example:
+		i2(some_bartime,x=1,y=1)
+
+	Args:
+		bar (float): Bartime integer or the Original Bartime
+		nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
+		dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+		x (float): The x-axis position of the PosNode. Range[-16,32]
+		y (float): The y-axis position of the PosNode. Range[-8,16]
+		easetype (int): EaseType of the PosNode. Use Pn.* Series.
+		curve_init (float): The initial ratio of the easing curve. Range[0,1]
+		curve_end (float): The end ratio of the easing curve. Range[0,1]
+		max_visible_distance (float): The max visible distance for WishChilds.
+		ahead (Union[float,None]): Specify the ahead-visible-bartime
+								   before the Wish and its WishChild collide.
+
+	Returns:
+		new_wish (WishGroup): The newly-created WishGroup.
+	'''
+	# Args checking are finished in the method "w" and "h".
+	if ahead == None:
+		ahead = float(max_visible_distance) / 16.0
+	return w(True, max_visible_distance).n(bar-ahead, nmr, dnm, x, y).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end).c(bar, nmr, dnm)
 
 # Official Tools & Patterns
-# def collide_to
-# def multi
-# def i1
-# def i2
+class Origin:
+	'''
+	Predefine an Origin Point, and you may chain PosNodes on the Origin Point Instance.
+
+	Args:
+		x (float): The x-axis position of the Origin. Range[-16,32]
+		y (float): The y-axis position of the Origin. Range[-8,16]
+		ahead_bar (float): Bartime integer or the Original Bartime, representing the time ahead the 1st attached PosNode.
+						   This Argument is Nullable.
+		ahead_nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
+		ahead_dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+		easetype (int): EaseType of the Origin. Use Pn.* Series.
+		curve_init (float): The initial ratio of the Origin's easing curve. Range[0,1]
+		curve_end (float): The end ratio of the Origin's easing curve. Range[0,1]
+		of_layer2 (bool): Is WishGroup(s) generated by the Origin belong(s) to layer 2?  By default, newly-created WishGroup belongs to layer 1.
+		max_visible_distance (float): Max visible distance of WishChilds for WishGroup(s) generated by the Origin.
+	'''
+	def __init__(self, x:float, y:float, ahead_bar:Union[float, None] = None, ahead_nmr:int = 0, ahead_dnm:int = 1, easetype:int = 0, curve_init:float = 0, curve_end:float = 1, of_layer2:bool = False, max_visible_distance:float = 7) -> None:
+		self.__x = float(x)
+		self.__y = float(y)
+		self.__et = int(easetype)
+		self.__ci = float(curve_init)
+		self.__ce = float(curve_end)
+		self.__mvd = float(max_visible_distance)
+		self.__ofl2 = bool(of_layer2)
+		self.__ahead = None
+		if ahead_bar:
+			self.__ahead = float(ahead_bar) + float(ahead_nmr) / float(ahead_dnm)
+
+	def n(self, bar:float, nmr:int = 0, dnm:int = 1, x:float = 0, y:float = 0, easetype:int = 0, curve_init:float = 0, curve_end:float = 1) -> WishGroup:
+		'''
+		Create a WishGroup with the Origin Info, and attach a PosNode with arguments passed in.
+
+		Args:
+			bar (float): Bartime integer or the Original Bartime
+			nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+			dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
+			x (float): The x-axis position of the PosNode. Range[-16,32]
+			y (float): The y-axis position of the PosNode. Range[-8,16]
+			easetype (int): EaseType of the AngleNode. Use Pn.* Series.
+			curve_init (float): The initial ratio of the easing curve. Range[0,1]
+			curve_end (float): The end ratio of the easing curve. Range[0,1]
+
+		Returns:
+			Result (WishGroup): for Method Chaining Usage.
+		'''
+		if self.__ahead == None:
+			self.__ahead = sqrt( (x-self.__x)**2 + (y-self.__y)**2 ) / 16.0
+		return w(self.__ofl2, self.__mvd).n(bar - self.__ahead, nmr, dnm, self.__x, self.__y, self.__et, self.__ci, self.__ce).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end)
+
+	def to(self, target:WishGroup, at_bar:float, at_nmr:int = 0, at_dnm:int = 1, easetype:int = 0, curve_init:float = 0, curve_end:float = 1, with_a_hint:bool = True) -> WishGroup:
+		'''
+		Create a WishGroup with the Origin Info, and let it collide to the target WishGroup.
+
+		Args:
+			target (WishGroup): The collision target.
+			at_bar (float): Bartime integer or the Original Bartime, representing the collision timing.
+			at_nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+			at_dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
+			easetype (int): EaseType of the AngleNode. Use Pn.* Series.
+			curve_init (float): The initial ratio of the easing curve. Range[0,1]
+			curve_end (float): The end ratio of the easing curve. Range[0,1]
+			with_a_hint (bool): If True, attach a Hint to the "calling" WishGroup with the bartime the
+								collision timing and the angle the default.
+
+		Returns:
+			Result (WishGroup): for Method Chaining Usage.
+		'''
+		if type(target) != "WishGroup":
+			raise ValueError('''The type of argument "target" must be "WishGroup".''')
+
+		at_bartime = float(at_bar) + float(at_nmr) / float(at_dnm)
+		if at_bartime < 0:
+			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+
+		target_get_result = target.GET(at_bartime)
+		if target_get_result == None:
+			raise RuntimeError("Failed to get the Position of the Collide Target.")
+		target_x = target_get_result[0]
+		target_y = target_get_result[1]
+
+		if self.__ahead == None:
+			self.__ahead = sqrt( (target_x-self.__x)**2 + (target_y-self.__y)**2 ) / 16.0
+
+		if with_a_hint: target.manual_hint(at_bartime)
+		return w(self.__ofl2, self.__mvd).n(at_bartime - self.__ahead, 0, 1, self.__x, self.__y, self.__et, self.__ci, self.__ce).n(at_bartime, 0, 1, target_x, target_y, easetype, curve_init, curve_end)
+
+
+def collide_to(target:WishGroup, at_bar:float, at_nmr:int = 0, at_dnm:int = 1, easetype:int = 0, curve_init:float = 0, curve_end:float = 1, with_a_hint:bool = True) -> FunctionType:
+	'''
+	A PseudoDecorator function to let multiple WishGroups collide.
+
+	Example:
+		# Suppose there are 3 WishGroups: wish_1, wish_2 and wish_3 .
+		wish_1 / collide_to(wish_2, 6,9,16) / collide_to(wish_3, 7,0,1)
+
+	Args:
+		target (WishGroup): The collision target.
+		at_bar (float): Bartime integer or the Original Bartime, representing the collision timing.
+		at_nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
+		at_dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
+		easetype (int): EaseType of the AngleNode. Use Pn.* Series.
+		curve_init (float): The initial ratio of the easing curve. Range[0,1]
+		curve_end (float): The end ratio of the easing curve. Range[0,1]
+		with_a_hint (bool): If True, attach a Hint to the "calling" WishGroup with the bartime the
+							collision timing and the angle the default.
+
+	Returns:
+		rtn (FunctionType): For PseudoDecorator Usage.
+	'''
+	if type(target) != "WishGroup":
+		raise ValueError('''The type of argument "target" must be "WishGroup".''')
+
+	at_bartime = float(at_bar) + float(at_nmr) / float(at_dnm)
+	if at_bartime < 0:
+		raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+
+	target_get_result = target.GET(at_bartime)
+	if target_get_result == None:
+		raise RuntimeError("Failed to get the Position of the Collide Target.")
+	target_x = target_get_result[0]
+	target_y = target_get_result[1]
+
+	def rtn(w:WishGroup) -> None:
+		w.n(at_bartime,0,1, target_x, target_y, easetype, curve_init, curve_end)
+		if with_a_hint: w.manual_hint(at_bartime,0,1)
+	return rtn
+
+
+def m(bar:float, nmr:int = 0, dnm:int = 1, x:float = 0, y:float = 0, *args, **kwargs) -> None:
+	# easetype:int = 0, curve_init:float = 0, curve_end:float = 1
+	pass
