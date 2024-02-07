@@ -38,11 +38,11 @@
 #include <dmsdk/dlib/buffer.h>
 #include <dmsdk/script/script.h>
 #include <dmsdk/gameobject/gameobject.h>
+#include <ease_constants.h> // extern const double DSIN[901], DCOS[901],
+							//					   ESIN[1001], ECOS[1001], RCP[8192];
 #include <arf2_generated.h>
 #include <unordered_map>
 #include <vector>
-extern const double DSIN[901], DCOS[901],
-					ESIN[1001], ECOS[1001], RCP[8192];
 
 // Data & Globals
 // For Safety Concern, Nothing will happen if !ArfSize.
@@ -1081,8 +1081,8 @@ static const luaL_reg M[] =   // Considering Adding a "JudgeArfController" Funct
 	{"NewTable", NewTable}, {0, 0}
 };
 static inline dmExtension::Result LuaInit(dmExtension::Params* p) {
-	luaL_register(p -> m_L, "Arf2", M);		return dmExtension::RESULT_OK;
-}
+	luaL_register(p->m_L, "Arf2", M);		lua_pop(p->m_L, 1);		return dmExtension::RESULT_OK;
+}   // Defold Restriction, Must Get the Lua Stack Balanced in the Initiation Process.
 static inline dmExtension::Result OK(dmExtension::Params* params) { return dmExtension::RESULT_OK; }
 static inline dmExtension::Result APPOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
 DM_DECLARE_EXTENSION(libArf2, "libArf2", APPOK, APPOK, LuaInit, 0, 0, OK)
