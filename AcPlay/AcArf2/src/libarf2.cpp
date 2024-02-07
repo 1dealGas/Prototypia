@@ -122,19 +122,19 @@ static inline void GetORIG(const float p1, const float p2, uint8_t et, const boo
 	else {
 		double fci = curve_init;		double fce = curve_end;
 		switch(et) {
-			case 0:
+			case 0: {
 				fci = ESIN[ (uint16_t)(1000 * fci) ];
 				fce = ESIN[ (uint16_t)(1000 * fce) ];
-				break;
-			case 1:
+				break; }
+			case 1: {
 				fci = ECOS[ (uint16_t)(1000 * fci) ];
 				fce = ECOS[ (uint16_t)(1000 * fce) ];
-				break;
-			case 2:
-				fci *= fci;		fce *= fce;		break;
-			case 3:
+				break; }
+			case 2: {
+				fci *= fci;		fce *= fce;		break; }
+			case 3: {
 				fci = 1.0 - fci;		fci = 1.0 - fci * fci;
-				fce = 1.0 - fce;		fce = 1.0 - fce * fce;
+				fce = 1.0 - fce;		fce = 1.0 - fce * fce; }
 		}
 
 		// To control the scale of the precision loss, the divisions here won't be optimized.
@@ -508,38 +508,38 @@ static inline int UpdateArf(lua_State *L)
 					else if(curve_end < 0.0f)		curve_end = 0.0f;	}
 
 				if( curve_init==0.0f && curve_end==1.0f ) {
-					x1 = ( (current_node>>31)&0x1fff - 2048 ) * 0.0078125f;
-					y1 = ( (current_node>>19)&0xfff - 1024 ) * 0.0078125f;
-					dx = ( (next_node>>31)&0x1fff - 2048 ) * 0.0078125f - x1;
-					dy = ( (next_node>>19)&0xfff - 1024 ) * 0.0078125f - y1;
+					x1 = ( ( (current_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
+					y1 = ( ( (current_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
+					dx = ( ( (next_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f - x1;
+					dy = ( ( (next_node>>19) & 0xfff ) - 1024 ) * 0.0078125f - y1;
 				}
 				else {
 					// Get the true x1,dx
-					float fm_x1 = ( (current_node>>31)&0x1fff - 2048 ) * 0.0078125f;
-					float fm_x2 = ( (next_node>>31)&0x1fff - 2048 ) * 0.0078125f;
+					float fm_x1 = ( ( (current_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
+					float fm_x2 = ( ( (next_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
 					GetORIG(fm_x1, fm_x2, et, false, curve_init, curve_end, x1, dx);
 
 					// Get the true y1,dy
-					float fm_y1 = ( (current_node>>19)&0xfff - 1024 ) * 0.0078125f;
-					float fm_y2 = ( (next_node>>19)&0xfff - 1024 ) * 0.0078125f;
+					float fm_y1 = ( ( (current_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
+					float fm_y2 = ( ( (next_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
 					GetORIG(fm_y1, fm_y2, et, true, curve_init, curve_end, y1, dy);
 				}
 
 
 				switch(et) {
-					case 1:
+					case 1: {
 						uint16_t curve_ratio = (uint16_t)
 											   ( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
 						node_x = x1 + dx * ESIN[curve_ratio];
 						node_y = y1 + dy * ECOS[curve_ratio];
-						break;
-					case 2:
+						break; }
+					case 2: {
 						uint16_t curve_ratio = (uint16_t)
 											   ( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
 						node_x = x1 + dx * ECOS[curve_ratio];
 						node_y = y1 + dy * ESIN[curve_ratio];
-						break;
-					default:   // case 3
+						break; }
+					default: {   // case 3
 						float ease_ratio; {
 							if(curve_init > curve_end) {
 								// The ACTUAL init ratio of the curve IS "curve_end" here
@@ -553,14 +553,14 @@ static inline int UpdateArf(lua_State *L)
 							}
 						}
 						node_x = x1 + dx * ease_ratio;
-						node_y = y1 + dy * ease_ratio;
+						node_y = y1 + dy * ease_ratio; }
 				}
 			}
 			else {
-				float x1 = ( (current_node>>31)&0x1fff - 2048 ) * 0.0078125f;
-				float y1 = ( (current_node>>19)&0xfff - 1024 ) * 0.0078125f;
-				float dx = ( (next_node>>31)&0x1fff - 2048 ) * 0.0078125f - x1;
-				float dy = ( (next_node>>19)&0xfff - 1024 ) * 0.0078125f - y1;
+				float x1 = ( ( (current_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
+				float y1 = ( ( (current_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
+				float dx = ( ( (next_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f - x1;
+				float dy = ( ( (next_node>>19) & 0xfff ) - 1024 ) * 0.0078125f - y1;
 				node_x = x1 + dx * node_ratio;
 				node_y = y1 + dy * node_ratio;
 			}
@@ -701,24 +701,24 @@ static inline int UpdateArf(lua_State *L)
 												double da = (double)(next_anode >> 20) - a1;
 												uint8_t et = (uint8_t)( (current_anode>>18) & 0b11 );
 												switch(et) {
-													case 0:
+													case 0: {
 														current_degree = a1 - 1800.0;
-														break;
-													case 1:
+														break; }
+													case 1: {
 														current_degree = a1 + da * a_ratio;
 														current_degree -= 1800.0;
-														break;
-													case 2:
+														break; }
+													case 2: {
 														a_ratio *= a_ratio;
 														current_degree = a1 + da * a_ratio;
 														current_degree -= 1800.0;
-														break;
-													case 3:
+														break; }
+													case 3: {
 														a_ratio = 1.0f - a_ratio;
 														a_ratio = 1.0f - a_ratio * a_ratio;
 														current_degree = a1 + da * a_ratio;
 														current_degree -= 1800.0;
-														break;
+														break; }
 												}	break;
 											}	current_child -> mutate_p( a_progress );
 										}
@@ -779,7 +779,7 @@ static inline int UpdateArf(lua_State *L)
 			uint8_t ch_status = HStatus(current_hint);
 			if( (ch_status<2) && dt>100 ) {   // Sweep, before generating rendering parameters.
 				hint_lost += 1;
-				hint -> Mutate(current_hint_id, current_hint & 0xfffffffffff + 0x100000000000 );
+				hint -> Mutate(current_hint_id, (current_hint & 0xfffffffffff) + 0x100000000000 );
 				ch_status = HINT_SWEEPED;
 			}
 			u = (current_hint<<1) >> 45;			int32_t pt = mstime - (int32_t)u;
@@ -804,15 +804,15 @@ static inline int UpdateArf(lua_State *L)
 				hgo_used++;
 			}
 			else if( dt <= 370 ) switch(ch_status) {
-				case HINT_NONJUDGED_NONLIT:
+				case HINT_NONJUDGED_NONLIT: {
 					hpos -> setX(posx).setY(posy).setZ( -0.04f );
 					htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
-					hgo_used++;		break;
-				case HINT_NONJUDGED_LIT:
+					hgo_used++;		break; }
+				case HINT_NONJUDGED_LIT: {
 					hpos -> setX(posx).setY(posy).setZ( -0.03f );
 					htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
-					hgo_used++;		break;
-				case HINT_JUDGED_LIT:   // No "break" here
+					hgo_used++;		break; }
+				case HINT_JUDGED_LIT: {   // No "break" here
 					hpos -> setX(posx).setY(posy).setZ( -0.01f );
 					if ( elt>=-37 && elt<=37 ) {
 						if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
@@ -822,8 +822,8 @@ static inline int UpdateArf(lua_State *L)
 						if( elt>37 ) 	htint -> setX(H_LATE_R).setY(H_LATE_G).setZ(H_LATE_B);
 						else 			htint -> setX(H_EARLY_R).setY(H_EARLY_G).setZ(H_EARLY_B);
 					}
-					hgo_used++;
-				case HINT_JUDGED:
+					hgo_used++; }
+				case HINT_JUDGED: {
 					if( pt <= 370 ) {
 						apos -> setX(posx).setY(posy).setZ( -pt*0.00001f );
 						if( pt<73 ) {
@@ -846,13 +846,13 @@ static inline int UpdateArf(lua_State *L)
 						}
 						lua_pushnumber(L, pt);	lua_rawseti(L, 3, ++ago_used);
 					}							// Sh*t from C++
-					break;
-				case HINT_SWEEPED:
+					break; }
+				case HINT_SWEEPED: {
 					float hl_rt = 0.437f - dt*0.00037f;
 					htint -> setX(hl_rt);		hl_rt *= 0.51f;		htint -> setY(hl_rt).setZ(hl_rt);
 					hpos -> setX(posx).setY(posy).setZ( -0.02f + dt*0.00001f );
-					hgo_used++;		break;
-				case HINT_AUTO:
+					hgo_used++;		break; }
+				case HINT_AUTO: {
 					if( dt>0 ) {
 
 						// HGo
@@ -883,7 +883,7 @@ static inline int UpdateArf(lua_State *L)
 						hpos -> setX(posx).setY(posy).setZ( -0.04f );
 						htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
 						hgo_used++;		break;
-					}
+					} }
 				// default:
 			}
 			else if(
@@ -968,8 +968,8 @@ static inline int JudgeArf(lua_State *L)
 								if( dt>=mindt && dt<=maxdt )	hint_hit += 1;
 								else							hint_lost += 1;
 
-								hint -> Mutate(current_hint_id, (uint64_t)mstime << 44 +
-								current_hint & 0xfffffffffff + 0x8000000000000000 );
+								hint -> Mutate(current_hint_id, (uint64_t)(mstime << 44) +
+								(current_hint & 0xfffffffffff) + 0x8000000000000000 );
 
 								if( current_hint_id == special_hint )
 								special_hint_judged = (bool)special_hint;
@@ -980,19 +980,19 @@ static inline int JudgeArf(lua_State *L)
 								if( dt>=mindt && dt<=maxdt )	hint_hit += 1;
 								else							hint_lost += 1;
 
-								hint -> Mutate(current_hint_id, (uint64_t)mstime << 44 +
-								current_hint & 0xfffffffffff + 0x8000000000000000 );
+								hint -> Mutate(current_hint_id, (uint64_t)(mstime << 44) +
+								(current_hint & 0xfffffffffff) + 0x8000000000000000 );
 
 								if( current_hint_id == special_hint )
 								special_hint_judged = (bool)special_hint;
 							}
 							// for Hints unsuitable to judge, just switch it into HINT_NONJUDGED_LIT.
 							else hint -> Mutate( current_hint_id,
-							(current_hint<<1) >> 1 + 0x8000000000000000 );
+							( (current_hint<<1) >> 1) + 0x8000000000000000 );
 						}
 						// for Hints out of judging range, just switch it into HINT_NONJUDGED_LIT.
 						else hint -> Mutate( current_hint_id,
-						(current_hint<<1) >> 1 + 0x8000000000000000 );
+						( (current_hint<<1) >> 1 ) + 0x8000000000000000 );
 					}
 					else hint -> Mutate( current_hint_id, (current_hint<<1) >> 1 );
 				}
@@ -1024,7 +1024,7 @@ static inline int JudgeArf(lua_State *L)
 				bool htn = has_touch_near(current_hint);
 
 				if( ch_status<2 ) {   // HINT_NONJUDGED
-					if(htn) hint -> Mutate( current_hint_id, (current_hint<<1) >> 1 + 0x8000000000000000 );
+					if(htn) hint -> Mutate( current_hint_id, ( (current_hint<<1) >> 1 ) + 0x8000000000000000 );
 					else	hint -> Mutate( current_hint_id, (current_hint<<1) >> 1 );
 				}
 				else if ( ch_status==HINT_JUDGED_LIT && (!htn) ){
