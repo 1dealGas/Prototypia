@@ -124,14 +124,14 @@ static inline void GetORIG(const float p1, const float p2, uint8_t et, const boo
 		switch(et) {
 			case 0: {
 				fci = ESIN[ (uint16_t)(1000 * fci) ];
-				fce = ESIN[ (uint16_t)(1000 * fce) ];
-				break; }
+				fce = ESIN[ (uint16_t)(1000 * fce) ]; }
+				break;
 			case 1: {
 				fci = ECOS[ (uint16_t)(1000 * fci) ];
-				fce = ECOS[ (uint16_t)(1000 * fce) ];
-				break; }
+				fce = ECOS[ (uint16_t)(1000 * fce) ]; }
+				break;
 			case 2: {
-				fci *= fci;		fce *= fce;		break; }
+				fci *= fci;		fce *= fce; }		break;
 			case 3: {
 				fci = 1.0 - fci;		fci = 1.0 - fci * fci;
 				fce = 1.0 - fce;		fce = 1.0 - fce * fce; }
@@ -531,14 +531,14 @@ static inline int UpdateArf(lua_State *L)
 						uint16_t curve_ratio = (uint16_t)
 											   ( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
 						node_x = x1 + dx * ESIN[curve_ratio];
-						node_y = y1 + dy * ECOS[curve_ratio];
-						break; }
+						node_y = y1 + dy * ECOS[curve_ratio]; }
+						break;
 					case 2: {
 						uint16_t curve_ratio = (uint16_t)
 											   ( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
 						node_x = x1 + dx * ECOS[curve_ratio];
-						node_y = y1 + dy * ESIN[curve_ratio];
-						break; }
+						node_y = y1 + dy * ESIN[curve_ratio]; }
+						break;
 					default: {   // case 3
 						float ease_ratio; {
 							if(curve_init > curve_end) {
@@ -702,23 +702,23 @@ static inline int UpdateArf(lua_State *L)
 												uint8_t et = (uint8_t)( (current_anode>>18) & 0b11 );
 												switch(et) {
 													case 0: {
-														current_degree = a1 - 1800.0;
-														break; }
+														current_degree = a1 - 1800.0; }
+														break;
 													case 1: {
 														current_degree = a1 + da * a_ratio;
-														current_degree -= 1800.0;
-														break; }
+														current_degree -= 1800.0; }
+														break;
 													case 2: {
 														a_ratio *= a_ratio;
 														current_degree = a1 + da * a_ratio;
-														current_degree -= 1800.0;
-														break; }
+														current_degree -= 1800.0; }
+														break;
 													case 3: {
 														a_ratio = 1.0f - a_ratio;
 														a_ratio = 1.0f - a_ratio * a_ratio;
 														current_degree = a1 + da * a_ratio;
-														current_degree -= 1800.0;
-														break; }
+														current_degree -= 1800.0; }
+														break;
 												}	break;
 											}	current_child -> mutate_p( a_progress );
 										}
@@ -807,11 +807,11 @@ static inline int UpdateArf(lua_State *L)
 				case HINT_NONJUDGED_NONLIT: {
 					hpos -> setX(posx).setY(posy).setZ( -0.04f );
 					htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
-					hgo_used++;		break; }
+					hgo_used++;	}	break;
 				case HINT_NONJUDGED_LIT: {
 					hpos -> setX(posx).setY(posy).setZ( -0.03f );
 					htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
-					hgo_used++;		break; }
+					hgo_used++;	}	break;
 				case HINT_JUDGED_LIT: {   // No "break" here
 					hpos -> setX(posx).setY(posy).setZ( -0.01f );
 					if ( elt>=-37 && elt<=37 ) {
@@ -845,13 +845,13 @@ static inline int UpdateArf(lua_State *L)
 							else 			atint -> setX(A_EARLY_R).setY(A_EARLY_G).setZ(A_EARLY_B);
 						}
 						lua_pushnumber(L, pt);	lua_rawseti(L, 3, ++ago_used);
-					}							// Sh*t from C++
-					break; }
+					} }							// Sh*t from C++
+					break;
 				case HINT_SWEEPED: {
 					float hl_rt = 0.437f - dt*0.00037f;
 					htint -> setX(hl_rt);		hl_rt *= 0.51f;		htint -> setY(hl_rt).setZ(hl_rt);
 					hpos -> setX(posx).setY(posy).setZ( -0.02f + dt*0.00001f );
-					hgo_used++;		break; }
+					hgo_used++;	}	break;
 				case HINT_AUTO: {
 					if( dt>0 ) {
 
@@ -882,8 +882,8 @@ static inline int UpdateArf(lua_State *L)
 					else {
 						hpos -> setX(posx).setY(posy).setZ( -0.04f );
 						htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
-						hgo_used++;		break;
-					} }
+						hgo_used++; }
+					}
 				// default:
 			}
 			else if(
