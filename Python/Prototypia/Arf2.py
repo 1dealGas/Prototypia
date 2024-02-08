@@ -21,6 +21,7 @@ E = Exception
 class MoveError						(E):pass
 class BPMInvalidError				(E):pass
 class ScaleInvalidError				(E):pass
+class AnglenodeInvalidError			(E):pass
 class InterpolationError			(E):pass
 class PseudoDecoratorError			(E):pass
 class ManualProhibition				(E):pass
@@ -423,7 +424,7 @@ class WishGroup:
 			raise TypeError("Invalid AngleNode EaseType. Use An.* Series.")
 
 		if self.__last_child == None:
-			raise RuntimeError("Please attach at least one WishChild on the WishGroup before creating a AngleNode.")
+			raise RuntimeError("Please attach at least one WishChild on the WishGroup before creating an AngleNode.")
 
 		_lc = self.__last_child
 		if _lc.is_default_angle:
@@ -758,12 +759,41 @@ class WishGroup:
 
 
 
-# Arf2 Compiler Function
+# Arf2 Compiler Functions
+def UpdateBPM() -> None:
+	__ms = Arf2Prototype.offset
+	b = Arf2Prototype.bpms
+	for i in range(len(b)):
+		if i == 0:
+			__new = ( b[0][0], b[0][1], __ms )
+			b[0] = __new
+		else:
+			# delta_bartime * (60000.0 / last_bars_per_minute)
+			__ms += (b[i][0] - b[i-1][0]) * (60000.0 / b[i-1][1])
+			__new = ( b[i][0], b[i][1], __ms )
+			b[i] = __new
+
+def GetMS(bar:float) -> int:
+	b = Arf2Prototype.bpms
+	if bar < b[0][0]: return 0
+	elif bar >= b[-1][0]:
+		return int( b[-1][2] + (bar - b[-1][0]) * (60000.0 / b[-1][1]) )
+	else:
+		for i in range( len(b) - 1 ):
+			c = b[i]
+			n = b[i+1]
+			# bar [c0,n0)
+			if bar < c[0]  or  bar >= n[0]: continue
+			return int( c[2] + (bar - c[0]) * (60000.0 / c[1]) )
+		return 0
+
 def Arf2Compile() -> None:
 	'''
 	This function processes the data contained in the Arf2Prototype class,
 	And then encode it into a *.arf file.
 	'''
+	# Do BPM Related Stuff
+	UpdateBPM()
 	# Merge Bartimes and Dts
 	# Add WishChilds-related Hints
 	# Calculate Object Params

@@ -3,7 +3,7 @@ Methods Provided:   # See also  GitHub.com/1dealGas/Prototypia  .
     "An", "Pn", "VERSE", "NEW_VERSE", "REQUIRE",
     "OFFSET", "BEATS_PER_MINUTE", "BARS_PER_MINUTE", "SC_LAYER1", "SC_LAYER2",
     "CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2", "i1", "i2",
-    "Origin", "collide_to", "m"
+    "m", "Origin", "AngleSet", "ApplyAngleSet", "MoveAngleNodes", "CollideTo"
 '''
 
 from .Arf2 import *
@@ -11,7 +11,7 @@ __all__ = [
 	"An", "Pn", "VERSE", "NEW_VERSE", "REQUIRE",
 	"OFFSET", "BEATS_PER_MINUTE", "BARS_PER_MINUTE", "SC_LAYER1", "SC_LAYER2",
 	"CURRENT_ANGLE", "specialize_last_hint", "w", "n1", "n2", "i1", "i2",
-	"Origin", "collide_to", "m"
+	"m", "Origin", "AngleSet", "ApplyAngleSet", "MoveAngleNodes", "CollideTo"
 ]
 
 
@@ -281,7 +281,7 @@ def n1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 		easetype (int): EaseType of the PosNode. Use Pn.* Series.
 		curve_init (float): The initial ratio of the easing curve. Range[0,1]
 		curve_end (float): The end ratio of the easing curve. Range[0,1]
-		max_visible_distance (float): The max visible distance for WishChilds.
+		max_visible_distance (float): The max visible distance for WishChilds, Range (0,8].
 
 	Returns:
 		new_wish (WishGroup): The newly-created WishGroup.
@@ -305,7 +305,7 @@ def n2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 		easetype (int): EaseType of the PosNode. Use Pn.* Series.
 		curve_init (float): The initial ratio of the easing curve. Range[0,1]
 		curve_end (float): The end ratio of the easing curve. Range[0,1]
-		max_visible_distance (float): The max visible distance for WishChilds.
+		max_visible_distance (float): The max visible distance for WishChilds, Range (0,8].
 
 	Returns:
 		new_wish (WishGroup): The newly-created WishGroup.
@@ -329,7 +329,7 @@ def i1(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 		easetype (int): EaseType of the PosNode. Use Pn.* Series.
 		curve_init (float): The initial ratio of the easing curve. Range[0,1]
 		curve_end (float): The end ratio of the easing curve. Range[0,1]
-		max_visible_distance (float): The max visible distance for WishChilds.
+		max_visible_distance (float): The max visible distance for WishChilds, Range (0,8].
 		ahead (Union[float,None]): Specify the ahead-visible-bartime
 								   before the Wish and its WishChild collide.
 
@@ -358,7 +358,7 @@ def i2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 		easetype (int): EaseType of the PosNode. Use Pn.* Series.
 		curve_init (float): The initial ratio of the easing curve. Range[0,1]
 		curve_end (float): The end ratio of the easing curve. Range[0,1]
-		max_visible_distance (float): The max visible distance for WishChilds.
+		max_visible_distance (float): The max visible distance for WishChilds, Range (0,8].
 		ahead (Union[float,None]): Specify the ahead-visible-bartime
 								   before the Wish and its WishChild collide.
 
@@ -371,6 +371,138 @@ def i2(bar:float, nmr:int=0, dnm:int=1, x:float=0, y:float=0, easetype:int=0, cu
 	return w(True, max_visible_distance).n(bar-ahead, nmr, dnm, x, y).n(bar, nmr, dnm, x, y, easetype, curve_init, curve_end).c(bar, nmr, dnm)
 
 # Official Tools & Patterns
+def m(bar:float, nmr:int, dnm:int, x:float, y:float, *args, **kwargs) -> list[WishGroup]:
+	# easetype:int = 0, curve_init:float = 0, curve_end:float = 1
+	# ahead_bar, ahead_nmr, ahead_dnm
+	'''
+	Create multiple WishGroups and make them collide at the provided position & time.
+
+	Mandatory Args:
+		bar (float): Bartime integer or the Original Bartime
+		nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
+		dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+		x (float): The x-axis position of the PosNode. Range[-16,32]
+		y (float): The y-axis position of the PosNode. Range[-8,16]
+
+	Args:
+		when you pass the kwarg "with_distances_alternated = True",
+		Pass degree(s) & distance(s) alternately; Pass only degree(s) else.
+		-- If you pass nothing, "args" will be [90] or [90,default_distance].
+
+	Keyword Args:
+		ahead_bar (float): Bartime integer or the Original Bartime, representing the time before the collision.
+						   This Argument is Nullable.
+		ahead_nmr (int): numerator to specify the internal position in a bar. Example 5/16 -> 5
+		ahead_dnm (int): denominator to specify the internal position in a bar. Example 5/16 -> 16
+		easetype (int): EaseType of the PosNode. Use Pn.* Series.
+		curve_init (float): The initial ratio of the easing curve. Range[0,1]
+		curve_end (float): The end ratio of the easing curve. Range[0,1]
+		default_distance (float): Set the default distance, 7.0 if not specified.
+		with_distances_alternated (bool): Whether "Args" includes degree(s) & distance(s) alternately,
+										  or only includes degree(s).
+		with_a_stationary_wish (bool): If True, the function creates an extra stationary WishGroup.
+		of_layer2 (bool): If True, all WishGroup(s) created will be of Layer 2.
+		max_visible_distance (float): The max visible distance for WishChilds, Range (0,8].
+
+	Returns:
+		Wishes (list[WishGroup]): The list of newly-created WishGroups.
+	'''
+	# Create Variables
+	__easetype:int = 0
+	__curve_init:float = 0
+	__curve_end:float = 1
+	__default_distance:float = 7.0
+	__ahead_bartime:float = None
+	__wda:bool = False
+	__wsw:bool = False
+	__ofl2:bool = False
+	__mvb:float = 7.0
+
+	# Check Mandatory Args
+	bartime = float(bar) + float(nmr) / float(dnm)
+	if bartime < 0:
+		raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+
+	x = float(x)
+	y = float(y)
+	if x < -16  or  x > 32:
+		raise ValueError("X-Axis Position out of Range [-16,32].")
+	if y < -8  or  y > 16:
+		raise ValueError("Y-Axis Position out of Range [-8,16].")
+
+	# Check kwargs
+	if "easetype" in kwargs:
+		__easetype = int(kwargs["easetype"])
+		if __easetype < 0  or  __easetype > 4:
+			raise TypeError("Invalid EaseType. Use Pn.* Series.")
+
+	if "curve_init" in kwargs:
+		__curve_init = float(kwargs["curve_init"])
+	if "curve_end" in kwargs:
+		__curve_end = float(kwargs["curve_end"])
+	if __curve_init < 0  or  __curve_init > 1:
+			raise ValueError("CurveInit out of Range [0,1].")
+	if __curve_end < 0  or  __curve_end > 1:
+			raise ValueError("CurveEnd out of Range [0,1].")
+	if __curve_init >= __curve_end:
+			raise ValueError("CurveEnd Value must be larger than CurveInit Value.")
+
+	if "default_distance" in kwargs:
+		__default_distance = float(kwargs["default_distance"])
+	if "with_distances_alternated" in kwargs:
+		__wda = bool(kwargs["with_distances_alternated"])
+	if "with_a_stationary_wish" in kwargs:
+		__wsw = bool(kwargs["with_a_stationary_wish"])
+
+	if "of_layer2" in kwargs:
+		__ofl2 = bool(kwargs["of_layer2"])
+	if "max_visible_distance" in kwargs:   # No Range Checking Here
+		__mvb = float(kwargs["max_visible_distance"])
+
+	if "ahead_bar" in kwargs:
+		__ab = kwargs["ahead_bar"]
+		__an = 0
+		__ad = 1
+		if "ahead_nmr" in kwargs: __an = kwargs["ahead_nmr"]
+		if "ahead_dnm" in kwargs: __ad = kwargs["ahead_dnm"]
+		__ahead_bartime = float( __ab ) + float( __an ) / float( __ad )
+		if __ahead_bartime < 0:
+			raise ValueError("Bartime Ahead must be larger than 0.")
+	else:
+		__ahead_bartime = __default_distance / 16.0
+
+	# Arrange args
+	if len(args) == 0:
+		if __wda: args = (90, __default_distance)
+		else: args = (90,)
+	deg_dist:list[Tuple[float,float]] = []
+	if __wda:
+		for i in range( 0, len(args), 2 ):
+			__deg = float(args[i])
+			__dist = float(args[i+1])
+			deg_dist.append( (__deg, __dist) )
+	else:
+		for deg in args:
+			__deg = float(deg)
+			deg_dist.append( (__deg, __default_distance) )
+
+	# Manipulate
+	rtn:list[WishGroup] = []
+	for t in deg_dist:
+		__rad = t[0] * pi / 180.0
+		__dx = t[1] * cos(__rad)
+		__dy = t[1] * sin(__rad)
+		rtn.append(
+			w(__ofl2, __mvb).n(bartime - __ahead_bartime,0,1, x+__dx, y+__dy, __easetype, __curve_init, __curve_end).n(bartime,0,1, x, y, 0, 0, 1)
+		)
+	if __wsw: rtn.append(
+		w(__ofl2, __mvb).n(bartime - __ahead_bartime,0,1, x, y, 0, 0, 1).n(bartime,0,1, x, y, 0, 0, 1)
+	)
+	rtn[-1].manual_hint(bartime)
+
+	return rtn
+
+
 class Origin:
 	'''
 	Predefine an Origin Point, and you may chain PosNodes on the Origin Point Instance.
@@ -459,13 +591,233 @@ class Origin:
 		return w(self.__ofl2, self.__mvd).n(at_bartime - self.__ahead, 0, 1, self.__x, self.__y, self.__et, self.__ci, self.__ce).n(at_bartime, 0, 1, target_x, target_y, easetype, curve_init, curve_end)
 
 
-def collide_to(target:WishGroup, at_bar:float, at_nmr:int = 0, at_dnm:int = 1, easetype:int = 0, curve_init:float = 0, curve_end:float = 1, with_a_hint:bool = True) -> FunctionType:
+class AngleSet:
+	'''
+	Predefine a set of AngleNodes, and then Apply them to a WishChild.
+
+	Example:
+		my_angleset = AngleSet(
+		#	BartimeAhead		Degree		EaseType
+			0.5,				90,			An.OUTQUAD,
+			0.25,				45,			An.INQUAD,
+			0,					0,			An.STASIS
+		)
+
+		some_wish / ApplyAngleSet(my_angleset)
+	'''
+	def __init__(self, *args) -> None:
+		self.ans:list[Tuple[float,int,int]] = []
+
+		__len = len(args)
+		if __len == 0  or  __len % 3 != 0 :
+			raise AnglenodeInvalidError("Pass Bartime, Degree and EaseType(An.*) alternately.")
+		for i in range(0,__len,3):
+			__bartime_ahead = float( args[i] )
+			__degree = int( args[i+1] )
+			__et = int( args[i+2] )
+			if __bartime_ahead < 0:
+				raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+			if __degree < -1800  or  __degree > 1800:
+				raise ValueError("Degree of AngleNode out of Range [-1800,1800].")
+			if __et < 0  or  __et > 3:
+				raise TypeError("Invalid AngleNode EaseType. Use An.* Series.")
+			self.ans.append( (__bartime_ahead, __degree, __et) )
+		self.ans.sort( key=lambda aon: aon[0], reverse=True )
+
+	def move(self, delta_bar:float = 0, delta_nmr:int = 0, delta_dnm:int = 1, delta_degree:int = 0, trim_by_interpolating:bool = True) -> Self:
+		'''
+		Move the AngleSet with several delta arguments specified.
+
+		Args:
+			delta_bar (float): Delta Bartime integer or the Original Delta Bartime
+			delta_nmr (int): Numerator to specify the internal position after a delta bar.
+							 Example 5/16 -> 5
+			delta_dnm (int): Denominator to specify the internal position after a deltabar.
+							 Example 5/16 -> 16
+			delta_degree (float): The delta degree for all angle values of the AngleSet.
+			trim_by_interpolating (bool): Whether interpolate AngleNodes before trimming
+										  Nodes with BartimeAhead smaller than 0.
+
+		Returns:
+			Result (AngleSet): for Method Chaining Usage.
+		'''
+		# Delta Check
+		delta_bartime = float(delta_bar) + float(delta_nmr) / float(delta_dnm)
+		if delta_bartime < 0:
+			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+		if delta_degree < -1800  or  delta_degree > 1800:
+			raise ValueError("Delta Degree out of Range [-1800,1800].")
+
+		# Manipulation
+		__len = len(self.ans)
+		for i in range(__len):
+			new_bt = self.ans[i][0] + delta_bartime
+			new_deg = self.ans[i][1] + delta_degree
+			if new_deg < -1800  or  new_deg > 1800:
+				raise ValueError("Moved AngleDegree out of Range [-1800,1800].")
+			et = self.ans[i][2]
+			self.ans[i] = (new_bt, new_deg, et)
+
+		# Trim
+		trimed = []
+		for i in range(__len-1):
+			as_l = self.ans[i]
+			as_r = self.ans[i+1]
+
+			if as_l[0] < 0: break
+			else: trimed.append(as_l)
+
+			if as_r[0] < 0:
+				if trim_by_interpolating:
+					ratio = as_l[0] / (as_l[0] - as_r[0])
+					deg0 = as_l[1]
+					degd = as_r[1] - deg0
+					et = as_l[2]
+
+					if et == 0: pass   # An.STASIS
+					elif et == 1:   # An.LINEAR
+						trimed.append( (0, deg0 + degd * ratio, 1) )
+					elif et == 2:   # An.INQUAD
+						ratio *= ratio
+						trimed.append( (0, deg0 + degd * ratio, 2) )
+					else:   # An.OUTQUAD
+						ratio = 1.0 - ratio
+						ratio = 1.0 - ratio * ratio
+						trimed.append( (0, deg0 + degd * ratio, 3) )
+				break
+			if i == __len-2  and  as_r[0] >= 0: trimed.append(as_r)
+
+		trimed.sort( key=lambda aon: aon[0], reverse=True )
+		self.ans = trimed
+
+		return self
+
+def ApplyAngleSet(s:AngleSet) -> FunctionType:
+	'''
+	A PseudoDecorator function to apply an AngleSet to the last
+	WishChild to the calling WishGroup.
+
+	Args:
+		s (AngleSet): The AngleSet to be applied.
+
+	Returns:
+		rtn (FunctionType): For PseudoDecorator Usage.
+	'''
+	if type(s) != "AngleSet":
+		raise ValueError('''The type of argument "s" must be "AngleSet".''')
+	if len(s.ans) == 0:
+		raise RuntimeError("Please attach at least one AngleNode on the AngleSet before applying the AngleSet.")
+
+	def rtn(w:WishGroup) -> None:
+		child:WishChild = (w()["last_child"])
+		if child == None:
+			raise RuntimeError("Please attach at least one WishChild on the WishGroup before applying an AngleSet.")
+
+		child.anodes = []
+		child_bar = child.bartime
+		for an in s.ans:
+			final_bar = child_bar - an[0]
+			if final_bar < 0:
+				raise RuntimeError("AngleSet Final Bartime(child_bar - anglenode_bar) smaller than 0.")
+			deg = an[1]
+			et = an[2]
+			child.anodes.append( (final_bar,deg,et) )
+		child.anodes.sort(key = lambda an: an[0])
+	return rtn
+
+
+def MoveAngleNodes(delta_bar:float = 0, delta_nmr:int = 0, delta_dnm:int = 1, delta_degree:int = 0, trim_by_interpolating:bool = True, for_all_childs:bool = False) -> FunctionType:
+	'''
+	A PseudoDecorator function to move AngleNode(s) related to the
+	calling WishGroup.
+
+	Args:
+		delta_bar (float): Delta Bartime integer or the Original Delta Bartime
+		delta_nmr (int): Numerator to specify the internal position after a delta bar.
+						 Example 5/16 -> 5
+		delta_dnm (int): Denominator to specify the internal position after a deltabar.
+						 Example 5/16 -> 16
+		delta_degree (float): The delta degree for all angle values of the AngleSet.
+		trim_by_interpolating (bool): Whether interpolate AngleNodes before trimming
+									  Nodes with BartimeAhead smaller than 0.
+		for_all_childs (bool): If False, the method applies the movement to the last
+							   WishChild; else, the method applies the movement to all
+							   WishChild(s) in the calling WishGroup.
+
+	Returns:
+		rtn (FunctionType): For PseudoDecorator Usage.
+	'''
+	# Delta Check
+	delta_bartime = float(delta_bar) + float(delta_nmr) / float(delta_dnm)
+	if delta_bartime < 0:
+		raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
+	if delta_degree < -1800  or  delta_degree > 1800:
+		raise ValueError("Delta Degree out of Range [-1800,1800].")
+
+	def __move(c:WishChild) -> None:
+		a = c.anodes
+		__len = len(a)
+
+		for i in range(__len):
+			new_bt = a[i][0] + delta_bartime
+			new_deg = a[i][1] + delta_degree
+			if new_deg < -1800  or  new_deg > 1800:
+				raise ValueError("Moved AngleDegree out of Range [-1800,1800].")
+			et = a[i][2]
+			a[i] = (new_bt, new_deg, et)
+
+		if __len < 2: a[0] = ( 0, a[0][1], 0 )
+		elif a[0][0] < 0:
+			if trim_by_interpolating:
+				for i in range(__len-1):
+					current_anode = a[i]
+					next_anode = a[i+1]
+
+					t1 = current_anode[0]
+					t2 = next_anode[0]
+					if t2 < 0: continue
+
+					angle_0 = current_anode[1]
+					d_angle = next_anode[1] - angle_0
+
+					ratio = (0-t1) / (t2-t1)
+					et = current_anode[2]
+					if et == 0:   # An.STASIS
+						ratio = 0
+					elif et == 1:   # An.LINEAR
+						pass
+					elif et == 2:   # An.INQUAD
+						ratio *= ratio
+					else:   # An.OUTQUAD
+						ratio = 1.0 - ratio
+						ratio = 1.0 - ratio * ratio
+
+					a.append( (0, angle_0 + d_angle * ratio, et) )
+					break
+				a.sort(key = lambda a: a[0])
+
+				while len(a) > 1  and  a[0][0] < 0: a.pop(0)
+				if __len < 2: a[0] = ( 0, a[0][1], 0 )
+
+	if for_all_childs:
+		def rtn(w:WishGroup) -> None:
+			childs:list[WishChild] = w()["childs"]
+			for c in childs: __move(c)
+		return rtn
+	else:
+		def rtn(w:WishGroup) -> None:
+			last_child:WishChild = w()["last_child"]
+			__move(last_child)
+		return rtn
+
+
+def CollideTo(target:WishGroup, at_bar:float, at_nmr:int = 0, at_dnm:int = 1, easetype:int = 0, curve_init:float = 0, curve_end:float = 1, with_a_hint:bool = True) -> FunctionType:
 	'''
 	A PseudoDecorator function to let multiple WishGroups collide.
 
 	Example:
 		# Suppose there are 3 WishGroups: wish_1, wish_2 and wish_3 .
-		wish_1 / collide_to(wish_2, 6,9,16) / collide_to(wish_3, 7,0,1)
+		wish_1 / CollideTo(wish_2, 6,9,16) / CollideTo(wish_3, 7,0,1)
 
 	Args:
 		target (WishGroup): The collision target.
@@ -498,8 +850,3 @@ def collide_to(target:WishGroup, at_bar:float, at_nmr:int = 0, at_dnm:int = 1, e
 		w.n(at_bartime,0,1, target_x, target_y, easetype, curve_init, curve_end)
 		if with_a_hint: w.manual_hint(at_bartime,0,1)
 	return rtn
-
-
-def m(bar:float, nmr:int = 0, dnm:int = 1, x:float = 0, y:float = 0, *args, **kwargs) -> None:
-	# easetype:int = 0, curve_init:float = 0, curve_end:float = 1
-	pass
