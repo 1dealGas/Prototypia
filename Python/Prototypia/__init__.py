@@ -703,7 +703,7 @@ def ApplyAngleSet(s:AngleSet) -> FunctionType:
 	Returns:
 		rtn (FunctionType): For PseudoDecorator Usage.
 	'''
-	if type(s) != "AngleSet":
+	if type(s) != AngleSet:
 		raise ValueError('''The type of argument "s" must be "AngleSet".''')
 	if len(s.ans) == 0:
 		raise RuntimeError("Please attach at least one AngleNode on the AngleSet before applying the AngleSet.")
@@ -833,7 +833,7 @@ def CollideTo(target:WishGroup, at_bar:float, at_nmr:int = 0, at_dnm:int = 1, ea
 	Returns:
 		rtn (FunctionType): For PseudoDecorator Usage.
 	'''
-	if type(target) != "WishGroup":
+	if type(target) != WishGroup:
 		raise ValueError('''The type of argument "target" must be "WishGroup".''')
 
 	at_bartime = float(at_bar) + float(at_nmr) / float(at_dnm)

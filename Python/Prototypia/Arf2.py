@@ -954,6 +954,13 @@ def Arf2Compile() -> None:
 	h_dict:dict[Tuple[int,float,float], Hint] = {}
 	for h in hlist:
 		if h.ref == None: continue
+		elif type(h.ref) != WishGroup:
+			print("\n----------------")
+			print("Wrong Hint Reference Discovered.")
+			print('''Please Don't modify the value of a Hint instance's "ref" member.''')
+			print("\nNo file change happened.")
+			print("----------------\n")
+			return
 		href:WishGroup = h.ref
 
 		bt = h.bartime
