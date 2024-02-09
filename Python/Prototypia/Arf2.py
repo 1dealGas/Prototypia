@@ -124,9 +124,9 @@ class Hint:
 		self.ref = Ref
 		self.is_special:bool = False
 
-		self._ms:int = 0
-		self._x:float = 0
-		self._y:float = 0
+		self._ms:int = None
+		self._x:float = None
+		self._y:float = None
 
 class PosNode:
 	'''
@@ -162,7 +162,7 @@ class WishChild:
 			(0, DefaultAngle, 0)
 		]
 		self._dt:float = 0
-		self._final_anodes:list[Tuple[float,int,int]] = []
+		self._final_anodes:list[Tuple[int,int,int]] = []   # (ms, angle, et)
 
 
 class WishGroup:
@@ -787,21 +787,241 @@ def GetMS(bar:float) -> int:
 			return int( c[2] + (bar - c[0]) * (60000.0 / c[1]) )
 		return 0
 
+class MergedTimeNode:
+	def __init__(self) -> None:
+		self.bar = None
+		self.bpm = None
+		self.scale = None
+		self.dt_ms = None
+		self.dt_base = None
+		self.dt_ratio = None
+
+def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
+	m.sort(key = lambda mtn: mtn.bar)   # Sort
+
+	# Fill bpm, scale, dt_ratio
+	m[0].dt_ratio = float(m[0].bpm * m[0].scale) / 15000.0
+	for i in range(1, len(m)):
+		__last:MergedTimeNode = m[i-1]
+		__current:MergedTimeNode = m[i]
+		if __current.bpm == None: __current.bpm = __last.bpm
+		if __current.scale == None: __current.scale = __last.scale
+		__current.dt_ratio = float(__current.bpm * __current.scale) / 15000.0
+
+	# Deduplicate by dt_ratio  &  Calculate dt_ms
+	m_d:list[MergedTimeNode] = [ m[0] ]
+	has_underzero = False
+	for mtnode in m[1:]:
+		if mtnode.dt_ratio == m_d[-1].dt_ratio: continue
+		else: m_d.append(mtnode)
+	for mtnode in m_d:
+		dtms = GetMS(mtnode.bar)
+		if dtms < 0:
+			has_underzero = True
+		mtnode.dt_ms = dtms
+
+	# Trim Nodes with dt_ms < 0
+	if has_underzero:
+		m_d.reverse()
+		index_1st = None
+		for i in range( len(m_d) - 1 ):
+			__former = m_d[i]
+			__latter = m_d[i+1]
+			if __latter.dt_ms < 0:
+				if __former.dt_ms > 0: index_1st = i+1   # dt_ms: >0 , <0
+				else: index_1st = i						 # dt_ms: =0 , <0
+				break
+		m_d = m_d[0: index_1st+1 ]   # [0,index_1st+1) -> [0,index_1st]
+		m_d.reverse()
+	m_d[0].dt_ms = 0
+
+	# Calculate dt_base
+	m_d[0].dt_base = 0
+	for i in range( 1, len(m_d) ):
+		__last = m_d[i-1]
+		__current = m_d[i]
+		__current.dt_base = __last.dt_base + (__current.dt_ms - __last.dt_ms) * __last.dt_ratio
+
+	return m_d
+
+def Bar2Dt(bar:float, m:list[MergedTimeNode]) -> float:
+	ms = GetMS(bar)
+	if ms < m[0].dt_ms: return 0
+	elif ms >= m[-1].dt_ms:
+		b = m[-1].dt_base
+		dms = ms - m[-1].dt_ms
+		r = m[-1].dt_ratio
+		return ( b + dms * r )
+	else:   # ms [dt_ms_1, dt_ms_2)
+		for i in range( len(m)-1 ):
+			__former = m[i]
+			__latter = m[i+1]
+			if ms < __former.dt_ms  or  ms >= __latter.dt_ms: continue
+			b = __former.dt_base
+			dms = ms - __former.dt_ms
+			r = __former.dt_ratio
+			return ( b + dms * r )
+		return 0
+
+m_layer1:list[MergedTimeNode] = []
+m_layer2:list[MergedTimeNode] = []
 def Arf2Compile() -> None:
 	'''
 	This function processes the data contained in the Arf2Prototype class,
 	And then encode it into a *.arf file.
+
+	Don't raise any Exception within, since it's an "atexit" function.
 	'''
 	# Do BPM Related Stuff
+	if len(Arf2Prototype.bpms) == 0:
+		print("\n----------------")
+		print("Please provide a BPM List of the Arf2 chart[fumen]")
+		print('''using the function "BARS_PER_MINUTE" or "BEATS_PER_MINUTE".''')
+		print("\nNo file change happened.")
+		print("----------------\n")
+		return
 	UpdateBPM()
+
 	# Merge Bartimes and Dts
-	# Add WishChilds-related Hints
-	# Calculate Object Params
+	dict_layer1:dict[float,MergedTimeNode] = {}
+	dict_layer2:dict[float,MergedTimeNode] = {}
+
+	for b in Arf2Prototype.bpms:   # (bartime, BPM, base_ms)
+		if b[0] in dict_layer1:
+			dict_layer1[ b[0] ].bpm = b[1]
+			dict_layer2[ b[0] ].bpm = b[1]
+		else:
+			m1 = MergedTimeNode()
+			m1.bar = b[0]
+			m1.bpm = b[1]
+			dict_layer1[ b[0] ] = m1
+
+			m2 = MergedTimeNode()
+			m2.bar = b[0]
+			m2.bpm = b[1]
+			dict_layer2[ b[0] ] = m2
+
+	for s in Arf2Prototype.scales_layer1:   # (bartime, scale)
+		if s[0] in dict_layer1:
+			dict_layer1[ s[0] ].scale = s[1]
+		else:
+			m = MergedTimeNode()
+			m.bar = s[0]
+			m.scale = s[1]
+			dict_layer1[ s[0] ] = m
+
+	for s in Arf2Prototype.scales_layer2:   # Same
+		if s[0] in dict_layer2:
+			dict_layer2[ s[0] ].scale = s[1]
+		else:
+			m = MergedTimeNode()
+			m.bar = s[0]
+			m.scale = s[1]
+			dict_layer2[ s[0] ] = m
+
+	for m in dict_layer1.values(): m_layer1.append( m )
+	for m in dict_layer2.values(): m_layer2.append( m )
+	dict_layer1 = None
+	dict_layer2 = None
+
+	m_layer1 = UpdateMerged(m_layer1)
+	m_layer2 = UpdateMerged(m_layer2)
+
+	# Add WishChilds-Related Hints
+	# Hint(Bartime, Ref)
+	for wg in Arf2Prototype.wish:
+		wg_dict:dict = wg()
+
+		'''
+		{
+			"childs" : self.__childs,
+			"useless" : self.__useless
+		}
+		'''
+
+		if wg_dict["useless"] :
+			mhints:list[Hint] = wg_dict["mhints"]
+			for mh in mhints: mh.ref = None
+			continue
+
+		childs_AWCRH:list[WishChild] = wg_dict["childs"]
+		for c in childs_AWCRH:
+			new_hint = Hint( c.bartime, wg )
+			Arf2Prototype.hint.append(new_hint)
+
+	# Calculate Hint Params, and Deduplicate
+	hlist:list[Hint] = Arf2Prototype.hint
+	h_dict:dict[Tuple[int,float,float], Hint] = {}
+	for h in hlist:
+		if h.ref == None: continue
+		href:WishGroup = h.ref
+
+		bt = h.bartime
+		g_result = href.GET(bt)
+		if g_result == None: continue
+
+		__ms = GetMS(bt)
+		__x = g_result[0]
+		__y = g_result[1]
+
+		h._ms = __ms
+		h._x = __x
+		h._y = __y
+
+		h_key = (__ms, __x, __y)
+		if not h_key in h_dict: h_dict[h_key] = h
+	Arf2Prototype.hint = []
+	for h in h_dict.values(): Arf2Prototype.hint.append(h)
+	h_dict = None
+	hlist = None
+
+	# Discard Useless WishGroups
+	new_wg = []
+	for wg in Arf2Prototype.wish:
+		if not wg()["useless"]: new_wg.append(wg)
+	Arf2Prototype.wish = new_wg
+	new_wg = None
+
+	# Calculate Object Params: Other mstimes & _dt for WishChilds
+	for wg in Arf2Prototype.wish:
+		wg_dict:dict = wg()
+
+		'''
+		{
+			"nodes" : self.__nodes,
+			"childs" : self.__childs,
+			"mhints" : self.__mhints,
+			"of_layer2" : self.__of_layer2,
+			"max_visible_distance" : self.__max_visible_distance,
+			"last_child" : self.__last_child,
+			"useless" : self.__useless
+		}
+		'''
+
+		nodes_COP:list[PosNode] = wg_dict["nodes"]
+		childs_COP:list[WishChild] = wg_dict["childs"]
+
+		for n in nodes_COP:
+			n._ms = GetMS(n.bartime)
+		for c in childs_COP:
+			c._dt = Bar2Dt(c.bartime)
+			for a in c.anodes:
+				c._final_anodes.append(
+					( GetMS(a[0]), a[1], a[2] )
+				)
+			if len( c._final_anodes ) == 1:
+				__deg = c._final_anodes[0][1]
+				c._final_anodes[0] = (0, __deg, 0)
+
 	# Final Sortings
 	# Produce Group Indexes
 	# Encode the Flatbuffers binary data
+	'''
+	wish, hint, wgo_required, hgo_required, special_hint -> Arf2Prototype
+	dts_layer1, dts_layer2 -> m_layer1, m_layer2
+	before, index -> (Indexes made in this Func)
+	'''
 	# File Backup & Export
-	pass
 
 
 # Automating the Compiler Function
