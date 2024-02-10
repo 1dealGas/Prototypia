@@ -1,11 +1,9 @@
-// Arf2 Encoded Format in FlatBuffers Schema Syntax
+// Arf2 Encoded Format with Echo&EchoChild implementation in FlatBuffers Schema Syntax
 // (c) 2024- 1dealGas, under the MIT License.
 
-
 // 0. Usage
-// flatc --cpp --no-cpp-direct-copy --gen-mutable Arf2.fbs
-// flatc --python Arf2.fbs
-
+// flatc --cpp --no-cpp-direct-copy --gen-mutable Arf2echo.fbs
+// flatc --python Arf2echo.fbs
 
 // 1. EaseType       ESIN: Sin (ratio * π/2)       ECOS: 1 - Cos (ratio * π/2)
 //    |       | 0      | 1      | 2      | 3                                 |
@@ -14,12 +12,10 @@
 //    | PosY  | Linear |  ECOS  |  ESIN  | InQuad if sgn >= 0 , OutQuad else |
 //    | Angle | Stasis | Linear | InQuad |              OutQuad              |
 
-
 // 2. DTime System
 //    Ratio = BPM * Scale / 15000;   Ratio = dx/d(mstime) or dy/d(mstime).
 //    Range of DBPM(BPM*Scale): [-2400, -0.15]&[0.15, 2400].
 //    Flashback: Ratio will be ratio_x105/(-100000.f) if base_x105[i]>base_x105[i+1].
-
 
 // 3. Compressible Structs (High->Low)
 //    A. DeltaNode
@@ -42,7 +38,7 @@
 //       (8)  node_prg:int						 Runtime Only
 //       (1)  layer:int             0 -> Layer1   or   1 -> Layer2
 //       (13) max_vsbdist:float     [0,8) Originally, Precision: 1/1024
-//    E. Hint
+//    E. Hint & Echo
 //       (1)  TAG:int                            Runtime Only
 //       (19) judged_ms:int         [0,512000]   Runtime Only
 //       (19) ms:int                [0,512000]
@@ -57,15 +53,24 @@ table WishChild {
 	anodes:[uint32];   // AngleNodes
 }
 
+table EchoChild {
+	p:uint8 = 255;     //                        Runtime Only
+	ms:uint16;         // ms * 0.125
+	dt:uint32;         // DTime * (10^5) * 0.5
+	anodes:[uint32];   // AngleNodes
+}
+
 table WishGroup {
 	info:uint32 = 4294967295;   // WishGroup Info
 	nodes:[uint64];   // PosNodes
 	childs:[WishChild];   // WishChilds
+	echilds:[EchoChild];   // EchoChilds
 }
 
 table Arf2Index {
 	widx:[uint16];
 	hidx:[uint16];
+	eidx:[uint16];
 }
 
 
@@ -87,14 +92,17 @@ table Arf2 {
 	hgo_required:uint8;
 	special_hint:uint16;
 
-}   // New object type(s) coming in future.
-root_type Arf2;
+	// Echoes
+	echo:[uint64];
+	ego_required:uint8;
+
+}   root_type Arf2;   // New object type(s) coming in future.
 
 
 // 6. Limits.
 //    A. Length < 512000ms
-//    B. WishChild: Max 255    AngleNodes for each
-//    C. WishGroup: Max 1023   WishChilds  &  255    PosNodes for each
-//    D. Arf2:      Max 65535  WishGroups  &  65535  Hints    for each Chart(FFumen),
-//                  Max 255    WishGroups  &  255    Hints    for each Frame.
+//    B. WishChild / EchoChild: Max 255    AngleNodes for each
+//    C. WishGroup:             Max 1023   WishChilds,  1023   EchoChilds  &  255    PosNodes for each
+//    D. Arf2:                  Max 65535  WishGroups,  65535  Echoes      &  65535  Hints    for each Chart(Fumen),
+//                              Max 255    WishGroups,  255    Echoes      &  255    Hints    for each Frame.
 //    E. (Recommended)  Interval(ms) between PosNodes(or AngleNodes) < 8193ms
