@@ -95,6 +95,6 @@ root_type Arf2;
 //    A. Length < 512000ms
 //    B. WishChild: Max 255    AngleNodes for each
 //    C. WishGroup: Max 1023   WishChilds  &  255    PosNodes for each
-//    D. Arf2:      Max 65535  WishGroups  &  65535  Hints    for each Chart(FFumen),
+//    D. Arf2:      Max 65535  WishGroups  &  65535  Hints    for each Chart(Fumen),
 //                  Max 255    WishGroups  &  255    Hints    for each Frame.
 //    E. (Recommended)  Interval(ms) between PosNodes(or AngleNodes) < 8193ms
