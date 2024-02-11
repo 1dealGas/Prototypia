@@ -967,6 +967,10 @@ def HintSorter(a:Hint, b:Hint) -> int:
 			elif a_xdist > b_xdist: return 1
 			else: return 0
 
+def RL(x:list) -> list:
+	x.reverse()
+	return x
+
 
 def Arf2Compile() -> None:
 	'''
@@ -1354,6 +1358,7 @@ def Arf2Compile() -> None:
 		table = TableType.End(builder)
 
 	(3) Tables CANNOT be created in a nested way.
+		Remind to Manually Reverse the Original lists, since Buffers are built back to front.
 	'''
 
 	# Encode, Serialize & Assemble the Final binary data
@@ -1372,7 +1377,7 @@ def Arf2Compile() -> None:
 
 	## 1D Structures / dts_layer1, dts_layer2, hint
 	Arf2Fb.StartDtsLayer1Vector(b, len(m_layer1))
-	for mtn in m_layer1:
+	for mtn in RL(m_layer1):
 		ratio_x105:int = int( abs(mtn.dt_ratio) * 100000 ) << 50   # Ratio Checked
 		half_init_ms:int = int(mtn.dt_ms * 0.5) << 32   # Checked
 		half_base_x105:int = int(mtn.dt_base * 0.5 * 100000)
@@ -1388,7 +1393,7 @@ def Arf2Compile() -> None:
 	Arf2Serialized.dts_layer1 = b.EndVector()
 
 	Arf2Fb.StartDtsLayer2Vector(b, len(m_layer2))
-	for mtn in m_layer2:
+	for mtn in RL(m_layer2):
 		ratio_x105:int = int( abs(mtn.dt_ratio) * 100000 ) << 50   # Ratio Checked
 		half_init_ms:int = int(mtn.dt_ms * 0.5) << 32   # Checked
 		half_base_x105:int = int(mtn.dt_base * 0.5 * 100000)
@@ -1404,7 +1409,7 @@ def Arf2Compile() -> None:
 	Arf2Serialized.dts_layer2 = b.EndVector()
 
 	Arf2Fb.StartHintVector(b, len(hlist_final))
-	for h in hlist_final:
+	for h in RL(hlist_final):
 		ms = int(h._ms) << 25   # Checked
 		y = int( (h._y + 8.0) * 128 ) << 13   # Checked
 		x = int( (h._x + 16.0) * 128 )   # Checked
@@ -1415,7 +1420,7 @@ def Arf2Compile() -> None:
 	idxlen = len(widx)
 	for i in range( idxlen ):
 
-		current_widx = widx[i]
+		current_widx = RL(widx[i])
 		Arf2Index.StartWidxVector(b, len(current_widx))
 		for value in current_widx:
 			if value > 65535:
@@ -1429,7 +1434,7 @@ def Arf2Compile() -> None:
 			b.PrependUint16(value)
 		current_widx_serialized = b.EndVector()
 
-		current_hidx = hidx[i]
+		current_hidx = RL(hidx[i])
 		Arf2Index.StartHidxVector(b, len(current_hidx))
 		for value in current_hidx:
 			if value > 65535:
@@ -1449,11 +1454,11 @@ def Arf2Compile() -> None:
 		Arf2Serialized.index.append( Arf2Index.End(b) )
 
 	Arf2Fb.StartIndexVector(b, idxlen)
-	for tbl in Arf2Serialized.index: b.PrependUOffsetTRelative(tbl)
+	for tbl in RL(Arf2Serialized.index): b.PrependUOffsetTRelative(tbl)
 	Arf2Serialized.index = b.EndVector()
 
 	## Complex Structure / WishGroup
-	for wg in wlist_final:
+	for wg in RL(wlist_final):
 		wgd:dict = wg()
 		'''
 		{
@@ -1467,13 +1472,13 @@ def Arf2Compile() -> None:
 
 		# WishChild: list[AngleNode] -> F_VECTOR[AngleNode] -> F_TABLE[WishChild]
 		childs_S:list[WishChild] = wgd["childs"]
-		for ch in childs_S:
+		for ch in RL(childs_S):
 
 			# "WishChildFb" is an alias of class[WishChild.py -> WishChild],
 			# rather than class[Arf2.py -> WishChild].
 			# The code analysis of Pylance is wrongful here.
 			WishChildFb.StartAnodesVector( b, len(ch._final_anodes) )
-			for an in ch._final_anodes:   # (ms, angle, et)
+			for an in RL(ch._final_anodes):   # (ms, angle, et)
 				degree = int( an[1] + 1800 ) << 20
 				easetype = int( an[2] ) << 18
 				halfms = int( an[0] / 2 )
@@ -1494,19 +1499,19 @@ def Arf2Compile() -> None:
 
 		# WishChild: list[F_TABLE[WishChild]] -> F_VECTOR[WishChild]
 		WishGroupFb.StartChildsVector(b, len(childs_S) )
-		for c_serialized in __s_childs: b.PrependUOffsetTRelative(c_serialized)
+		for c_serialized in RL(__s_childs): b.PrependUOffsetTRelative(c_serialized)
 		__s_childs = b.EndVector()
 
 		# PosNode: list[PosNode] -> F_VECTOR[PosNode]
 		nodes_S:list[PosNode] = wgd["nodes"]
 		WishGroupFb.StartNodesVector(b, len(nodes_S) )
-		for pn in nodes_S:
+		for pn in RL(nodes_S):
 			curve_init = int(pn.curve_init * 511) << 55   # Checked
 			curve_end = int(pn.curve_end * 511) << 46   # Checked
 			_easetype = int(pn.easetype) << 44   # Checked
 			_x = int( (pn.x + 16) * 128 ) << 31   # Checked
 			_y = int( (pn.y + 8) * 128 ) << 19   # Checked
-			b.PrependUint64( curve_init + curve_end + _easetype + _x + _y )
+			b.PrependUint64( curve_init + curve_end + _easetype + _x + _y + pn._ms )
 		__s_nodes = b.EndVector()
 
 		# Encode Info
@@ -1522,7 +1527,7 @@ def Arf2Compile() -> None:
 
 	## WishGroup: list[F_TABLE[WishGroup]] -> F_VECTOR[WishGroup]
 	Arf2Fb.StartWishVector(b, len(wlist_final))
-	for wg_serialized in Arf2Serialized.wish: b.PrependUOffsetTRelative(wg_serialized)
+	for wg_serialized in RL(Arf2Serialized.wish): b.PrependUOffsetTRelative(wg_serialized)
 	Arf2Serialized.wish = b.EndVector()
 
 	## Serialize the Root Table
@@ -1557,8 +1562,7 @@ def Arf2Compile() -> None:
 
 	## Transfer the Buf into the *.ar file
 	buf:bytearray = b.Output()
-	with open( path, mode = "wb") as buf_file:
-		buf_file.write(buf)
+	with open( path, mode = "wb") as buf_file: buf_file.write(buf)
 
 
 
