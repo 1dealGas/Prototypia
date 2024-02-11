@@ -31,25 +31,17 @@ class Pn:
 	OUTQUAD = 4
 class __R:
 	'''An internal class managing wgo_required & hgo_required.'''
-	__cnt = 0
 	def __getitem__(self, idx):
-		if __R.__cnt == 0:
-			__idx = int(idx)
-			if __idx < 0 or __idx > 255: raise ValueError("""Don't require less than 0 objects or more than 255 objects.""")
-			Arf2Prototype.wgo_required = __idx
-			__R.__cnt = 1
-		elif __R.__cnt == 1:
-			__idx = int(idx)
-			if __idx < 0 or __idx > 255: raise ValueError("""Don't require less than 0 objects or more than 255 objects.""")
-			Arf2Prototype.hgo_required = __idx
-			__R.__cnt = 2
+		__idx = int(idx)
+		if __idx < 0 or __idx > 255: raise ValueError("""Don't require less than 0 objects or more than 255 objects.""")
+		Arf2Prototype.wgo_required = __idx
 		return self
 REQUIRE = __R()
 """
 After Debugging your Arf2 chart[fumen] in the viewer,
 Play the chart[fumen] entirely, and then Add this line at the end of your *.py file:
-	REQUIRE[w][h]
-Param "w" & "h" are provided in the title of the viewer window.
+	REQUIRE[w]
+Param "w" is shown in the title of the viewer window.
 """
 
 
@@ -164,6 +156,8 @@ def SC_LAYER1(*args) -> None:
 			raise ValueError("The 1st SpeedScale must be larger than 0.")
 		Arf2Prototype.scales_layer1.append( (__bar,__scl) )
 	Arf2Prototype.scales_layer1.sort(key = lambda sctpl: sctpl[0])
+	if Arf2Prototype.scales_layer1[-1][1] < 0:
+		raise ValueError("The Last SpeedScale must not be smaller than 0.")
 
 def SC_LAYER2(*args) -> None:
 	'''
@@ -197,6 +191,8 @@ def SC_LAYER2(*args) -> None:
 			raise ValueError("The 1st SpeedScale must be larger than 0.")
 		Arf2Prototype.scales_layer2.append( (__bar,__scl) )
 	Arf2Prototype.scales_layer2.sort(key = lambda sctpl: sctpl[0])
+	if Arf2Prototype.scales_layer2[-1][1] < 0:
+		raise ValueError("The Last SpeedScale must not be smaller than 0.")
 
 
 # Composational Functions

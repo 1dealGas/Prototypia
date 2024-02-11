@@ -83,20 +83,32 @@ def get_original(p1:float, p2:float, curve_init:float, curve_end:float, ease_fun
 	return (p,dp)
 
 @functools.cmp_to_key
-def PosNodeSorter(a, b) -> int:
+def OPSorter(a, b) -> int:
+	'''
+	To implement the Overlap Prohibition,
+	use this sorter instead of "lambda x: x.bartime".
+	'''
 	if a.bartime > b.bartime: return 1
 	elif a.bartime < b.bartime: return -1
 	elif id(a) == id(b): return 0
-	else: raise OverlapProhibition('''Adding multiple PosNodes with the same Bartime to a single WishGroup is prohibited.''')
+	else: raise OverlapProhibition("Adding multiple PosNodes/WishChilds/Hints with the same Bartime to a single WishGroup is prohibited.")
+
+@functools.cmp_to_key
+def OPSorterForAngleNodes(a:Tuple[float,int,int], b:Tuple[float,int,int]) -> int:
+	if a[0] > b[0]: return 1
+	elif a[0] < b[0]: return -1
+	elif id(a) == id(b): return 0
+	else: raise OverlapProhibition("Adding multiple AngleNodes with the same Bartime to a single WishChild is prohibited.")
 
 
-# Arf2 Prototype
+# Arf2 Class Defs
 class Arf2Prototype:
 	'''
 	A rough Singeleton class of the Prototype Data of an Arf2 chart[fumen].
 	'''
 	wgo_required:int							= 255   		# [0,255]
 	hgo_required:int							= 255   		# [0,255]
+	special_hint:int							= 0				# [0,65535]
 	hint:list									= []			# Type: list[Hint]
 	wish:list									= []			# Type: list[WishGroup]
 
@@ -107,6 +119,29 @@ class Arf2Prototype:
 
 	current_angle:int							= 90			# Degree [-1800,1800]
 	last_hint									= None			# Type: Hint
+
+class F_VECTOR: '''Refers to a Serialized Flatbuffers Vector.'''
+class F_TABLE: '''Refers to a Serialized Flatbuffers Table.'''
+class WCSerialized:
+	def __init__(self) -> None:
+		self.p:int = 255
+		self.dt:int = 0
+		self.anodes:F_VECTOR = []
+class WGSerialized:
+	def __init__(self) -> None:
+		self.info:int = 4294967295
+		self.nodes:F_VECTOR = []
+		self.childs:Union[list[WCSerialized], list[F_TABLE], F_VECTOR] = []
+class Arf2Serialized:
+	before:int = 0
+	dts_layer1:F_VECTOR
+	dts_layer2:F_VECTOR
+	index:Union[list[F_TABLE], F_VECTOR] = []
+	wish:Union[list[WGSerialized], list[F_TABLE], F_VECTOR] = []
+	wgo_required:int = 0
+	hint:F_VECTOR = []
+	hgo_required:int = 0
+	special_hint:int = 0
 
 
 # Arf2 Data Structure Classes
@@ -266,7 +301,7 @@ class WishGroup:
 				y2 = next_posnode.y
 
 				return_x = return_y = 0
-				if ci == 0 and ce == 1:
+				if (ci == 0  and  ce == 1)  or  (ci == 1  and  ce == 0  and  easetype == 3):
 					dx = x2 - x1
 					dy = y2 - y1
 					actual_ratio = original_ratio
@@ -278,11 +313,13 @@ class WishGroup:
 						return_x = x1 + dx * ECOS(actual_ratio)
 						return_y = y1 + dy * ESIN(actual_ratio)
 					elif ci > ce:
-						return_x = x1 + dx * OutQuad(actual_ratio)
-						return_y = y1 + dy * OutQuad(actual_ratio)
+						O = OutQuad(actual_ratio)
+						return_x = x1 + dx * O
+						return_y = y1 + dy * O
 					else:
-						return_x = x1 + dx * InQuad(actual_ratio)
-						return_y = y1 + dy * InQuad(actual_ratio)
+						I = InQuad(actual_ratio)
+						return_x = x1 + dx * I
+						return_y = y1 + dy * I
 
 				elif easetype == 1:
 					x0,dx = get_original(x1, x2, ci, ce, ESIN)
@@ -300,14 +337,16 @@ class WishGroup:
 					x0,dx = get_original(x1, x2, ce, ci, OutQuad)
 					y0,dy = get_original(y1, y2, ce, ci, OutQuad)
 					actual_ratio = ce + original_ratio * ( ci - ce )
-					return_x = x0 + dx * OutQuad(actual_ratio)
-					return_y = y0 + dy * OutQuad(actual_ratio)
+					O = OutQuad(actual_ratio)
+					return_x = x0 + dx * O
+					return_y = y0 + dy * O
 				else:
 					x0,dx = get_original(x1, x2, ci, ce, InQuad)
 					y0,dy = get_original(y1, y2, ci, ce, InQuad)
 					actual_ratio = ci + original_ratio * ( ce - ci )
-					return_x = x0 + dx * InQuad(actual_ratio)
-					return_y = y0 + dy * InQuad(actual_ratio)
+					I = InQuad(actual_ratio)
+					return_x = x0 + dx * I
+					return_y = y0 + dy * I
 
 				return (return_x, return_y, original_ratio, actual_ratio, current_posnode, next_posnode)
 
@@ -366,7 +405,7 @@ class WishGroup:
 
 		n = PosNode(bartime, x, y, easetype, curve_init, curve_end)
 		self.__nodes.append(n)
-		self.__nodes.sort(key = PosNodeSorter)
+		self.__nodes.sort(key = OPSorter)
 		return self
 
 	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:int = Arf2Prototype.current_angle) -> Self:
@@ -394,7 +433,7 @@ class WishGroup:
 		c = WishChild(bartime, angle)
 		self.__last_child = c
 		self.__childs.append(c)
-		self.__childs.sort( key = lambda wc: wc.bartime )
+		self.__childs.sort( key = OPSorter )
 		return self
 
 	def a(self, bar:float, nmr:int = 0, dnm:int = 1, degree:int = 90, easetype:int = 0) -> Self:
@@ -432,7 +471,7 @@ class WishGroup:
 			_lc.is_default_angle = False
 		else:
 			_lc.anodes.append( (bartime,degree,easetype) )
-			_lc.anodes.sort(key = lambda a: a[0])
+			_lc.anodes.sort(key = OPSorterForAngleNodes)
 		return self
 
 
@@ -458,7 +497,7 @@ class WishGroup:
 		Arf2Prototype.hint.append(h)   # Hints in the Arf2Protorype class will be sorted in the compling process.
 
 		self.__mhints.append(h)
-		self.__mhints.sort(key = lambda ht: ht.bartime)
+		self.__mhints.sort(key = OPSorter)
 
 		return self
 
@@ -759,7 +798,7 @@ class WishGroup:
 
 
 
-# Arf2 Compiler Functions
+# Arf2 Compiler
 def UpdateBPM() -> None:
 	__ms = Arf2Prototype.offset
 	b = Arf2Prototype.bpms
@@ -795,18 +834,52 @@ class MergedTimeNode:
 		self.dt_ms = None
 		self.dt_base = None
 		self.dt_ratio = None
-
 def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
+	def dbpmprint() -> None:
+		print("\n----------------")
+		print("Warning:")
+		print("DBPM( BPM*Scale ) Out of Range [-2400,-0.15]&[0.15,2400] ,")
+		print("Ratio will be clamped.")
+		print("----------------\n")
 	m.sort(key = lambda mtn: mtn.bar)   # Sort
 
 	# Fill bpm, scale, dt_ratio
-	m[0].dt_ratio = float(m[0].bpm * m[0].scale) / 15000.0
+	dbpm0 = float(m[0].bpm * m[0].scale)
+	if dbpm0 > 2400:
+		dbpmprint()
+		dbpm0 = 2400
+	elif dbpm0 > 0  and  dbpm0 < 0.15:
+		dbpmprint()
+		dbpm0 = 0.15
+	elif dbpm0 < 0  and  dbpm0 > -0.15:
+		dbpmprint()
+		dbpm0 = -0.15
+	elif dbpm0 < -2400:
+		dbpmprint()
+		dbpm0 = -2400
+
+	m[0].dt_ratio = dbpm0 / 15000.0
 	for i in range(1, len(m)):
 		__last:MergedTimeNode = m[i-1]
 		__current:MergedTimeNode = m[i]
 		if __current.bpm == None: __current.bpm = __last.bpm
 		if __current.scale == None: __current.scale = __last.scale
-		__current.dt_ratio = float(__current.bpm * __current.scale) / 15000.0
+		current_dbpm = float(__current.bpm * __current.scale)
+
+		if current_dbpm > 2400:
+			dbpmprint()
+			current_dbpm = 2400
+		elif current_dbpm > 0  and  current_dbpm < 0.15:
+			dbpmprint()
+			current_dbpm = 0.15
+		elif current_dbpm < 0  and  current_dbpm > -0.15:
+			dbpmprint()
+			current_dbpm = -0.15
+		elif current_dbpm < -2400:
+			dbpmprint()
+			current_dbpm = -2400
+	
+		__current.dt_ratio = current_dbpm / 15000.0
 
 	# Deduplicate by dt_ratio  &  Calculate dt_ms
 	m_d:list[MergedTimeNode] = [ m[0] ]
@@ -863,8 +936,50 @@ def Bar2Dt(bar:float, m:list[MergedTimeNode]) -> float:
 			return ( b + dms * r )
 		return 0
 
-m_layer1:list[MergedTimeNode] = []
-m_layer2:list[MergedTimeNode] = []
+@functools.cmp_to_key
+def WishGroupSorter(a:WishGroup, b:WishGroup) -> int:
+	# 1st_ms -> 1st_ydist -> 1st_xdist -> length
+	a_nodes:list[PosNode] = a()["nodes"]
+	b_nodes:list[PosNode] = b()["nodes"]
+	a_1st:PosNode = a_nodes[1]
+	b_1st:PosNode = b_nodes[1]
+	if a_1st._ms < b_1st.ms: return -1
+	elif a_1st._ms > b_1st.ms: return 1
+	else:
+		a_ydist = abs(0.5 - a_1st.y)
+		b_ydist = abs(0.5 - b_1st.y)
+		if a_ydist < b_ydist: return -1
+		elif a_ydist > b_ydist: return 1
+		else:
+			a_xdist = abs(8.0 - a_1st.x)
+			b_xdist = abs(8.0 - b_1st.x)
+			if a_xdist < b_xdist: return -1
+			elif a_xdist > b_xdist: return 1
+			else:
+				a_length = a_nodes[-1]._ms - a_1st._ms
+				b_length = b_nodes[-1]._ms - b_1st._ms
+				if a_length < b_length: return -1
+				elif a_length > b_length: return 1
+				else: return 0
+
+@functools.cmp_to_key
+def HintSorter(a:Hint, b:Hint) -> int:
+	# ms -> ydist -> xdist
+	if a._ms < b._ms: return -1
+	elif a._ms > b._ms: return 1
+	else:
+		a_ydist = abs(0.5 - a._y)
+		b_ydist = abs(0.5 - b._y)
+		if a_ydist < b_ydist: return -1
+		elif a_ydist > b_ydist: return 1
+		else:
+			a_xdist = abs(8.0 - a._x)
+			b_xdist = abs(8.0 - b._x)
+			if a_xdist < b_xdist: return -1
+			elif a_xdist > b_xdist: return 1
+			else: return 0
+
+
 def Arf2Compile() -> None:
 	'''
 	This function processes the data contained in the Arf2Prototype class,
@@ -919,12 +1034,15 @@ def Arf2Compile() -> None:
 			m.scale = s[1]
 			dict_layer2[ s[0] ] = m
 
+	m_layer1:list[MergedTimeNode] = []
+	m_layer2:list[MergedTimeNode] = []
+
 	for m in dict_layer1.values(): m_layer1.append( m )
 	for m in dict_layer2.values(): m_layer2.append( m )
 	dict_layer1 = None
 	dict_layer2 = None
 
-	m_layer1 = UpdateMerged(m_layer1)
+	m_layer1 = UpdateMerged(m_layer1)   # DeltaNodes sorted here.
 	m_layer2 = UpdateMerged(m_layer2)
 
 	# Add WishChilds-Related Hints
@@ -953,7 +1071,7 @@ def Arf2Compile() -> None:
 	hlist:list[Hint] = Arf2Prototype.hint
 	h_dict:dict[Tuple[int,float,float], Hint] = {}
 	for h in hlist:
-		if h.ref == None: continue
+		if h.ref == None: continue   # Trim I: Hint that has no Ref
 		elif type(h.ref) != WishGroup:
 			print("\n----------------")
 			print("Wrong Hint Reference Discovered.")
@@ -965,27 +1083,32 @@ def Arf2Compile() -> None:
 
 		bt = h.bartime
 		g_result = href.GET(bt)
-		if g_result == None: continue
+		if g_result == None: continue   # Trim I: Hint that has no Interpolation Result
 
 		__ms = GetMS(bt)
-		__x = g_result[0]
-		__y = g_result[1]
+		if __ms >= 0:   # Trim I: Hint that mstime < 0
+			__x = g_result[0]
+			__y = g_result[1]
 
-		h._ms = __ms
-		h._x = __x
-		h._y = __y
+			h._ms = __ms
+			h._x = __x
+			h._y = __y
 
-		h_key = (__ms, __x, __y)
-		if not h_key in h_dict: h_dict[h_key] = h
+			# Trim I: Hint that overlapped on another Hint
+			h_key = (__ms, __x, __y)
+			if not h_key in h_dict:
+				h_dict[h_key] = h
 	Arf2Prototype.hint = []
 	for h in h_dict.values(): Arf2Prototype.hint.append(h)
 	h_dict = None
 	hlist = None
 
-	# Discard Useless WishGroups
+	# Discard Useless WishGroups & WishGroups that has less than 2 PosNodes
 	new_wg = []
 	for wg in Arf2Prototype.wish:
-		if not wg()["useless"]: new_wg.append(wg)
+		if wg()["useless"]: pass
+		elif len( wg()["nodes"] ) < 2: pass
+		else: new_wg.append(wg)
 	Arf2Prototype.wish = new_wg
 	new_wg = None
 
@@ -997,21 +1120,18 @@ def Arf2Compile() -> None:
 		{
 			"nodes" : self.__nodes,
 			"childs" : self.__childs,
-			"mhints" : self.__mhints,
-			"of_layer2" : self.__of_layer2,
-			"max_visible_distance" : self.__max_visible_distance,
-			"last_child" : self.__last_child,
-			"useless" : self.__useless
+			"of_layer2" : self.__of_layer2
 		}
 		'''
 
 		nodes_COP:list[PosNode] = wg_dict["nodes"]
 		childs_COP:list[WishChild] = wg_dict["childs"]
+		ofl2_COP:bool = wg_dict["of_layer2"]
 
 		for n in nodes_COP:
 			n._ms = GetMS(n.bartime)
 		for c in childs_COP:
-			c._dt = Bar2Dt(c.bartime)
+			c._dt = Bar2Dt(c.bartime, m_layer2 if ofl2_COP else m_layer1)
 			for a in c.anodes:
 				c._final_anodes.append(
 					( GetMS(a[0]), a[1], a[2] )
@@ -1019,16 +1139,334 @@ def Arf2Compile() -> None:
 			if len( c._final_anodes ) == 1:
 				__deg = c._final_anodes[0][1]
 				c._final_anodes[0] = (0, __deg, 0)
+		
+		# Trim II: WishChilds that _dt < 0
+		# WishChilds sorted here
+		childs_COP.sort(key = lambda c:c._dt, reverse = True )
+		while childs_COP[-1]._dt < 0: childs_COP.pop()
+		childs_COP.reverse()
 
-	# Final Sortings
+		# Trim III: AngleNodes that ms < 0
+		# AngleNodes sorted here
+		for c in childs_COP:
+			a_t3:list[Tuple[int,int,int]] = c.anodes   # (ms,deg,et)
+			a_t3.sort( key = lambda a: a[0] )
+			for i in range( len(a_t3)-1 ):
+				__current_a = a_t3[i]   # ca.ms <= na.ms
+				__next_a = a_t3[i+1]
+
+				nams = __next_a[0]
+				if nams < 0: continue   # <0, <0
+				elif nams == 0: break   # <0, =0
+				else:   # ?, >0
+					cams = __current_a[0]
+					if cams >= 0: break   # >=0, >0
+					else:   # <0, >0
+						et = __current_a[2]
+						ratio = float(0 - cams) / float(nams - cams)
+						deg_0 = __current_a[1]
+						deg_delta = __next_a[1]
+
+						if et == 0: ratio = 0
+						# elif et == 1: pass
+						elif et == 2: ratio *= ratio
+						elif et == 3:
+							ratio = 1.0 - ratio
+							ratio = 1.0 - ratio * ratio
+						a_t3.append( (0, int(deg_0 + ratio * deg_delta), et) )
+						break
+
+			a_t3.sort( key = lambda a: a[0] , reverse = True)
+			while a_t3[-1][0] < 0: a_t3.pop()
+			a_t3.reverse()
+
+		# Trim IV: PosNodes that ms < 0
+		# PosNodes sorted here
+		nodes_COP.sort( key = lambda p: p._ms )
+		for i in range( len(nodes_COP)-1 ):
+			__current_p:PosNode = nodes_COP[i]
+			__next_p:PosNode = nodes_COP[i+1]
+			
+			npms = __next_p._ms
+			if npms < 0: continue
+			elif npms == 0: break
+			else:
+				cpms = __current_p[0]
+				if cpms >= 0: break
+				else:
+					# Interpolation
+					IP_X = None
+					IP_Y = None
+					IP_A = None
+
+					o_ratio = float(0 - cpms) / float(npms - cpms)
+					et = __current_p.easetype
+					if et:
+						x0 = y0 = dx = dy = 0
+						ci = __current_p.curve_init
+						ce = __current_p.curve_end
+						x1 = __current_p.x
+						y1 = __current_p.y
+						x2 = __next_p.x
+						y2 = __next_p.y
+
+						if (ci == 0  and  ce == 1)  or  (ci == 1  and  ce == 0  and  et == 3):
+							dx = x2 - x1
+							dy = y2 - y1
+							IP_A = o_ratio
+
+							if et == 1:
+								IP_X = x1 + dx * ESIN(IP_A)
+								IP_Y = y1 + dy * ECOS(IP_A)
+							elif et == 2:
+								IP_X = x1 + dx * ECOS(IP_A)
+								IP_Y = y1 + dy * ESIN(IP_A)
+							elif ci > ce:
+								O = OutQuad(IP_A)
+								IP_X = x1 + dx * O
+								IP_Y = y1 + dy * O
+							else:
+								I = InQuad(IP_A)
+								IP_X = x1 + dx * I
+								IP_Y = y1 + dy * I
+						
+						elif et == 1:
+							x0,dx = get_original(x1, x2, ci, ce, ESIN)
+							y0,dy = get_original(y1, y2, ci, ce, ECOS)
+							IP_A = ci + o_ratio * ( ce - ci )
+							IP_X = x0 + dx * ESIN(IP_A)
+							IP_Y = y0 + dy * ECOS(IP_A)
+						elif et == 2:
+							x0,dx = get_original(x1, x2, ci, ce, ECOS)
+							y0,dy = get_original(y1, y2, ci, ce, ESIN)
+							IP_A = ci + o_ratio * ( ce - ci )
+							IP_X = x0 + dx * ECOS(IP_A)
+							IP_Y = y0 + dy * ESIN(IP_A)
+						elif ci > ce:
+							x0,dx = get_original(x1, x2, ce, ci, OutQuad)
+							y0,dy = get_original(y1, y2, ce, ci, OutQuad)
+							IP_A = ce + o_ratio * ( ci - ce )
+							IP_X = x0 + dx * OutQuad(IP_A)
+							IP_Y = y0 + dy * OutQuad(IP_A)
+						else:
+							x0,dx = get_original(x1, x2, ci, ce, InQuad)
+							y0,dy = get_original(y1, y2, ci, ce, InQuad)
+							IP_A = ci + o_ratio * ( ce - ci )
+							IP_X = x0 + dx * InQuad(IP_A)
+							IP_Y = y0 + dy * InQuad(IP_A)
+
+					# Inserting
+					# PosNode(Bartime:float, X:float, Y:float, EaseType:int, CurveInit:float, CurveEnd:float)
+					f_ci = __current_p.curve_init
+					f_ce = __current_p.curve_end
+
+					np = None   # Notice that __current_p will be discarded
+					if f_ci > f_ce:  np = PosNode(0, IP_X, IP_Y, 4, IP_A, f_ci)
+					else:  np = PosNode(0, IP_X, IP_Y, et, IP_A, f_ce)
+					nodes_COP.append(np)
+					break
+
+		nodes_COP.sort( key = lambda p: p._ms, reverse = True)
+		while nodes_COP[-1]._ms < 0: nodes_COP.pop()
+		nodes_COP.reverse()
+
+	# Sort WishGroups & Hints
+	Arf2Prototype.wish.sort(key = WishGroupSorter)
+	Arf2Prototype.hint.sort(key = HintSorter)
+
 	# Produce Group Indexes
-	# Encode the Flatbuffers binary data
+	wlist_final:list[WishGroup] = Arf2Prototype.wish
+	hlist_final:list[Hint] = Arf2Prototype.hint
+
+	before:int = 0
+	for w in wlist_final:
+		last_node:PosNode = w()["nodes"][-1]
+		if last_node._ms > before: before = last_node._ms
+	for h in hlist_final:
+		hendms = h._ms + 470
+		if hendms > before: before = hendms
+	if before > 512000:
+		print("\n----------------")
+		print("Limit breached:")
+		print("Object exists later than 512000ms.")
+		print("--  Make sure the last PosNode EARLIER than 512000ms,")
+		print("    And the last Hint EARLIER than 511530ms.")
+		print("\nNo file change happened.")
+		print("----------------\n")
+		return
+	
+	widx:list[list[int]] = []
+	hidx:list[list[int]] = []
+	has_special:bool = False
+	for i in range( before//512 + 1 ):
+		widx.append([])
+		hidx.append([])
+	
+	for i in range( len(wlist_final) ):
+		w_widx:WishGroup = wlist_final[i]
+		f_node:PosNode = w_widx()["nodes"][0]
+		l_node:PosNode = w_widx()["nodes"][-1]
+		for g in range( f_node._ms//512, l_node._ms//512 + 1 ):
+			widx[g].append(i)
+	for i in range( len(hlist_final) ):
+		h_hidx:Hint = hlist_final[i]
+		hidx[h_hidx._ms//512].append(i)
+		if h_hidx.is_special:
+			Arf2Prototype.special_hint = i
+			has_special = True
+
+	# Check special_hint & hgo_required
+	if has_special  and  Arf2Prototype.special_hint == 0:
+		print("\n----------------")
+		print("Warning:")
+		print("The earliest Hint is set to be the Special Hint,")
+		print('''which will cause the "Special Hint" lose its effect.''')
+		print("----------------\n")
+	
+	hr = 0
+	hidxlast = len(hidx) - 1
+	for i in range( len(hidx) ):
+		current_hr = len(hidx[i])
+		if i > 0: current_hr += len(hidx[i-1])
+		if i < hidxlast: current_hr += len(hidx[i+1])
+		if current_hr > hr: hr = current_hr
+	if hr > 255:
+		print("\n----------------")
+		print("Limit breached:")
+		print("More than 255 Hints may pop up within 1536ms.")
+		print("--  Try to reduce the density of Hints.")
+		print("\nNo file change happened.")
+		print("----------------\n")
+		return
+	else: Arf2Prototype.hgo_required = hr
+
 	'''
-	wish, hint, wgo_required, hgo_required, special_hint -> Arf2Prototype
+	Usage of Flatbuffers:
+	(0) Serialized Stream:
+		builder = flatbuffers.Builder(0)
+		# Create Elements ······
+
+		RootType.Start(builder)   # Actually Table Action
+		# Create the Root Table ······
+		roottype_end = RootType.End(builder)   # Actually Table Action
+
+		builder.Finish(roottype_end)
+		result:bytearray = builder.Output()
+
+	(1) Vector:
+	    table_the_vec_belongs_to.StartXXXVector(builder, size)
+		builder.PrependXXX( some_value )   # for Flatbuffers Builtin Scalar Types
+		builder.PrependUOffsetTRelative( serialized_table )   # for Tables defined manually.
+		vec = builder.EndVector()
+
+	(2) Table:
+		TableType.Start(builder)
+		TableType.AddXXX(builder, sth)   # sth: scalar value, or serialized Vector / Table
+		table = TableType.End(builder)
+	
+	(3) Tables CANNOT be created in a nested way.
+	'''
+
+	# Encode, Serialize & Assemble the Final binary data
+	'''
+	wish, hint, wgo_required, special_hint -> Arf2Prototype
 	dts_layer1, dts_layer2 -> m_layer1, m_layer2
-	before, index -> (Indexes made in this Func)
+	before, index, hgo_required -> (Indexes made in this Func)
 	'''
-	# File Backup & Export
+
+	# Builders, Scalars
+	b = flatbuffers.Builder(0)
+	Arf2Serialized.before = before   # Checked
+	Arf2Serialized.wgo_required = Arf2Prototype.wgo_required   # Checked
+	Arf2Serialized.hgo_required = Arf2Prototype.hgo_required   # Checked
+	Arf2Serialized.special_hint = Arf2Prototype.special_hint   # Checked
+	
+	# 1D Vectors
+	Arf2Fb.StartDtsLayer1Vector(b, len(m_layer1))
+	for mtn in m_layer1:
+		ratio_x105:int = int( abs(mtn.dt_ratio) * 100000 ) << 50   # Ratio Checked
+		half_init_ms:int = int(mtn.dt_ms * 0.5) << 32   # Checked
+		half_base_x105:int = int(mtn.dt_base * 0.5 * 100000)
+		if half_base_x105 < 0:
+			print("\n----------------")
+			print("Limit breached:")
+			print("Base DTime value of DeltaNode somewhere got smaller than 0.")
+			print("--  Try to reduce the negative Speed Scale.")
+			print("\nNo file change happened.")
+			print("----------------\n")
+			return
+		b.PrependUint64(ratio_x105 + half_init_ms + half_base_x105)
+	Arf2Serialized.dts_layer1 = b.EndVector()
+
+	Arf2Fb.StartDtsLayer2Vector(b, len(m_layer2))
+	for mtn in m_layer2:
+		ratio_x105:int = int( abs(mtn.dt_ratio) * 100000 ) << 50   # Ratio Checked
+		half_init_ms:int = int(mtn.dt_ms * 0.5) << 32   # Checked
+		half_base_x105:int = int(mtn.dt_base * 0.5 * 100000)
+		if half_base_x105 < 0:
+			print("\n----------------")
+			print("Limit breached:")
+			print("Base DTime value of DeltaNode somewhere got smaller than 0.")
+			print("--  Try to reduce the negative Speed Scale.")
+			print("\nNo file change happened.")
+			print("----------------\n")
+			return
+		b.PrependUint64(ratio_x105 + half_init_ms + half_base_x105)
+	Arf2Serialized.dts_layer2 = b.EndVector()
+
+	Arf2Fb.StartHintVector(b, len(hlist_final))
+	for h in hlist_final:
+		ms = int(h._ms) << 25   # Checked
+		y = int( (h._y + 8.0) * 128 ) << 13   # Checked
+		x = int( (h._x + 16.0) * 128 )   # Checked
+		b.PrependUint64(ms + y + x)
+	Arf2Serialized.hint = b.EndVector()
+
+	# 2D Structure / Index
+	idxlen = len(widx)
+	for i in range( idxlen ):
+
+		current_widx = widx[i]
+		Arf2Index.StartWidxVector(b, len(current_widx))
+		for value in current_widx:
+			if value > 65535:
+				print("\n----------------")
+				print("Limit breached:")
+				print("More than 65535 Wishes included in the Chart[Fumen].")
+				print("--  Try to reduce the amount of Wishes.")
+				print("\nNo file change happened.")
+				print("----------------\n")
+				return
+			b.PrependUint16(value)
+		current_widx_serialized = b.EndVector()
+
+		current_hidx = hidx[i]
+		Arf2Index.StartWidxVector(b, len(current_hidx))
+		for value in current_hidx:
+			if value > 65535:
+				print("\n----------------")
+				print("Limit breached:")
+				print("More than 65535 Hints included in the Chart[Fumen].")
+				print("--  Try to reduce the amount of Hints.")
+				print("\nNo file change happened.")
+				print("----------------\n")
+				return
+			b.PrependUint16(value)
+		current_hidx_serialized = b.EndVector()
+
+		Arf2Index.Start(b)
+		Arf2Index.AddWidx(current_widx_serialized)
+		Arf2Index.AddHidx(current_hidx_serialized)
+		Arf2Serialized.index.append( Arf2Index.End(b) )
+
+	Arf2Fb.StartIndexVector(b, idxlen)
+	for tbl in Arf2Serialized.index:
+		b.PrependUOffsetTRelative(tbl)
+	Arf2Serialized.index = b.EndVector()
+
+	# Complex Structures
+	# File Saving & Backup
+
 
 
 # Automating the Compiler Function
