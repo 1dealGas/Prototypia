@@ -1,10 +1,10 @@
----  
+---
 
-<center>In Respect of the World</center>  
+<table align="center"><tr><td align="center" width="9999">
+In Respect of the World<br />Constructed with Numerous Prototypes.
+</td></tr></table>
 
-<center>Constructed with Numerous Prototypes.</center>
-
----  
+---
 
 # Compose Aerials Chart[Fumen] with the Prototypia Workflow
 
