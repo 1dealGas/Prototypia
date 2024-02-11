@@ -1557,7 +1557,8 @@ def Arf2Compile() -> None:
 
 	## Transfer the Buf into the *.ar file
 	buf:bytearray = b.Output()
-	with open( path, mode = "wb") as buf_file: buf_file.write(buf)
+	with open( path, mode = "wb") as buf_file:
+		buf_file.write(buf)
 
 
 
