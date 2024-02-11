@@ -3,10 +3,8 @@ from ast import *
 from math import *
 from typing import *
 
-import sys
-import atexit
-import inspect
-import functools
+import os, sys, atexit, inspect, functools
+import time, shutil
 import flatbuffers
 
 # Flatbuffers Related Imports
@@ -122,24 +120,14 @@ class Arf2Prototype:
 
 class F_VECTOR: '''Refers to a Serialized Flatbuffers Vector.'''
 class F_TABLE: '''Refers to a Serialized Flatbuffers Table.'''
-class WCSerialized:
-	def __init__(self) -> None:
-		self.p:int = 255
-		self.dt:int = 0
-		self.anodes:F_VECTOR = []
-class WGSerialized:
-	def __init__(self) -> None:
-		self.info:int = 4294967295
-		self.nodes:F_VECTOR = []
-		self.childs:Union[list[WCSerialized], list[F_TABLE], F_VECTOR] = []
 class Arf2Serialized:
 	before:int = 0
 	dts_layer1:F_VECTOR
 	dts_layer2:F_VECTOR
 	index:Union[list[F_TABLE], F_VECTOR] = []
-	wish:Union[list[WGSerialized], list[F_TABLE], F_VECTOR] = []
+	wish:Union[list[F_TABLE], F_VECTOR] = []
 	wgo_required:int = 0
-	hint:F_VECTOR = []
+	hint:F_VECTOR
 	hgo_required:int = 0
 	special_hint:int = 0
 
@@ -878,7 +866,7 @@ def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 		elif current_dbpm < -2400:
 			dbpmprint()
 			current_dbpm = -2400
-	
+
 		__current.dt_ratio = current_dbpm / 15000.0
 
 	# Deduplicate by dt_ratio  &  Calculate dt_ms
@@ -1139,7 +1127,7 @@ def Arf2Compile() -> None:
 			if len( c._final_anodes ) == 1:
 				__deg = c._final_anodes[0][1]
 				c._final_anodes[0] = (0, __deg, 0)
-		
+
 		# Trim II: WishChilds that _dt < 0
 		# WishChilds sorted here
 		childs_COP.sort(key = lambda c:c._dt, reverse = True )
@@ -1186,12 +1174,12 @@ def Arf2Compile() -> None:
 		for i in range( len(nodes_COP)-1 ):
 			__current_p:PosNode = nodes_COP[i]
 			__next_p:PosNode = nodes_COP[i+1]
-			
+
 			npms = __next_p._ms
 			if npms < 0: continue
 			elif npms == 0: break
 			else:
-				cpms = __current_p[0]
+				cpms = __current_p._ms
 				if cpms >= 0: break
 				else:
 					# Interpolation
@@ -1229,7 +1217,7 @@ def Arf2Compile() -> None:
 								I = InQuad(IP_A)
 								IP_X = x1 + dx * I
 								IP_Y = y1 + dy * I
-						
+
 						elif et == 1:
 							x0,dx = get_original(x1, x2, ci, ce, ESIN)
 							y0,dy = get_original(y1, y2, ci, ce, ECOS)
@@ -1294,14 +1282,14 @@ def Arf2Compile() -> None:
 		print("\nNo file change happened.")
 		print("----------------\n")
 		return
-	
+
 	widx:list[list[int]] = []
 	hidx:list[list[int]] = []
 	has_special:bool = False
 	for i in range( before//512 + 1 ):
 		widx.append([])
 		hidx.append([])
-	
+
 	for i in range( len(wlist_final) ):
 		w_widx:WishGroup = wlist_final[i]
 		f_node:PosNode = w_widx()["nodes"][0]
@@ -1322,7 +1310,7 @@ def Arf2Compile() -> None:
 		print("The earliest Hint is set to be the Special Hint,")
 		print('''which will cause the "Special Hint" lose its effect.''')
 		print("----------------\n")
-	
+
 	hr = 0
 	hidxlast = len(hidx) - 1
 	for i in range( len(hidx) ):
@@ -1340,6 +1328,7 @@ def Arf2Compile() -> None:
 		return
 	else: Arf2Prototype.hgo_required = hr
 
+
 	'''
 	Usage of Flatbuffers:
 	(0) Serialized Stream:
@@ -1354,7 +1343,7 @@ def Arf2Compile() -> None:
 		result:bytearray = builder.Output()
 
 	(1) Vector:
-	    table_the_vec_belongs_to.StartXXXVector(builder, size)
+		table_the_vec_belongs_to.StartXXXVector(builder, size)
 		builder.PrependXXX( some_value )   # for Flatbuffers Builtin Scalar Types
 		builder.PrependUOffsetTRelative( serialized_table )   # for Tables defined manually.
 		vec = builder.EndVector()
@@ -1363,7 +1352,7 @@ def Arf2Compile() -> None:
 		TableType.Start(builder)
 		TableType.AddXXX(builder, sth)   # sth: scalar value, or serialized Vector / Table
 		table = TableType.End(builder)
-	
+
 	(3) Tables CANNOT be created in a nested way.
 	'''
 
@@ -1373,15 +1362,15 @@ def Arf2Compile() -> None:
 	dts_layer1, dts_layer2 -> m_layer1, m_layer2
 	before, index, hgo_required -> (Indexes made in this Func)
 	'''
+	b = flatbuffers.Builder(0)   # Builder
 
-	# Builders, Scalars
-	b = flatbuffers.Builder(0)
+	## Scalars
 	Arf2Serialized.before = before   # Checked
 	Arf2Serialized.wgo_required = Arf2Prototype.wgo_required   # Checked
 	Arf2Serialized.hgo_required = Arf2Prototype.hgo_required   # Checked
 	Arf2Serialized.special_hint = Arf2Prototype.special_hint   # Checked
-	
-	# 1D Vectors
+
+	## 1D Structures / dts_layer1, dts_layer2, hint
 	Arf2Fb.StartDtsLayer1Vector(b, len(m_layer1))
 	for mtn in m_layer1:
 		ratio_x105:int = int( abs(mtn.dt_ratio) * 100000 ) << 50   # Ratio Checked
@@ -1422,7 +1411,7 @@ def Arf2Compile() -> None:
 		b.PrependUint64(ms + y + x)
 	Arf2Serialized.hint = b.EndVector()
 
-	# 2D Structure / Index
+	## 2D Structure / index
 	idxlen = len(widx)
 	for i in range( idxlen ):
 
@@ -1441,7 +1430,7 @@ def Arf2Compile() -> None:
 		current_widx_serialized = b.EndVector()
 
 		current_hidx = hidx[i]
-		Arf2Index.StartWidxVector(b, len(current_hidx))
+		Arf2Index.StartHidxVector(b, len(current_hidx))
 		for value in current_hidx:
 			if value > 65535:
 				print("\n----------------")
@@ -1460,12 +1449,122 @@ def Arf2Compile() -> None:
 		Arf2Serialized.index.append( Arf2Index.End(b) )
 
 	Arf2Fb.StartIndexVector(b, idxlen)
-	for tbl in Arf2Serialized.index:
-		b.PrependUOffsetTRelative(tbl)
+	for tbl in Arf2Serialized.index: b.PrependUOffsetTRelative(tbl)
 	Arf2Serialized.index = b.EndVector()
 
-	# Complex Structures
+	## Complex Structure / WishGroup
+	for wg in wlist_final:
+		wgd:dict = wg()
+		'''
+		{
+			"nodes" : self.__nodes,
+			"childs" : self.__childs,
+			"of_layer2" : self.__of_layer2,
+			"max_visible_distance" : self.__max_visible_distance,
+		}
+		'''
+		__s_childs = []   # Temporary list to store serialized WishChilds
+
+		# WishChild: list[AngleNode] -> F_VECTOR[AngleNode] -> F_TABLE[WishChild]
+		childs_S:list[WishChild] = wgd["childs"]
+		for ch in childs_S:
+
+			# "WishChildFb" is an alias of class[WishChild.py -> WishChild],
+			# rather than class[Arf2.py -> WishChild].
+			# The code analysis of Pylance is wrongful here.
+			WishChildFb.StartAnodesVector( b, len(ch._final_anodes) )
+			for an in ch._final_anodes:   # (ms, angle, et)
+				degree = int( an[1] + 1800 ) << 20
+				easetype = int( an[2] ) << 18
+				halfms = int( an[0] / 2 )
+				b.PrependUint32( degree + easetype + halfms )
+			__anodes = b.EndVector()
+
+			# Checked:
+			# ms[0,512000], ratio_x105[-16000, 16000], Negative dts Excluded
+			# max = 512000*16000 / 2 = 4096000000 < 4294967295 = 2**32 - 1
+			__dt = int(ch._dt * 100000 * 0.5)
+
+			# Serialize and Store
+			WishChildFb.Start(b)
+			WishChildFb.AddAnodes(b, __anodes)
+			WishChildFb.AddDt(b, __dt)
+			WishChildFb.AddP(b, 0)   # Different from the Default Value
+			__s_childs.append( WishChildFb.End(b) )
+
+		# WishChild: list[F_TABLE[WishChild]] -> F_VECTOR[WishChild]
+		WishGroupFb.StartChildsVector(b, len(childs_S) )
+		for c_serialized in __s_childs: b.PrependUOffsetTRelative(c_serialized)
+		__s_childs = b.EndVector()
+
+		# PosNode: list[PosNode] -> F_VECTOR[PosNode]
+		nodes_S:list[PosNode] = wgd["nodes"]
+		WishGroup.StartNodesVector(b, len(nodes_S) )
+		for pn in nodes_S:
+			curve_init = int(pn.curve_init * 511) << 55   # Checked
+			curve_end = int(pn.curve_end * 511) << 46   # Checked
+			_easetype = int(pn.easetype) << 44   # Checked
+			_x = int( (pn.x + 16) * 128 ) << 31   # Checked
+			_y = int( (pn.y + 8) * 128 ) << 19   # Checked
+			b.PrependUint64( curve_init + curve_end + _easetype + _x + _y )
+		__s_nodes = b.EndVector()
+
+		# Encode Info
+		ofl2int = int(1 if wgd["of_layer2"] else 0) << 13
+		mvdint = int(wgd["max_visible_distance"] * 1024)   # Checked
+
+		# Serialize & Store the Whole WishGroup
+		WishGroupFb.Start(b)
+		WishGroupFb.AddNodes(b, __s_nodes)
+		WishGroupFb.AddChilds(b, __s_childs)
+		WishGroupFb.AddInfo(b, ofl2int + mvdint)
+		Arf2Serialized.wish.append( WishGroupFb.end(b) )
+
+	## WishGroup: list[F_TABLE[WishGroup]] -> F_VECTOR[WishGroup]
+	Arf2Fb.StartWishVector(b, len(wlist_final))
+	for wg_serialized in Arf2Serialized.wish: b.PrependUOffsetTRelative(wg_serialized)
+	Arf2Serialized.wish = b.EndVector()
+
+	## Serialize the Root Table
+	Arf2Fb.Start(b)
+
+	Arf2Fb.AddBefore(Arf2Serialized.before)
+	Arf2Fb.AddDtsLayer1(Arf2Serialized.dts_layer1)
+	Arf2Fb.AddDtsLayer2(Arf2Serialized.dts_layer2)
+	Arf2Fb.AddIndex(Arf2Serialized.index)
+
+	Arf2Fb.AddWish(Arf2Serialized.wish)
+	Arf2Fb.AddWgoRequired(Arf2Serialized.wgo_required)
+
+	Arf2Fb.AddHint(Arf2Serialized.hint)
+	Arf2Fb.AddHgoRequired(Arf2Serialized.hgo_required)
+	Arf2Fb.AddSpecialHint(Arf2Serialized.special_hint)
+
+	b.Finish( Arf2Fb.End(b) )
+
+
 	# File Saving & Backup
+	## Get the Directory & Filename of calling *.py file(without extension)
+	fnm:str = os.path.basename( sys.argv[0] ) .removesuffix(".py")
+	dir:str = os.getcwd()
+
+	## If the *.ar file exists, backup it
+	path:str = dir
+	if dir.count("\\"): path += ("\\" + fnm + ".ar")
+	else: path += ("/" + fnm + ".ar")
+
+	if os.path.exists(path):
+		_ctime = time.ctime( os.path.getatime(path) )
+		new_path:str = dir
+		if dir.count("\\"):
+			path += ("\\" + fnm + " " + _ctime + " .ar")
+		else:
+			path += ("/" + fnm + " " + _ctime + " .ar")
+		shutil.copy(path, new_path)
+
+	## Transfer the Buf into the *.ar file
+	buf:bytearray = b.Output()
+	with open( path, mode = "wb") as buf_file: buf_file.write(buf)
 
 
 
