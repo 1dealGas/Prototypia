@@ -746,7 +746,7 @@ class WishGroup:
 		   but you need to pass them with their keywords.
 
 		Args:
-			text (str): Chart[fumen] text created by DRMaker
+			text (str): Chart[Fumen] text created by DRMaker
 			type (int): Note Type Filter, declare it like "type=0"
 			left (float): Left Position Filter, declare it like "left=0"
 			mid (float): Middle Position Filter, declare it like "mid=2"
@@ -1444,8 +1444,8 @@ def Arf2Compile() -> None:
 		current_hidx_serialized = b.EndVector()
 
 		Arf2Index.Start(b)
-		Arf2Index.AddWidx(current_widx_serialized)
-		Arf2Index.AddHidx(current_hidx_serialized)
+		Arf2Index.AddWidx(b, current_widx_serialized)
+		Arf2Index.AddHidx(b, current_hidx_serialized)
 		Arf2Serialized.index.append( Arf2Index.End(b) )
 
 	Arf2Fb.StartIndexVector(b, idxlen)
@@ -1499,7 +1499,7 @@ def Arf2Compile() -> None:
 
 		# PosNode: list[PosNode] -> F_VECTOR[PosNode]
 		nodes_S:list[PosNode] = wgd["nodes"]
-		WishGroup.StartNodesVector(b, len(nodes_S) )
+		WishGroupFb.StartNodesVector(b, len(nodes_S) )
 		for pn in nodes_S:
 			curve_init = int(pn.curve_init * 511) << 55   # Checked
 			curve_end = int(pn.curve_end * 511) << 46   # Checked
@@ -1518,7 +1518,7 @@ def Arf2Compile() -> None:
 		WishGroupFb.AddNodes(b, __s_nodes)
 		WishGroupFb.AddChilds(b, __s_childs)
 		WishGroupFb.AddInfo(b, ofl2int + mvdint)
-		Arf2Serialized.wish.append( WishGroupFb.end(b) )
+		Arf2Serialized.wish.append( WishGroupFb.End(b) )
 
 	## WishGroup: list[F_TABLE[WishGroup]] -> F_VECTOR[WishGroup]
 	Arf2Fb.StartWishVector(b, len(wlist_final))
@@ -1528,17 +1528,17 @@ def Arf2Compile() -> None:
 	## Serialize the Root Table
 	Arf2Fb.Start(b)
 
-	Arf2Fb.AddBefore(Arf2Serialized.before)
-	Arf2Fb.AddDtsLayer1(Arf2Serialized.dts_layer1)
-	Arf2Fb.AddDtsLayer2(Arf2Serialized.dts_layer2)
-	Arf2Fb.AddIndex(Arf2Serialized.index)
+	Arf2Fb.AddBefore(b, Arf2Serialized.before)
+	Arf2Fb.AddDtsLayer1(b, Arf2Serialized.dts_layer1)
+	Arf2Fb.AddDtsLayer2(b, Arf2Serialized.dts_layer2)
+	Arf2Fb.AddIndex(b, Arf2Serialized.index)
 
-	Arf2Fb.AddWish(Arf2Serialized.wish)
-	Arf2Fb.AddWgoRequired(Arf2Serialized.wgo_required)
+	Arf2Fb.AddWish(b, Arf2Serialized.wish)
+	Arf2Fb.AddWgoRequired(b, Arf2Serialized.wgo_required)
 
-	Arf2Fb.AddHint(Arf2Serialized.hint)
-	Arf2Fb.AddHgoRequired(Arf2Serialized.hgo_required)
-	Arf2Fb.AddSpecialHint(Arf2Serialized.special_hint)
+	Arf2Fb.AddHint(b, Arf2Serialized.hint)
+	Arf2Fb.AddHgoRequired(b, Arf2Serialized.hgo_required)
+	Arf2Fb.AddSpecialHint(b, Arf2Serialized.special_hint)
 
 	b.Finish( Arf2Fb.End(b) )
 
@@ -1549,17 +1549,10 @@ def Arf2Compile() -> None:
 	dir:str = os.getcwd()
 
 	## If the *.ar file exists, backup it
-	path:str = dir
-	if dir.count("\\"): path += ("\\" + fnm + ".ar")
-	else: path += ("/" + fnm + ".ar")
-
+	path:str = os.path.join(dir, fnm + ".ar")
 	if os.path.exists(path):
 		_ctime = time.ctime( os.path.getatime(path) )
-		new_path:str = dir
-		if dir.count("\\"):
-			path += ("\\" + fnm + " " + _ctime + " .ar")
-		else:
-			path += ("/" + fnm + " " + _ctime + " .ar")
+		new_path:str = os.path.join(dir, fnm + " --" + _ctime + "-- .ar")
 		shutil.copy(path, new_path)
 
 	## Transfer the Buf into the *.ar file
