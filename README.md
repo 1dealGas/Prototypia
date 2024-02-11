@@ -1,10 +1,8 @@
----
-
 <table align="center"><tr><td align="center" width="9999">
-In Respect of the World<br />Constructed with Numerous Prototypes.
+----------------<br /><b>In Respect of the World<br />Constructed with Numerous Prototypes.</b><br />----------------
 </td></tr></table>
 
----
+   
 
 # Compose Aerials Chart[Fumen] with the Prototypia Workflow
 
@@ -19,5 +17,3 @@ In Respect of the World<br />Constructed with Numerous Prototypes.
    ```
 
 3. Download `Prototypia Viewer` from Releases.  **(Not Available Yet)**  
-
-
