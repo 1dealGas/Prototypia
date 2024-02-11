@@ -1,8 +1,8 @@
 ---  
 
-<center>**In Respect of the World**</center>
+<center>In Respect of the World</center>  
 
-<center>**Constructed with Numerous Prototypes.**</center>
+<center>Constructed with Numerous Prototypes.</center>
 
 ---  
 
@@ -18,6 +18,6 @@
    pip3 install Prototypia
    ```
 
-3. Download `Prototypia Viewer` from Releases. **(Not Available Yet)**  
+3. Download `Prototypia Viewer` from Releases.  **(Not Available Yet)**  
 
 
