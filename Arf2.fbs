@@ -23,7 +23,7 @@
 
 // 3. Compressible Structs (High->Low)
 //    A. DeltaNode
-//       (14) ratio_x105:int        ratio * (10^5)
+//       (14) ratio_x105:int        abs( ratio * (10^5) )
 //       (18) half_init_ms:int      init_ms * 0.5
 //       (32) half_base_x105:int    base * (10^5) * 0.5
 //    B. AngleNode
