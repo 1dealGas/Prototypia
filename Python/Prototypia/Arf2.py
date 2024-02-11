@@ -724,7 +724,7 @@ class WishGroup:
 
 		Example:   # 1/8 Taterendas falling down
 			CURRENT_ANGLE(90)
-			n1(1,,, 3, 5).n(2,,, 7, 3).input(1.125,1.25,1.375,1.5,1.625,1.75,1.875)
+			n1(1,0,1, 3, 5).n(2,0,1, 7, 3).input(1.125,1.25,1.375,1.5,1.625,1.75,1.875)
 
 		Args:
 			*args (Tuple[float]): A series of accurate Bartime(s).
