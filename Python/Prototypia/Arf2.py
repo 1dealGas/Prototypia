@@ -1499,7 +1499,7 @@ def Arf2Compile() -> None:
 
 		# WishChild: list[F_TABLE[WishChild]] -> F_VECTOR[WishChild]
 		WishGroupFb.StartChildsVector(b, len(childs_S) )
-		for c_serialized in RL(__s_childs): b.PrependUOffsetTRelative(c_serialized)
+		for c_serialized in __s_childs: b.PrependUOffsetTRelative(c_serialized)   # No Reversing Here
 		__s_childs = b.EndVector()
 
 		# PosNode: list[PosNode] -> F_VECTOR[PosNode]
@@ -1527,7 +1527,7 @@ def Arf2Compile() -> None:
 
 	## WishGroup: list[F_TABLE[WishGroup]] -> F_VECTOR[WishGroup]
 	Arf2Fb.StartWishVector(b, len(wlist_final))
-	for wg_serialized in RL(Arf2Serialized.wish): b.PrependUOffsetTRelative(wg_serialized)
+	for wg_serialized in Arf2Serialized.wish: b.PrependUOffsetTRelative(wg_serialized)   # No Reversing Here
 	Arf2Serialized.wish = b.EndVector()
 
 	## Serialize the Root Table
@@ -1559,10 +1559,18 @@ def Arf2Compile() -> None:
 		_ctime = time.ctime( os.path.getatime(path) )
 		new_path:str = os.path.join(dir, fnm + " --" + _ctime + "-- .ar")
 		shutil.copy(path, new_path)
+		print("\n----------------")
+		print("Former Data Backup Completed.")
+		print("Filename: " + os.path.basename(new_path) )
+		print("----------------\n")
 
 	## Transfer the Buf into the *.ar file
-	buf:bytearray = b.Output()
-	with open( path, mode = "wb") as buf_file: buf_file.write(buf)
+	with open( path, mode = "wb") as buf_file:
+		buf_file.write( b.Output() )
+		print("\n----------------")
+		print("Arf2 Generation Completed.")
+		print("Filename: " + os.path.basename(path) )
+		print("----------------\n")
 
 
 
