@@ -397,7 +397,7 @@ class WishGroup:
 		self.__nodes.sort(key = OPSorter)
 		return self
 
-	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:int = Arf2Prototype.current_angle) -> Self:
+	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:Union[int, None] = None) -> Self:
 		'''
 		Add a WishChild to the calling WishGroup.
 		WishChilds will be sorted automatically.
@@ -411,8 +411,10 @@ class WishGroup:
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
 		'''
+		if angle == None: angle = Arf2Prototype.current_angle
+		else: angle = int(angle)
+
 		bartime = float(bar) + float(nmr) / float(dnm)
-		angle = int(angle)
 		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 		if angle < -1800  or  angle > 1800:
@@ -786,7 +788,7 @@ class WishGroup:
 			__mid = __left + 0.5 * __width
 
 			if type and  __type != type: continue
-			if left and  __left != left: continue
+			elif left and  __left != left: continue
 			elif mid and  __mid != mid: continue
 			elif width and  __width != width: continue
 			elif init and  __bartime < init: continue

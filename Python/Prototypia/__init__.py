@@ -695,7 +695,7 @@ def ApplyAngleSet(s:AngleSet, to_all_childs:bool = False) -> FunctionType:
 
 	Args:
 		s (AngleSet): The AngleSet to be applied.
-		to_all_childs (bool): If True, the AngleSet will be applied to all 
+		to_all_childs (bool): If True, the AngleSet will be applied to all
 							  WishChild(s) of the calling WishGroup.
 
 	Returns:
@@ -720,7 +720,7 @@ def ApplyAngleSet(s:AngleSet, to_all_childs:bool = False) -> FunctionType:
 			et = an[2]
 			child.anodes.append( (final_bar,deg,et) )
 		child.anodes.sort(key = lambda an: an[0])
-	
+
 	def rtn2(w:WishGroup) -> None:
 		childlist:list[WishChild] = w()["childs"]
 		if len(childlist) == 0:
