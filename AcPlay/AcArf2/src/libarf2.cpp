@@ -32,6 +32,45 @@
 #define JR_REV 63
 
 
+// Macros of Bitwise Operations
+#define D_R(n) (n>>50)   // DeltaNode: ratio_x105
+#define D_HI(n) ((n>>32)&0x3ffff)   // DeltaNode: half_init_ms
+#define D_HB(n) (n&0xffffffff)   // DeltaNode: half_base_x105
+
+#define A_D(n) (n>>20)   // AngleNode: degree
+#define A_E(n) ((n>>18)&0b11)   // AngleNode: easetype
+#define A_HM(n) (n&0x3ffff)   // AngleNode: halfms
+
+#define P_CI(n) (n>>55)   // PosNode: curve_init
+#define P_CE(n) ((n>>46)&0x1ff)   // PosNode: curve_end
+#define P_E(n) ((n>>44)&0b11)   // PosNode: easetype
+#define P_X(n) ((n>>31)&0x1fff)   // PosNode: x
+#define P_Y(n) ((n>>19)&0xfff)   // PosNode: y
+#define P_M(n) (n&0x7ffff)   // PosNode: ms
+
+#define W_CP(n) (n>>22)   // WishGroup Info: child_prg
+#define W_NP(n) ((n>>14)&0xff)   // WishGroup Info: node_prg
+#define W_L(n) ((n>>13)&0b1)   // WishGroup Info: of_layer2
+#define W_MVB(n) (n&0x1fff)   // WishGroup Info: max_visible_distance
+
+#define H_T(n) (n>>63)   // Hint: TAG
+#define H_JM(n) ((n>>44)&0x7ffff)   // Hint: judged_ms
+#define H_M(n) ((n>>25)&0x7ffff)   // Hint: ms
+#define H_Y(n) ((n>>13)&0xfff)   // Hint: y
+#define H_X(n) (n&0x1fff)   // Hint: x
+
+#define G(n) (n>>9)   // Turn a mstime into an array offset
+#define CLEARTAG(n) ((n<<1)>>1)   // Clear the TAG of a Hint
+#define CLEARPRG(n) (n&0x3fff)   // Clear the Progress Data of the Info of a WishGroup
+#define PUREHINT(n) ((n&0xfffffffffff))   // Clear the TAG & judged_ms of a Hint
+#define SETHJM(n) (n<<44)
+#define SETNP(n) (n<<14)
+#define SETCP(n) (n<<22)
+#define SWEEP 0x100000000000
+#define AUTO 0x8000100000000000
+#define TAG 0x8000000000000000
+
+
 // Includes & Caches
 #include <dmsdk/sdk.h>
 #include <dmsdk/dlib/vmath.h>
@@ -182,8 +221,8 @@ static inline bool has_touch_near(const uint64_t hint) {
 	float hint_l, hint_r, hint_d, hint_u;
 	{
 		uint64_t u;
-		u = hint & 0x1fff;			float dx = ( (int16_t)u - 3072 ) * 0.0078125f * xscale;
-		u = (hint>>13) & 0xfff;		float dy = ( (int16_t)u - 1536 ) * 0.0078125f * yscale;
+		u = H_X(hint);		float dx = ( (int16_t)u - 3072 ) * 0.0078125f * xscale;
+		u = H_Y(hint);		float dy = ( (int16_t)u - 1536 ) * 0.0078125f * yscale;
 
 		// Camera transformation integrated.
 		hint_l = 8.0f + dx*rotcos - dy*rotsin + xdelta;
@@ -223,9 +262,9 @@ static inline bool is_safe_to_anmitsu( const uint64_t hint ){
 
 	if(!allow_anmitsu) return false;
 
-	uint64_t u;					// No overflowing risk here.
-	u = hint & 0x1fff;			int16_t hint_l = (int16_t)u - 384;		int16_t hint_r = (int16_t)u + 384;
-	u = (hint>>13) & 0xfff;		int16_t hint_d = (int16_t)u - 384;		int16_t hint_u = (int16_t)u + 384;
+	uint64_t u;			// No overflowing risk here.
+	u = H_X(hint);		int16_t hint_l = (int16_t)u - 384;		int16_t hint_r = (int16_t)u + 384;
+	u = H_Y(hint);		int16_t hint_d = (int16_t)u - 384;		int16_t hint_u = (int16_t)u + 384;
 
 	// Safe when blnums.size()==0. The circulation is to be skipped then.
 	// For registered Hints,
@@ -233,18 +272,19 @@ static inline bool is_safe_to_anmitsu( const uint64_t hint ){
 	for( uint16_t i=0; i<bs; i++ ){
 
 		// check its x pivot,
-		uint32_t blnum = blnums[i];		u = blnum & 0x1fff;
+		uint32_t blnum = blnums[i];		u = H_X(blnum);
 		if( (u>hint_l) && u<hint_r ){
 
 			// if problem happens with the x pivot,
 			// check its y pivot, and if problem happens with the y pivot, return false.
-			u = ( blnum >> 13 ) & 0xfff;
+			u = H_Y(blnum);
 			if( (u>hint_d) && u<hint_u ) return false;
 
 		}
 	}
 
 	// If the Hint is safe to "Anmitsu", register it, and return true.
+	// u = H_X(hint) + H_Y(hint);
 	u = hint & 0x1ffffff;
 	blnums.push_back( (uint32_t)u );
 	return true;
@@ -312,7 +352,7 @@ static inline int InitArf(lua_State *L)
 	if( lua_toboolean(L, 2) ) {   // is_auto
 		auto H = Arf -> mutable_hint();
 		for( uint16_t i=0; i<total_hints; i++ ){
-			auto hint_automated = H->Get(i) + 0x8000100000000000;
+			auto hint_automated = H->Get(i) + AUTO;
 			H -> Mutate(i, hint_automated);
 		}
 	}
@@ -384,11 +424,11 @@ static inline int UpdateArf(lua_State *L)
 	while(!found) {
 		if( dt_p1 >= dts1_last ) {   // "==" is replaced by ">=" to enhance the robustness.
 			uint64_t last_deltanode = dts1 -> Get(dts1_last);		uint64_t u;
-			u = (last_deltanode>>32) & 0x3ffff;						uint32_t init_ms = u*2;
+			u = D_HI(last_deltanode);								uint32_t init_ms = u*2;
 			if( init_ms <= mstime ) {
-				u = last_deltanode & 0xffffffff;					double base = (double)u * 0.00002;
-				u = last_deltanode >> 50;							double ratio = (double)u * 0.00001;
-				dt1 = base + ratio * (mstime - init_ms);			found = true;	break;
+				u = D_HB(last_deltanode);						double base = (double)u * 0.00002;
+				u = D_R(last_deltanode);						double ratio = (double)u * 0.00001;
+				dt1 = base + ratio * (mstime - init_ms);		found = true;	break;
 			}
 			else dt_p1--;
 		}
@@ -396,16 +436,16 @@ static inline int UpdateArf(lua_State *L)
 			uint64_t u;
 
 			uint64_t next_deltanode = dts1 -> Get(dt_p1+1);
-			u = (next_deltanode>>32) & 0x3ffff;						uint32_t next_init_ms = u*2;
+			u = D_HI(next_deltanode);						uint32_t next_init_ms = u*2;
 			if( mstime >= next_init_ms ) { dt_p1++; continue; }
 
 			uint64_t current_deltanode = dts1 -> Get(dt_p1);
-			u = (current_deltanode>>32) & 0x3ffff;					uint32_t current_init_ms = u*2;
+			u = D_HI(current_deltanode);					uint32_t current_init_ms = u*2;
 			if( mstime < current_init_ms ) { dt_p1--; continue; }
 
-			u = next_deltanode & 0xffffffff;						double next_base = (double)u * 0.00002;
-			u = current_deltanode & 0xffffffff;						double current_base = (double)u * 0.00002;
-			u = current_deltanode >> 50;							double current_ratio = (double)u * 0.00001;
+			u = D_HB(next_deltanode);						double next_base = (double)u * 0.00002;
+			u = D_HB(current_deltanode);					double current_base = (double)u * 0.00002;
+			u = D_R(current_deltanode);						double current_ratio = (double)u * 0.00001;
 			if( current_base > next_base ) dt1 = current_base - current_ratio * (mstime - current_init_ms);
 			else dt1 = current_base + current_ratio * (mstime - current_init_ms);
 			found = true;	break;
@@ -418,11 +458,11 @@ static inline int UpdateArf(lua_State *L)
 	while(!found) {
 		if( dt_p2 >= dts2_last ) {
 			uint64_t last_deltanode = dts2 -> Get(dts2_last);		uint64_t u;
-			u = (last_deltanode>>32) & 0x3ffff;						uint32_t init_ms = u*2;
+			u = D_HI(last_deltanode);								uint32_t init_ms = u*2;
 			if( init_ms <= mstime ) {
-				u = last_deltanode & 0xffffffff;					double base = (double)u * 0.00002;
-				u = last_deltanode >> 50;							double ratio = (double)u * 0.00001;
-				dt2 = base + ratio * (mstime - init_ms);			found = true;	break;
+				u = D_HB(last_deltanode);						double base = (double)u * 0.00002;
+				u = D_R(last_deltanode);						double ratio = (double)u * 0.00001;
+				dt2 = base + ratio * (mstime - init_ms);		found = true;	break;
 			}
 			else dt_p2--;
 		}
@@ -430,16 +470,16 @@ static inline int UpdateArf(lua_State *L)
 			uint64_t u;
 
 			uint64_t next_deltanode = dts2 -> Get(dt_p2+1);
-			u = (next_deltanode>>32) & 0x3ffff;						uint32_t next_init_ms = u*2;
+			u = D_HI(next_deltanode);						uint32_t next_init_ms = u*2;
 			if( mstime >= next_init_ms ) { dt_p2++; continue; }
 
 			uint64_t current_deltanode = dts2 -> Get(dt_p2);
-			u = (current_deltanode>>32) & 0x3ffff;					uint32_t current_init_ms = u*2;
+			u = D_HI(current_deltanode);					uint32_t current_init_ms = u*2;
 			if( mstime < current_init_ms ) { dt_p2--; continue; }
 
-			u = next_deltanode & 0xffffffff;						double next_base = (double)u * 0.00002;
-			u = current_deltanode & 0xffffffff;						double current_base = (double)u * 0.00002;
-			u = current_deltanode >> 50;							double current_ratio = (double)u * 0.00001;
+			u = D_HB(next_deltanode);						double next_base = (double)u * 0.00002;
+			u = D_HB(current_deltanode);					double current_base = (double)u * 0.00002;
+			u = D_R(current_deltanode);						double current_ratio = (double)u * 0.00001;
 			if( current_base > next_base ) dt2 = current_base - current_ratio * (mstime - current_init_ms);
 			else dt2 = current_base + current_ratio * (mstime - current_init_ms);
 			found = true;	break;
@@ -448,7 +488,7 @@ static inline int UpdateArf(lua_State *L)
 
 
 	// Search & Interpolate & Render Wishes
-	uint32_t which_widx = mstime >> 9;
+	uint32_t which_widx = G(mstime);
 	auto current_wgids = Arf -> index() -> Get( which_widx ) -> widx();
 	auto how_many_wgs = current_wgids -> size();
 
@@ -460,10 +500,10 @@ static inline int UpdateArf(lua_State *L)
 		// A. Info
 		//    current_wishgroup -> mutate_info(new_stuff);
 		uint32_t info = current_wishgroup -> info();
-		bool of_layer2 = (bool)( (info>>13) & 0b1 );
+		bool of_layer2 = (bool)W_L(info);
 
-		uint8_t node_progress = (uint8_t)( (info>>14) & 0xff );
-		uint16_t child_progress = (uint16_t)(info >> 22);
+		uint8_t node_progress = (uint8_t)W_NP(info);
+		uint16_t child_progress = (uint16_t)W_CP(info);
 
 		// B. Nodes
 		bool node_found; 	float node_x, node_y;
@@ -472,17 +512,17 @@ static inline int UpdateArf(lua_State *L)
 		uint32_t current_ms;
 		uint8_t nodes_bound = nodes->size() - 1;
 		{
-			if(nodes_bound < 1)											continue;
-			else if( mstime < (uint32_t)(nodes->Get(0) & 0x7ffff) )		continue;
-			else if( node_progress >= nodes_bound )						node_progress = nodes_bound - 1;
+			if(nodes_bound < 1)										continue;
+			else if( mstime < (uint32_t)P_M( nodes->Get(0) ) )		continue;
+			else if( node_progress >= nodes_bound )					node_progress = nodes_bound - 1;
 		}
 		while( node_progress<nodes_bound ) {   // A "break;" added at the end of the circulation body.
 			// 1. Info & Judgement
 			uint64_t next_node = nodes -> Get(node_progress+1);
 			uint64_t current_node = nodes -> Get(node_progress);
 
-			uint32_t next_ms = (uint32_t)(next_node & 0x7ffff);
-					 current_ms = (uint32_t)(current_node & 0x7ffff);
+			uint32_t next_ms = (uint32_t)P_M(next_node);
+					 current_ms = (uint32_t)P_M(current_node);
 
 			if( mstime < current_ms ) { node_progress--; continue; }
 			else if( mstime >= next_ms ) { node_progress++; continue; }
@@ -497,31 +537,31 @@ static inline int UpdateArf(lua_State *L)
 				else					node_ratio = (mstime-current_ms) / (float)difms;
 			}
 
-		{	uint8_t et = (uint8_t)( (current_node>>44) & 0b11 );
+		{	uint8_t et = (uint8_t)P_E(current_node);
 			if(et) {
 				float x1, y1, dx, dy;
-				float curve_init = (current_node>>55) * 0.001956947162f;
+				float curve_init = P_CI(current_node) * 0.001956947162f;
 				{	if(curve_init > 1.0f)			curve_init = 1.0f;
 					else if(curve_init < 0.0f)		curve_init = 0.0f;	}
-				float curve_end = ( (current_node>>46) & 0x1ff ) * 0.001956947162f;
+				float curve_end = P_CE(current_node) * 0.001956947162f;
 				{	if(curve_end > 1.0f)			curve_end = 1.0f;
 					else if(curve_end < 0.0f)		curve_end = 0.0f;	}
 
 				if( curve_init==0.0f && curve_end==1.0f ) {
-					x1 = ( ( (current_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
-					y1 = ( ( (current_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
-					dx = ( ( (next_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f - x1;
-					dy = ( ( (next_node>>19) & 0xfff ) - 1024 ) * 0.0078125f - y1;
+					x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
+					y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
+					dx = ( P_X(next_node) - 2048 ) * 0.0078125f - x1;
+					dy = ( P_Y(next_node) - 1024 ) * 0.0078125f - y1;
 				}
 				else {
 					// Get the true x1,dx
-					float fm_x1 = ( ( (current_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
-					float fm_x2 = ( ( (next_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
+					float fm_x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
+					float fm_x2 = ( P_X(next_node) - 2048 ) * 0.0078125f;
 					GetORIG(fm_x1, fm_x2, et, false, curve_init, curve_end, x1, dx);
 
 					// Get the true y1,dy
-					float fm_y1 = ( ( (current_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
-					float fm_y2 = ( ( (next_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
+					float fm_y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
+					float fm_y2 = ( P_Y(next_node) - 1024 ) * 0.0078125f;
 					GetORIG(fm_y1, fm_y2, et, true, curve_init, curve_end, y1, dy);
 				}
 
@@ -557,10 +597,10 @@ static inline int UpdateArf(lua_State *L)
 				}
 			}
 			else {
-				float x1 = ( ( (current_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f;
-				float y1 = ( ( (current_node>>19) & 0xfff ) - 1024 ) * 0.0078125f;
-				float dx = ( ( (next_node>>31) & 0x1fff ) - 2048 ) * 0.0078125f - x1;
-				float dy = ( ( (next_node>>19) & 0xfff ) - 1024 ) * 0.0078125f - y1;
+				float x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
+				float y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
+				float dx = ( P_X(next_node) - 2048 ) * 0.0078125f - x1;
+				float dy = ( P_Y(next_node) - 1024 ) * 0.0078125f - y1;
 				node_x = x1 + dx * node_ratio;
 				node_y = y1 + dy * node_ratio;
 			}
@@ -585,7 +625,7 @@ static inline int UpdateArf(lua_State *L)
 				float wst_ratio;
 				{
 					uint32_t dms_from_1st_node; {
-						if(node_progress)	dms_from_1st_node = mstime - (uint32_t)(nodes->Get(0) & 0x7ffff);
+						if(node_progress)	dms_from_1st_node = mstime - (uint32_t)P_M( nodes->Get(0) );
 						else				dms_from_1st_node = mstime - current_ms;
 					}
 					if( dms_from_1st_node > 237 ) wst_ratio = 1.0f;
@@ -614,7 +654,7 @@ static inline int UpdateArf(lua_State *L)
 
 				// Search Childs
 				if(has_child_to_search) {
-					double max_visible_distance = (info & 0x1fff) / 1024.0;
+					double max_visible_distance = W_MVB(info) / 1024.0;
 					while(child_progress < how_many_childs) {
 
 						// Verify Child Progress II
@@ -638,7 +678,7 @@ static inline int UpdateArf(lua_State *L)
 
 									// Unique Value
 									if(!anodes_bound) {
-										current_degree = (double)(anodes->Get(0) >> 20) - 1800.0;
+										current_degree = (double)A_D( anodes->Get(0) ) - 1800.0;
 									}
 
 									// A Series of Values
@@ -648,20 +688,20 @@ static inline int UpdateArf(lua_State *L)
 										bool anode_search_required = true;
 										{
 											uint32_t last_anode = anodes -> Get(anodes_bound);
-											uint32_t last_ms = (last_anode&0x3ffff) * 2;
+											uint32_t last_ms = A_HM(last_anode) * 2;
 											if( mstime >= last_ms ) {
 												anode_search_required = false;
-												current_degree = (double)(last_anode>>20) - 1800.0;
+												current_degree = (double)A_D(last_anode) - 1800.0;
 											}
 										}
 
 										// Trial II
 										if(anode_search_required) {
 											uint32_t first_anode = anodes -> Get(0);
-											uint32_t first_ms = (first_anode&0x3ffff) * 2;
+											uint32_t first_ms = A_HM(first_anode) * 2;
 											if( mstime <= first_ms ) {
 												anode_search_required = false;
-												current_degree = (double)(first_anode>>20) - 1800.0;
+												current_degree = (double)A_D(first_anode) - 1800.0;
 											}
 										}
 
@@ -674,8 +714,8 @@ static inline int UpdateArf(lua_State *L)
 												uint32_t next_anode = anodes -> Get(a_progress+1);
 												uint32_t current_anode = anodes -> Get(a_progress);
 
-												uint32_t a_next_ms = (next_anode&0x3ffff) * 2;
-												uint32_t a_current_ms = (current_anode&0x3ffff) * 2;
+												uint32_t a_next_ms = A_HM(next_anode) * 2;
+												uint32_t a_current_ms = A_HM(current_anode) * 2;
 
 												if( mstime < a_current_ms ) {
 													a_progress--;
@@ -697,9 +737,9 @@ static inline int UpdateArf(lua_State *L)
 														a_ratio = (mstime-a_current_ms) / (float)difms;
 												}
 
-												double a1 = (double)(current_anode >> 20);
-												double da = (double)(next_anode >> 20) - a1;
-												uint8_t et = (uint8_t)( (current_anode>>18) & 0b11 );
+												double a1 = (double)A_D(current_anode);
+												double da = (double)A_D(next_anode) - a1;
+												uint8_t et = (uint8_t)A_E(current_anode);
 												switch(et) {
 													case 0: {
 														current_degree = a1 - 1800.0; }
@@ -755,7 +795,7 @@ static inline int UpdateArf(lua_State *L)
 					}
 				}
 			}   // L. Mutate Info
-		}		current_wishgroup -> mutate_info( (info&0x3fff) + (node_progress<<14) + (child_progress<<22) );
+		}		current_wishgroup -> mutate_info( CLEARPRG(info) + SETNP(node_progress) + SETCP(child_progress) );
 	}
 
 
@@ -773,21 +813,21 @@ static inline int UpdateArf(lua_State *L)
 			auto current_hint = hint -> Get( current_hint_id );
 
 			uint64_t u;   // Acquire the status of current Hint.
-			u = (current_hint>>25) & 0x7ffff;		int32_t dt = mstime - (int32_t)u;
-			if(dt < -510) break;					if(dt > 470) continue;   // Asserted to be sorted.
+			u = H_M(current_hint);			int32_t dt = mstime - (int32_t)u;
+			if(dt < -510) break;			if(dt > 470) continue;   // Asserted to be sorted.
 
 			uint8_t ch_status = HStatus(current_hint);
 			if( (ch_status<2) && dt>100 ) {   // Sweep, before generating rendering parameters.
 				hint_lost += 1;
-				hint -> Mutate(current_hint_id, (current_hint & 0xfffffffffff) + 0x100000000000 );
+				hint -> Mutate(current_hint_id, PUREHINT(current_hint) + SWEEP );
 				ch_status = HINT_SWEEPED;
 			}
-			u = (current_hint<<1) >> 45;			int32_t pt = mstime - (int32_t)u;
-													int32_t elt = dt - pt - idelta;
+			u = H_JM(current_hint);			int32_t pt = mstime - (int32_t)u;
+											int32_t elt = dt - pt - idelta;
 
 			float posx, posy; {
-			u = current_hint & 0x1fff;				float dx = ( (int16_t)u - 3072 ) * 0.0078125f * xscale;
-			u = (current_hint>>13) & 0xfff;			float dy = ( (int16_t)u - 1536 ) * 0.0078125f * yscale;
+			u = H_X(current_hint);			float dx = ( (int16_t)u - 3072 ) * 0.0078125f * xscale;
+			u = H_Y(current_hint);			float dy = ( (int16_t)u - 1536 ) * 0.0078125f * yscale;
 			posx = (8.0f + dx*rotcos - dy*rotsin + xdelta) * 112.5f;
 			posy = (4.0f + dx*rotsin + dy*rotcos + ydelta) * 112.5f;
 			}
@@ -930,7 +970,7 @@ static inline int JudgeArf(lua_State *L)
 	// Now we prepare returns, and then acquire some stuff from C++ logics.
 	bool special_hint_judged;					lua_Number hint_hit, hint_lost;
 	auto hint = Arf -> mutable_hint();			auto idx_size = Arf -> index() -> size();
-	uint64_t _group = (uint64_t)mstime >> 9;	uint16_t which_group = _group>1 ? _group-1 : 0 ;
+	uint64_t _group = (uint64_t)G(mstime);		uint16_t which_group = _group>1 ? _group-1 : 0 ;
 			 _group = which_group + 3;			uint16_t byd1_group = _group<idx_size ? _group : idx_size;
 
 	// Start Judging.
@@ -946,7 +986,7 @@ static inline int JudgeArf(lua_State *L)
 				auto current_hint = hint->Get( current_hint_id );
 
 				// Acquire the status of current Hint.
-				uint64_t hint_time = (current_hint>>25) & 0x7ffff;
+				uint64_t hint_time = H_M(current_hint);
 				double dt = mstime - (double)hint_time;
 				/// Asserted to be sorted.
 				if(dt <- 370.0f) break;
@@ -968,8 +1008,8 @@ static inline int JudgeArf(lua_State *L)
 								if( dt>=mindt && dt<=maxdt )	hint_hit += 1;
 								else							hint_lost += 1;
 
-								hint -> Mutate(current_hint_id, ( (uint64_t)mstime << 44 ) +
-								(current_hint & 0xfffffffffff) + 0x8000000000000000 );
+								hint -> Mutate(current_hint_id, SETHJM( (uint64_t)mstime ) +
+								PUREHINT(current_hint) + TAG );
 
 								if( current_hint_id == special_hint )
 								special_hint_judged = (bool)special_hint;
@@ -980,26 +1020,26 @@ static inline int JudgeArf(lua_State *L)
 								if( dt>=mindt && dt<=maxdt )	hint_hit += 1;
 								else							hint_lost += 1;
 
-								hint -> Mutate(current_hint_id, ( (uint64_t)mstime << 44 ) +
-								(current_hint & 0xfffffffffff) + 0x8000000000000000 );
+								hint -> Mutate(current_hint_id, SETHJM( (uint64_t)mstime ) +
+								PUREHINT(current_hint) + TAG );
 
 								if( current_hint_id == special_hint )
 								special_hint_judged = (bool)special_hint;
 							}
 							// for Hints unsuitable to judge, just switch it into HINT_NONJUDGED_LIT.
 							else hint -> Mutate( current_hint_id,
-							( (current_hint<<1) >> 1) + 0x8000000000000000 );
+							( CLEARTAG(current_hint) + TAG );
 						}
 						// for Hints out of judging range, just switch it into HINT_NONJUDGED_LIT.
 						else hint -> Mutate( current_hint_id,
-						( (current_hint<<1) >> 1 ) + 0x8000000000000000 );
+						( CLEARTAG(current_hint) + TAG );
 					}
-					else hint -> Mutate( current_hint_id, (current_hint<<1) >> 1 );
+					else hint -> Mutate( current_hint_id, CLEARTAG(current_hint) );
 				}
 
 				// For judged hints,
 				else if ( ch_status==HINT_JUDGED_LIT && (!htn) ){
-					hint -> Mutate( current_hint_id, (current_hint<<1) >> 1 );
+					hint -> Mutate( current_hint_id, CLEARTAG(current_hint) );
 				}
 			}
 		}
@@ -1014,7 +1054,7 @@ static inline int JudgeArf(lua_State *L)
 				auto current_hint = hint->Get( current_hint_id );
 
 				// Acquire the status of current Hint.
-				uint64_t hint_time = (current_hint>>25) & 0x7ffff;
+				uint64_t hint_time = H_M(current_hint);
 				double dt = mstime - (double)hint_time;
 				/// Asserted to be sorted.
 				if(dt <- 510.0f) break;
@@ -1024,11 +1064,11 @@ static inline int JudgeArf(lua_State *L)
 				bool htn = has_touch_near(current_hint);
 
 				if( ch_status<2 ) {   // HINT_NONJUDGED
-					if(htn) hint -> Mutate( current_hint_id, ( (current_hint<<1) >> 1 ) + 0x8000000000000000 );
-					else	hint -> Mutate( current_hint_id, (current_hint<<1) >> 1 );
+					if(htn) hint -> Mutate( current_hint_id, CLEARTAG(current_hint) + TAG );
+					else	hint -> Mutate( current_hint_id, CLEARTAG(current_hint) );
 				}
 				else if ( ch_status==HINT_JUDGED_LIT && (!htn) ){
-					hint -> Mutate( current_hint_id, (current_hint<<1) >> 1 );
+					hint -> Mutate( current_hint_id, CLEARTAG(current_hint) );
 				}
 			}
 		}
