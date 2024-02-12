@@ -688,13 +688,15 @@ class AngleSet:
 
 		return self
 
-def ApplyAngleSet(s:AngleSet) -> FunctionType:
+def ApplyAngleSet(s:AngleSet, to_all_childs:bool = False) -> FunctionType:
 	'''
-	A PseudoDecorator function to apply an AngleSet to the last
-	WishChild to the calling WishGroup.
+	A PseudoDecorator function to apply an AngleSet to the last / all
+	WishChild(s) to the calling WishGroup.
 
 	Args:
 		s (AngleSet): The AngleSet to be applied.
+		to_all_childs (bool): If True, the AngleSet will be applied to all 
+							  WishChild(s) of the calling WishGroup.
 
 	Returns:
 		rtn (FunctionType): For PseudoDecorator Usage.
@@ -704,11 +706,10 @@ def ApplyAngleSet(s:AngleSet) -> FunctionType:
 	if len(s.ans) == 0:
 		raise RuntimeError("Please attach at least one AngleNode on the AngleSet before applying the AngleSet.")
 
-	def rtn(w:WishGroup) -> None:
+	def rtn1(w:WishGroup) -> None:
 		child:WishChild = (w()["last_child"])
 		if child == None:
 			raise RuntimeError("Please attach at least one WishChild on the WishGroup before applying an AngleSet.")
-
 		child.anodes = []
 		child_bar = child.bartime
 		for an in s.ans:
@@ -719,7 +720,24 @@ def ApplyAngleSet(s:AngleSet) -> FunctionType:
 			et = an[2]
 			child.anodes.append( (final_bar,deg,et) )
 		child.anodes.sort(key = lambda an: an[0])
-	return rtn
+	
+	def rtn2(w:WishGroup) -> None:
+		childlist:list[WishChild] = w()["childs"]
+		if len(childlist) == 0:
+			raise RuntimeError("Please attach at least one WishChild on the WishGroup before applying an AngleSet.")
+		for child in childlist:
+			child.anodes = []
+			child_bar = child.bartime
+			for an in s.ans:
+				final_bar = child_bar - an[0]
+				if final_bar < 0:
+					raise RuntimeError("AngleSet Final Bartime(child_bar - anglenode_bar) smaller than 0.")
+				deg = an[1]
+				et = an[2]
+				child.anodes.append( (final_bar,deg,et) )
+			child.anodes.sort(key = lambda an: an[0])
+
+	return (rtn2 if to_all_childs else rtn1)
 
 
 def MoveAngleNodes(delta_bar:float = 0, delta_nmr:int = 0, delta_dnm:int = 1, delta_degree:int = 0, trim_by_interpolating:bool = True, for_all_childs:bool = False) -> FunctionType:

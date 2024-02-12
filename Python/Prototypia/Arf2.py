@@ -130,6 +130,7 @@ class Arf2Serialized:
 	hint:F_VECTOR
 	hgo_required:int = 0
 	special_hint:int = 0
+drm_tails:set[int] = {4, 6, 7, 8, 11, 12, 17, 18, 19, 20 ,21, 22, 23, 24}
 
 
 # Arf2 Data Structure Classes
@@ -732,7 +733,13 @@ class WishGroup:
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
 		'''
-		for t in args: self.c( float(t),0,1 )
+		tdict = {}
+		for t in args:
+			tfloat = float(t)
+			if tfloat in tdict: continue
+			else:
+				tdict[tfloat] = True
+				self.c( float(t),0,1 )
 		return self
 
 	def input_drm(self, text:str, *, type:Union[int,None] = None, left:Union[float,None] = None, mid:Union[float,None] = None, width:Union[float,None] = None, init:Union[float,None] = None, end:Union[float,None] = None) -> Self:
@@ -759,22 +766,27 @@ class WishGroup:
 		'''
 		drm_lines = text.splitlines()   # <id><type><bartime><left><width><nsc_scale><parentid><LRHP>
 		drm_elems = []
+		drm_bars = {}
 		for l in drm_lines:
 			if not l.startswith("<"): continue
-			l.removesuffix(">")
-			l.replace("<","")
+			l = l.removesuffix(">")
+			l = l.replace("<","")
 			drm_elems.append( l.split(">") )
 		for e in drm_elems:
-			if int(e[6]) != 0: continue
+
+			__bartime = float(e[2])
+			if __bartime in drm_bars: continue
+			else: drm_bars[__bartime] = True
 
 			__type = int(e[1])
-			__bartime = float(e[2])
+			if __type in drm_tails: continue
+
 			__left = float(e[3])
 			__width = float(e[4])
 			__mid = __left + 0.5 * __width
 
 			if type and  __type != type: continue
-			elif left and  __left != left: continue
+			if left and  __left != left: continue
 			elif mid and  __mid != mid: continue
 			elif width and  __width != width: continue
 			elif init and  __bartime < init: continue
