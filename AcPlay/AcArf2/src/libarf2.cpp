@@ -970,7 +970,7 @@ static inline int JudgeArf(lua_State *L)
 	// Now we prepare returns, and then acquire some stuff from C++ logics.
 	bool special_hint_judged;					lua_Number hint_hit, hint_lost;
 	auto hint = Arf -> mutable_hint();			auto idx_size = Arf -> index() -> size();
-	uint64_t _group = (uint64_t)G(mstime);		uint16_t which_group = _group>1 ? _group-1 : 0 ;
+	uint32_t _group = G((uint32_t)mstime);		uint16_t which_group = _group>1 ? _group-1 : 0 ;
 			 _group = which_group + 3;			uint16_t byd1_group = _group<idx_size ? _group : idx_size;
 
 	// Start Judging.
