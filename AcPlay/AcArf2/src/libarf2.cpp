@@ -195,6 +195,8 @@ typedef dmVMath::Vector3 v3, *v3p;
 typedef dmVMath::Vector4 v4, *v4p;
 enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
 	   HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
+typedef dmGameObject::HInstance GO;
+typedef dmVMath::Point3 p3;
 
 // Recommended Usage of "SetTouches"
 //     local v3,T = vmath.vector3, Arf2.NewTable(10,0);    for i=1,10 do T[i]=v3() end
@@ -313,9 +315,9 @@ static inline uint8_t HStatus(uint64_t Hint){
 /* Script APIs, Under Construction
    S --> Safety guaranteed, by precluding the memory leakage.  */
 static Arf2* Arf = nullptr;
-static v3p *T_WPOS = nullptr, *T_HPOS = nullptr, *T_APOS = nullptr;
+static GO *T_WGO = nullptr, *T_HGO = nullptr, *T_AGO_L = nullptr, *T_AGO_R = nullptr;
 static v4p *T_HTINT = nullptr, *T_ATINT = nullptr;
-#define S if( !ArfSize || T_WPOS==nullptr ) return 0;
+#define S if( !ArfSize || T_WGO==nullptr ) return 0;
 
 // InitArf(buf, is_auto) -> before, total_hints, wgo_required, hgo_required
 // Recommended Usage (Requires Defold 1.6.4 or Newer):
@@ -365,45 +367,53 @@ static inline int InitArf(lua_State *L)
 	return 4;
 }
 
-// SetVecs(table_wpos/hpos/apos/htint/atint)
+// SetVecs(table_wgo/hgo/agol/agor/htint/atint)
 // Recommended Usage:
 //     local wpos,hpos,apos,htint,atint
 //     if b then   -- Don't forget the judging.
-//         wpos = Arf2.NewTable(w,0);		for i=1,w do wpos[i] = vmath.vector3() end
-//         hpos = Arf2.NewTable(h,0);		for i=1,h do hpos[i] = vmath.vector3() end
-//         apos = Arf2.NewTable(h,0);		for i=1,h do apos[i] = vmath.vector3() end
+//         wgo = Arf2.NewTable(w,0);		for i=1,w do wgo[i] = factory.create(···) end
+//         hgo = Arf2.NewTable(h,0);		for i=1,h do hgo[i] = factory.create(···) end
+//         agol = Arf2.NewTable(h,0);		for i=1,h do agol[i] = factory.create(···) end
+//         agor = Arf2.NewTable(h,0);		for i=1,h do agor[i] = factory.create(···) end
 //         htint = Arf2.NewTable(h,0);		for i=1,h do htint[i] = vmath.vector4() end
 //         atint = Arf2.NewTable(h,0);		for i=1,h do atint[i] = vmath.vector4() end
-//         SetVecs(wpos,hpos,apos,htint,atint)
+//         SetVecs(wgo,hgo,agol,agor,htint,atint)
 //     end
 // Before calling FinalArf(), DO NOT deref these Tables.
 static inline int SetVecs(lua_State *L)
-{ if( !ArfSize || T_WPOS!=nullptr ) return 0;
+{ if( !ArfSize || T_WGO!=nullptr ) return 0;
 
 	uint8_t wgo_required = Arf->wgo_required();
 	uint8_t hgo_required = Arf->hgo_required();
 
-	T_WPOS = (v3p*)malloc( sizeof(v3p) * wgo_required );
-	T_HPOS = (v3p*)malloc( sizeof(v3p) * hgo_required );
-	T_APOS = (v3p*)malloc( sizeof(v3p) * hgo_required );
+	T_WGO = (GO*)malloc( sizeof(GO) * wgo_required );
+	T_HGO = (GO*)malloc( sizeof(GO) * hgo_required );
+	T_AGO_L = (GO*)malloc( sizeof(GO) * hgo_required );
+	T_AGO_R = (GO*)malloc( sizeof(GO) * hgo_required );
 	T_HTINT = (v4p*)malloc( sizeof(v4p) * hgo_required );
 	T_ATINT = (v4p*)malloc( sizeof(v4p) * hgo_required );
 
-	DM_LUA_STACK_CHECK(L, 4);
+	DM_LUA_STACK_CHECK(L, 5);
 	for( uint8_t i=0; i<wgo_required; i++ ) {
-		lua_rawgeti(L, 1, i+1);		T_WPOS[i] = dmScript::CheckVector3(L, 7);		lua_pop(L, 1);
+		lua_rawgeti(L, 1, i+1);		T_WGO[i] = dmScript::CheckGOInstance(L, 7);		lua_pop(L, 1);
 	}
 	for( uint8_t i=0, ii=1; i<hgo_required; ii = (++i) + 1 ) {
-		lua_rawgeti(L, 2, ii);		T_HPOS[i] = dmScript::CheckVector3(L, 7);
-		lua_rawgeti(L, 3, ii);		T_APOS[i] = dmScript::CheckVector3(L, 8);
-		lua_rawgeti(L, 4, ii);		T_HTINT[i] = dmScript::CheckVector4(L, 9);		T_HTINT[i] -> setW(1.0f);
-		lua_rawgeti(L, 5, ii);		T_ATINT[i] = dmScript::CheckVector4(L, 10);		lua_pop(L, 4);
+		lua_rawgeti(L, 2, ii);		T_HGO[i] = dmScript::CheckGOInstance(L, 7);
+		lua_rawgeti(L, 3, ii);		T_AGO_L[i] = dmScript::CheckGOInstance(L, 8);
+		lua_rawgeti(L, 4, ii);		T_AGO_R[i] = dmScript::CheckGOInstance(L, 9);
+		lua_rawgeti(L, 5, ii);		T_HTINT[i] = dmScript::CheckVector4(L, 10);		T_HTINT[i] -> setW(1.0f);
+		lua_rawgeti(L, 6, ii);		T_ATINT[i] = dmScript::CheckVector4(L, 11);		lua_pop(L, 5);
 	}
 	return 0;
 }
 
 
-// UpdateArf(mstime, table_wst, table_ainfo) -> hint_lost, wgo/hgo/ago_used
+// UpdateArf(mstime, table_winfo, table_ainfo) -> hint_lost, wgo/hgo/ago_used
+// winfo: tint.w value of a WishGroup,
+//        also referred when setting the scale of a WishGO
+// ainfo: time(ms) passed since the Hint is judged,
+//        referred when setting the "eular.z" of an AnimGO
+// 
 static inline int UpdateArf(lua_State *L)
 {S
 	// Prepare Returns & Process msTime
@@ -621,7 +631,7 @@ static inline int UpdateArf(lua_State *L)
 			}
 			else {
 				last_wgo[poskey] = wgo_used;
-				T_WPOS[wgo_used] -> setX(px).setY(py).setZ( of_layer2 ? 0.1f : 0.0f );
+				SetPosition( T_WGO[wgo_used], p3(px, py, of_layer2 ? 0.1f : 0.0f) );
 				float wst_ratio;
 				{
 					uint32_t dms_from_1st_node; {
@@ -783,7 +793,7 @@ static inline int UpdateArf(lua_State *L)
 							}
 							else {
 								last_wgo[poskey] = wgo_used;
-								T_WPOS[wgo_used] -> setX(px).setY(py).setZ( of_layer2 ? 0.15f : 0.05f );
+								SetPosition( T_WGO[wgo_used], p3(px, py, of_layer2 ? 0.15f : 0.05f) );
 								float wst_ratio;
 								{
 									float div  =  max_visible_distance - radius;
@@ -833,27 +843,27 @@ static inline int UpdateArf(lua_State *L)
 			}
 
 			// Prepare Render Elements
-			v3p hpos = T_HPOS[hgo_used];	v4p htint = T_HTINT[hgo_used];
-			v3p apos = T_APOS[ago_used];	v4p atint = T_ATINT[ago_used];
+			GO hgo = T_HGO[hgo_used], agol = T_AGO_L[ago_used], agor = T_AGO_R[ago_used];
+			v4p htint = T_HTINT[hgo_used], atint = T_ATINT[ago_used];
 
 			// Start The Access.
 			if( dt < -370 ) {
 				float hi_rt = 0.1337f + (float)(0.07 * (510+dt) / 140.0);
-				htint -> setX(hi_rt).setY(hi_rt).setZ(hi_rt);   // Elegant?
-				hpos -> setX(posx).setY(posy).setZ( -(0.05f + dt*0.00001f) );
+				htint -> setX(hi_rt).setY(hi_rt).setZ(hi_rt);
+				SetPosition( hgo, p3(posx, posy, -(0.05f + dt*0.00001f)) );
 				hgo_used++;
 			}
 			else if( dt <= 370 ) switch(ch_status) {
 				case HINT_NONJUDGED_NONLIT: {
-					hpos -> setX(posx).setY(posy).setZ( -0.04f );
 					htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
+					SetPosition( hgo, p3(posx, posy, -0.04f) );
 					hgo_used++;	}	break;
 				case HINT_NONJUDGED_LIT: {
-					hpos -> setX(posx).setY(posy).setZ( -0.03f );
 					htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
+					SetPosition( hgo, p3(posx, posy, -0.03f) );
 					hgo_used++;	}	break;
 				case HINT_JUDGED_LIT: {   // No "break" here
-					hpos -> setX(posx).setY(posy).setZ( -0.01f );
+					SetPosition( hgo, p3(posx, posy, -0.01f) );
 					if ( elt>=-37 && elt<=37 ) {
 						if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
 						else 			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
@@ -865,7 +875,9 @@ static inline int UpdateArf(lua_State *L)
 					hgo_used++; }
 				case HINT_JUDGED: {
 					if( pt <= 370 ) {
-						apos -> setX(posx).setY(posy).setZ( -pt*0.00001f );
+						p3 agopos(posx, posy, -pt*0.00001f);
+						SetPosition( agol, agopos );
+						SetPosition( agor, agopos );
 						if( pt<73 ) {
 							float tintw = pt * 0.01f;
 							tintw = 0.637f * tintw * (2.f - tintw);
@@ -890,21 +902,23 @@ static inline int UpdateArf(lua_State *L)
 				case HINT_SWEEPED: {
 					float hl_rt = 0.437f - dt*0.00037f;
 					htint -> setX(hl_rt);		hl_rt *= 0.51f;		htint -> setY(hl_rt).setZ(hl_rt);
-					hpos -> setX(posx).setY(posy).setZ( -0.02f + dt*0.00001f );
+					SetPosition( hgo, p3(posx, posy, -0.02f + dt*0.00001f) );
 					hgo_used++;	}	break;
 				case HINT_AUTO: {
 					if( dt>0 ) {
 
 						// HGo
 						if (dt<101) {
-							hpos -> setX(posx).setY(posy).setZ( -0.01f );
+							SetPosition( hgo, p3(posx, posy, -0.01f) );
 							if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
 							else 			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
 							hgo_used++;
 						}
 
 						// AGo
-						apos -> setX(posx).setY(posy).setZ( -dt*0.00001f );
+						p3 agopos(posx, posy, -dt*0.00001f);
+						SetPosition( agol, agopos );
+						SetPosition( agor, agopos );
 						if( dt<73 ) {
 							float tintw = dt * 0.01f;
 							tintw = 0.637f * tintw * (2.f - tintw);
@@ -920,8 +934,8 @@ static inline int UpdateArf(lua_State *L)
 						lua_pushnumber(L, pt);	lua_rawseti(L, 3, ++ago_used);
 					}
 					else {
-						hpos -> setX(posx).setY(posy).setZ( -0.04f );
 						htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
+						SetPosition( hgo, p3(posx, posy, -0.04f) );
 						hgo_used++; }
 					}
 				// default:
@@ -929,7 +943,9 @@ static inline int UpdateArf(lua_State *L)
 			else if(
 				(ch_status==HINT_JUDGED || ch_status==HINT_JUDGED_LIT) && ( pt<=370 )
 			) {
-				apos -> setX(posx).setY(posy).setZ( -pt*0.00001f );
+				p3 agopos(posx, posy, -dt*0.00001f);
+				SetPosition( agol, agopos );
+				SetPosition( agor, agopos );
 				if( pt<73 ) {
 					float tintw = pt * 0.01f;
 					tintw = 0.637f * tintw * (2.f - tintw);
@@ -1085,9 +1101,10 @@ static inline int FinalArf(lua_State *L)
 {S
 	orig_cache.clear();
 	ArfBuf = nullptr;	Arf = nullptr;   // The Buffer will be GCed after derefing its Handle in Lua.
-	free(T_WPOS);		T_WPOS = nullptr;
-	free(T_HPOS);		T_HPOS = nullptr;
-	free(T_APOS);		T_APOS = nullptr;
+	free(T_WGO);		T_WGO = nullptr;
+	free(T_HGO);		T_HGO = nullptr;
+	free(T_AGO_L);		T_AGO_L = nullptr;
+	free(T_AGO_R);		T_AGO_R = nullptr;
 	free(T_HTINT);		T_HTINT = nullptr;
 	free(T_ATINT);		T_ATINT = nullptr;
 	ArfSize = 0;		return 0;

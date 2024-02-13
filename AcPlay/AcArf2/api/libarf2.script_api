@@ -22,11 +22,13 @@
   - name: SetVecs
     type: function
     parameters:
-    - name: wish_pos
+    - name: wish_gos
       type: table
-    - name: hint_pos
+    - name: hint_gos
       type: table
-    - name: anim_pos
+    - name: anim_l_gos
+      type: table
+    - name: anim_r_gos
       type: table
     - name: hint_tint
       type: table
@@ -39,7 +41,7 @@
     parameters:
     - name: mstime
       type: number
-    - name: wish_screentime
+    - name: wish_info
       type: table
     - name: anim_info
       type: table
