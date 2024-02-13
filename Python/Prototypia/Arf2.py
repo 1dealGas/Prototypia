@@ -1435,7 +1435,16 @@ def Arf2Compile() -> None:
 	for i in range( idxlen ):
 
 		current_widx = RL(widx[i])
-		Arf2Index.StartWidxVector(b, len(current_widx))
+		widx_len = len(current_widx)
+		if widx_len > 255:
+			print("\n----------------")
+			print("Warning:")
+			print("More than 255 Wishes may exist within 512ms,")
+			print("which may make several Wishes hidden.\n")
+			print("--  Try to reduce the density of Wishes / WishChilds.")
+			print("----------------\n")
+
+		Arf2Index.StartWidxVector(b, widx_len)
 		for value in current_widx:
 			if value > 65535:
 				print("\n----------------")
@@ -1490,7 +1499,7 @@ def Arf2Compile() -> None:
 
 			# "WishChildFb" is an alias of class[WishChild.py -> WishChild],
 			# rather than class[Arf2.py -> WishChild].
-			# The code analysis of Pylance is wrongful here.
+			# The code analysis of Pylance is erroneous here.
 			WishChildFb.StartAnodesVector( b, len(ch._final_anodes) )
 			for an in RL(ch._final_anodes):   # (ms, angle, et)
 				degree = int( an[1] + 1800 ) << 20
