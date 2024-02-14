@@ -294,18 +294,18 @@ static inline bool is_safe_to_anmitsu( const uint64_t hint ){
 }
 static inline uint8_t HStatus(uint64_t Hint){
 	Hint >>= 44;
-	bool TAG = (bool)(Hint >> 19);
+	bool HS_TAG = (bool)(Hint >> 19);
 	Hint &= 0x7ffff;
 	if( Hint==1 ) {
-		if(TAG)			return HINT_AUTO;
+		if(HS_TAG)			return HINT_AUTO;
 		else			return HINT_SWEEPED;
 	}
 	else if(Hint) {
-		if(TAG)			return HINT_JUDGED_LIT;
+		if(HS_TAG)			return HINT_JUDGED_LIT;
 		else			return HINT_JUDGED;
 	}
 	else {
-		if(TAG) 		return HINT_NONJUDGED_LIT;
+		if(HS_TAG) 		return HINT_NONJUDGED_LIT;
 		else			return HINT_NONJUDGED_NONLIT;
 	}
 }
@@ -409,11 +409,9 @@ static inline int SetVecs(lua_State *L)
 
 
 // UpdateArf(mstime, table_winfo, table_ainfo) -> hint_lost, wgo/hgo/ago_used
-// winfo: tint.w value of a WishGroup,
-//        also referred when setting the scale of a WishGO
+// winfo: tint.w value of a WishGroup
 // ainfo: time(ms) passed since the Hint is judged,
 //        referred when setting the "eular.z" of an AnimGO
-// 
 static inline int UpdateArf(lua_State *L)
 {S
 	// Prepare Returns & Process msTime
@@ -631,7 +629,8 @@ static inline int UpdateArf(lua_State *L)
 			}
 			else {
 				last_wgo[poskey] = wgo_used;
-				SetPosition( T_WGO[wgo_used], p3(px, py, of_layer2 ? 0.1f : 0.0f) );
+				GO WGO = T_WGO[wgo_used];
+				SetPosition( WGO, p3(px, py, of_layer2 ? 0.1f : 0.0f) );
 				float wst_ratio;
 				{
 					uint32_t dms_from_1st_node; {
@@ -641,6 +640,7 @@ static inline int UpdateArf(lua_State *L)
 					if( dms_from_1st_node > 237 ) wst_ratio = 1.0f;
 					else						  wst_ratio = dms_from_1st_node * 0.00421940928270042194092827f;
 				}
+				SetScale( WGO, 0.637f * wst_ratio );
 				lua_pushnumber(L, wst_ratio);		lua_rawseti(L, 2, ++wgo_used);
 			}
 		}	break;
@@ -793,13 +793,15 @@ static inline int UpdateArf(lua_State *L)
 							}
 							else {
 								last_wgo[poskey] = wgo_used;
-								SetPosition( T_WGO[wgo_used], p3(px, py, of_layer2 ? 0.15f : 0.05f) );
-								float wst_ratio;
-								{
+								GO WGO = T_WGO[wgo_used];
+								SetPosition( WGO, p3(px, py, of_layer2 ? 0.15f : 0.05f) );
+								{   float wst_ratio;
 									float div  =  max_visible_distance - radius;
 										  div /= (max_visible_distance * 0.237f);
 									wst_ratio  =  div>1.0f ? 1.0f : div;
-								}	lua_pushnumber(L, wst_ratio);		lua_rawseti(L, 2, ++wgo_used);
+									SetScale( WGO, 0.637f * wst_ratio );
+									lua_pushnumber(L, wst_ratio);		lua_rawseti(L, 2, ++wgo_used);
+								}
 							}
 						}			break;
 					}
@@ -1044,11 +1046,11 @@ static inline int JudgeArf(lua_State *L)
 							}
 							// for Hints unsuitable to judge, just switch it into HINT_NONJUDGED_LIT.
 							else hint -> Mutate( current_hint_id,
-							( CLEARTAG(current_hint) + TAG );
+							CLEARTAG(current_hint) + TAG );
 						}
 						// for Hints out of judging range, just switch it into HINT_NONJUDGED_LIT.
 						else hint -> Mutate( current_hint_id,
-						( CLEARTAG(current_hint) + TAG );
+						CLEARTAG(current_hint) + TAG );
 					}
 					else hint -> Mutate( current_hint_id, CLEARTAG(current_hint) );
 				}
@@ -1127,6 +1129,7 @@ static inline int NewTable(lua_State *L) {
 }
 static inline int SetDaymode(lua_State *L) { daymode		= lua_toboolean(L, 1);	return 0; }
 static inline int SetAnmitsu(lua_State *L) { allow_anmitsu	= lua_toboolean(L, 1);	return 0; }
+
 
 // Defold Binding Related Stuff
 static const luaL_reg M[] =   // Considering Adding a "JudgeArfController" Function.
