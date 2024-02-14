@@ -43,8 +43,6 @@
       type: number
     - name: wish_info
       type: table
-    - name: anim_info
-      type: table
     returns:
     - name: hint_lost
       type: number

@@ -414,10 +414,8 @@ static inline int SetVecs(lua_State *L)
 }
 
 
-// UpdateArf(mstime, table_winfo, table_ainfo) -> hint_lost, wgo/hgo/ago_used
+// UpdateArf(mstime, table_winfo) -> hint_lost, wgo/hgo/ago_used
 // winfo: tint.w value of a WishGroup
-// ainfo: time(ms) passed since the Hint is judged,
-//        referred when setting the "eular.z" of an AnimGO
 static inline int UpdateArf(lua_State *L)
 {S
 	// Prepare Returns & Process msTime
