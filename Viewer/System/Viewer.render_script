@@ -1,0 +1,238 @@
+-- Copyright 2020-2024 The Defold Foundation
+-- Copyright 2014-2020 King
+-- Copyright 2009-2014 Ragnar Svensson, Christian Murray
+-- Licensed under the Defold License version 1.0 (the "License"); you may not use
+-- this file except in compliance with the License.
+-- 
+-- You may obtain a copy of the License, together with FAQs at
+-- https://www.defold.com/license
+-- 
+-- Unless required by applicable law or agreed to in writing, software distributed
+-- under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+-- CONDITIONS OF ANY KIND, either express or implied. See the License for the
+-- specific language governing permissions and limitations under the License.
+
+
+--
+-- Modified by 1dealGas:
+--     Only Use "Fixed Fit" & "GUI" Projections
+--     Convert indentations to Tabs
+--     Cache API Functions & Enums
+-- We will strip the useless encapsulation soon.
+--
+local hash = hash
+local pairs = pairs
+local vmath_vector4 = vmath.vector4
+local vmath_matrix4 = vmath.matrix4
+local vmath_matrix4_orthographic = vmath.matrix4_orthographic
+local sys_get_config_number = sys.get_config_number
+local render_predicate = render.predicate
+local render_get_window_width = render.get_window_width
+local render_get_window_height = render.get_window_height
+local render_get_width = render.get_width
+local render_get_height = render.get_height
+local render_set_depth_mask = render.set_depth_mask
+local render_set_stencil_mask = render.set_stencil_mask
+local render_clear = render.clear
+local render_set_viewport = render.set_viewport
+local render_set_view = render.set_view
+local render_set_projection = render.set_projection
+local render_set_blend_func = render.set_blend_func
+local render_enable_state = render.enable_state
+local render_disable_state = render.disable_state
+local render_draw_debug3d = render.draw_debug3d
+local render_draw = render.draw
+
+--
+-- Constants
+--
+local MSG_CLEAR_COLOR =         hash("clear_color")
+local MSG_WINDOW_RESIZED =      hash("window_resized")
+local MSG_SET_VIEW_PROJ =       hash("set_view_projection")
+local DEFAULT_NEAR, DEFAULT_FAR, DEFAULT_ZOOM = -1, 1, 1
+local render_BUFFER_COLOR_BIT = render.BUFFER_COLOR_BIT
+local render_BUFFER_DEPTH_BIT = render.BUFFER_DEPTH_BIT
+local render_BUFFER_STENCIL_BIT = render.BUFFER_STENCIL_BIT
+local render_BLEND_SRC_ALPHA = render.BLEND_SRC_ALPHA
+local render_BLEND_ONE_MINUS_SRC_ALPHA = render.BLEND_ONE_MINUS_SRC_ALPHA
+local render_STATE_DEPTH_TEST = render.STATE_DEPTH_TEST
+local render_STATE_CULL_FACE = render.STATE_CULL_FACE
+local render_STATE_BLEND = render.STATE_BLEND
+local render_STATE_STENCIL_TEST = render.STATE_STENCIL_TEST
+
+
+--
+-- Projection that centers and fits content with maintained aspect ratio
+--
+local function get_fixed_fit_projection(camera, state)
+	local projected_width = state.window_width
+	local projected_height = state.window_height
+
+	local wr = state.window_width / state.width
+	local hr = state.window_height / state.height
+
+	if wr >= hr then
+		camera.zoom = hr
+		projected_width = projected_width / hr
+		projected_height = projected_height / hr
+	else
+		camera.zoom = wr
+		projected_width = projected_width / wr
+		projected_height = projected_height / wr
+	end
+
+	local left = (state.width - projected_width) / 2
+	local bottom = (state.height - projected_height) / 2
+	return vmath_matrix4_orthographic(left, left + projected_width, bottom, bottom + projected_height, camera.near, camera.far)
+end
+
+local function update_state(state)
+	state.window_width = render_get_window_width()
+	state.window_height = render_get_window_height()
+	state.valid = state.window_width > 0 and state.window_height > 0
+	if not state.valid then
+		return false
+	end
+	-- Make sure state updated only once when resize window
+	if state.window_width == state.prev_window_width and state.window_height == state.prev_window_height then
+		return true
+	end
+	state.prev_window_width = state.window_width
+	state.prev_window_height = state.window_height
+	state.width = render_get_width()
+	state.height = render_get_height()
+
+	local c_w = state.camera_world
+	c_w.proj = get_fixed_fit_projection(c_w, state)
+	c_w.frustum.frustum = c_w.proj * c_w.view
+
+	local c_g = state.camera_gui
+	c_g.proj = vmath_matrix4_orthographic(0, state.window_width, 0, state.window_height, c_g.near, c_g.far)
+	c_g.frustum.frustum = c_g.proj * c_g.view
+
+	return true
+end
+
+local function create_camera(state, name, is_main_camera, near, far, zoom)
+
+	local camera = {}
+	camera.frustum = {}
+	camera.view = vmath_matrix4()
+	camera.near = near == nil and DEFAULT_NEAR or near
+	camera.far = far == nil and DEFAULT_FAR or far
+	camera.zoom = zoom == nil and DEFAULT_ZOOM or zoom
+
+	if is_main_camera then
+		state.main_camera = camera
+	end
+	state[name] = camera
+	return camera
+end
+
+
+function init(self)
+
+	local color = vmath_vector4(0, 0, 0, 0)
+	color.x = sys_get_config_number("render.clear_color_red", 0)
+	color.y = sys_get_config_number("render.clear_color_green", 0)
+	color.z = sys_get_config_number("render.clear_color_blue", 0)
+	color.w = sys_get_config_number("render.clear_color_alpha", 0)
+
+	local state = {}
+	state.clear_buffers = {
+		[render_BUFFER_COLOR_BIT] = color,
+		[render_BUFFER_DEPTH_BIT] = 1,
+		[render_BUFFER_STENCIL_BIT] = 0
+	}
+
+	create_camera(state, "camera_world", true)
+	create_camera(state, "camera_gui")
+	update_state(state)
+
+	local predicates = {}
+	local _tile, _gui, _text, _particle, _model = "tile", "gui", "text", "particle", "model"
+	predicates[_tile] = render_predicate( {_tile} )
+	predicates[_gui] = render_predicate( {_gui} )
+	predicates[_text] = render_predicate( {_text} )
+	predicates[_particle] = render_predicate( {_particle} )
+	predicates[_model] = render_predicate( {_model} )
+	
+	self.state = state
+	self.predicates = predicates
+end
+
+
+function update(self)
+	local state = self.state
+	if not state.valid then
+		if not update_state(state) then
+			return
+		end
+	end
+
+	local predicates = self.predicates
+	-- clear screen buffers
+	--
+	-- turn on depth_mask before `render.clear()` to clear it as well
+	render_set_depth_mask(true)
+	render_set_stencil_mask(0xff)
+	render_clear(state.clear_buffers)
+
+	-- setup camera view and projection
+	--
+	local camera_world = state.camera_world
+	render_set_viewport(0, 0, state.window_width, state.window_height)
+	render_set_view(camera_world.view)
+	render_set_projection(camera_world.proj)
+
+	-- set states used for all the world predicates
+	render_set_blend_func(render_BLEND_SRC_ALPHA, render_BLEND_ONE_MINUS_SRC_ALPHA)
+	render_enable_state(render_STATE_DEPTH_TEST)
+
+	-- render `model` predicate for default 3D material
+	--
+	render_enable_state(render_STATE_CULL_FACE)
+	render_draw(predicates.model, camera_world.frustum)
+	render_set_depth_mask(false)
+	render_disable_state(render_STATE_CULL_FACE)
+
+	-- render the other components: sprites, tilemaps, particles etc
+	--
+	render_enable_state(render_STATE_BLEND)
+	render_draw(predicates.tile, camera_world.frustum)
+	render_draw(predicates.particle, camera_world.frustum)
+	render_disable_state(render_STATE_DEPTH_TEST)
+	render_draw_debug3d()
+
+	-- render GUI
+	--
+	local camera_gui = state.camera_gui
+	render_set_view(camera_gui.view)
+	render_set_projection(camera_gui.proj)
+
+	render_enable_state(render_STATE_STENCIL_TEST)
+	render_draw(predicates.gui, camera_gui.frustum)
+	render_draw(predicates.text, camera_gui.frustum)
+	render_disable_state(render_STATE_STENCIL_TEST)
+	render_disable_state(render_STATE_BLEND)
+end
+
+
+function on_message(self, message_id, message)
+	local state = self.state
+	if message_id == MSG_CLEAR_COLOR then
+		local color = message.color
+		if color then
+			state.clear_buffers[render_BUFFER_COLOR_BIT] = color
+		end
+	elseif message_id == MSG_WINDOW_RESIZED then update_state(state)
+	elseif message_id == MSG_SET_VIEW_PROJ then
+		self.camera_projection = message.projection or vmath_matrix4()
+
+		local camera = state.camera_world
+		camera.view = message.view
+		camera.proj = get_fixed_fit_projection(camera, state)
+		camera.frustum.frustum = camera.proj * camera.view
+
+	end
+end

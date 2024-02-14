@@ -1,0 +1,96 @@
+platforms:
+  armv7-ios:
+    context:
+      excludeLibs: [physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeSymbols: [ProfilerExt]
+      symbols: []
+      libs: [physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      frameworks: []
+      linkFlags: []
+  arm64-ios:
+    context:
+      excludeLibs: [graphics, physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [graphics_vulkan, MoltenVK, physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      frameworks: [Metal, QuartzCore]
+      linkFlags: []
+  x86_64-ios:
+    context:
+      excludeLibs: [physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeSymbols: [ProfilerExt]
+      symbols: []
+      libs: [physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      frameworks: []
+      linkFlags: []
+  armv7-android:
+    context:
+      excludeLibs: [graphics, physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeJars: []
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [graphics_vulkan, physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      linkFlags: []
+      jetifier: true
+  arm64-android:
+    context:
+      excludeLibs: [graphics, physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeJars: []
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [graphics_vulkan, physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      linkFlags: []
+      jetifier: true
+  arm64-osx:
+    context:
+      excludeLibs: [graphics, physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [graphics_vulkan, MoltenVK, physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      frameworks: [Metal, IOSurface, QuartzCore]
+      linkFlags: []
+  x86_64-osx:
+    context:
+      excludeLibs: [graphics, physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [graphics_vulkan, MoltenVK, physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      frameworks: [Metal, IOSurface, QuartzCore]
+      linkFlags: []
+  x86_64-linux:
+    context:
+      excludeLibs: [graphics, physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [graphics_vulkan, X11-xcb, physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      linkFlags: []
+  x86-win32:
+    context:
+      excludeLibs: [libgraphics, libphysics, libLinearMath, libBulletDynamics, libBulletCollision, libBox2D, librecord, vpx, libprofilerext, libliveupdate, libgraphics_transcoder_basisu, libbasis_transcoder]
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [libgraphics_vulkan.lib, vulkan-1.lib, libphysics_null.lib, librecord_null.lib, libprofilerext_null.lib, libliveupdate_null.lib, libgraphics_transcoder_null.lib]
+      linkFlags: []
+  x86_64-win32:
+    context:
+      excludeLibs: [libgraphics, libphysics, libLinearMath, libBulletDynamics, libBulletCollision, libBox2D, librecord, vpx, libprofilerext, libliveupdate, libgraphics_transcoder_basisu, libbasis_transcoder]
+      excludeSymbols: [GraphicsAdapterOpenGL, ProfilerExt]
+      symbols: [GraphicsAdapterVulkan]
+      libs: [libgraphics_vulkan.lib, vulkan-1.lib, libphysics_null.lib, librecord_null.lib, libprofilerext_null.lib, libliveupdate_null.lib, libgraphics_transcoder_null.lib]
+      linkFlags: []
+  js-web:
+    context:
+      excludeLibs: [physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeJsLibs: []
+      excludeSymbols: [ProfilerExt]
+      symbols: []
+      libs: [physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      linkFlags: []
+  wasm-web:
+    context:
+      excludeLibs: [physics, LinearMath, BulletDynamics, BulletCollision, Box2D, record, vpx, profilerext, liveupdate, graphics_transcoder_basisu, basis_transcoder]
+      excludeJsLibs: []
+      excludeSymbols: [ProfilerExt]
+      symbols: []
+      libs: [physics_null, record_null, profilerext_null, liveupdate_null, graphics_transcoder_null]
+      linkFlags: []
