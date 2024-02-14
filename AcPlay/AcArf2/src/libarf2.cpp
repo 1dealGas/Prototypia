@@ -628,8 +628,8 @@ static inline int UpdateArf(lua_State *L)
 
 			uint32_t poskey = (uint32_t)(px * 1009.0f) + (uint32_t)(py * 1013.0f);
 			if( last_wgo.count(poskey) ) {   // Overlapped
-				SetScale( T_WGO[ last_wgo[poskey] ], 0.637f );
-				lua_pushnumber(L, 1.0);			lua_rawseti(L, 2, last_wgo[poskey]+1);
+				uint8_t lwid = last_wgo[poskey];	SetScale( T_WGO[lwid], 0.637f );
+				lua_pushnumber(L, 1.0);				lua_rawseti(L, 2, lwid + 1);
 			}
 			else {
 				last_wgo[poskey] = wgo_used;
@@ -792,8 +792,8 @@ static inline int UpdateArf(lua_State *L)
 
 							uint32_t poskey = (uint32_t)(px * 1009.0f) + (uint32_t)(py * 1013.0f);
 							if( last_wgo.count(poskey) ) {   // Overlapped
-								SetScale( T_WGO[ last_wgo[poskey] ], 0.637f );
-								lua_pushnumber(L, 1.0);			lua_rawseti(L, 2, last_wgo[poskey]+1);
+								uint8_t lwid = last_wgo[poskey];	SetScale( T_WGO[lwid], 0.637f );
+								lua_pushnumber(L, 1.0);				lua_rawseti(L, 2, lwid + 1);
 							}
 							else {
 								last_wgo[poskey] = wgo_used;
