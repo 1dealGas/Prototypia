@@ -197,7 +197,7 @@ static inline void GetORIG(const float p1, const float p2, uint8_t et, const boo
 }
 static inline dmVMath::Quat GetZQuad(const double degree) {
 	GetSINCOS( degree * 0.5 );
-	return dmVMath::Quat(0.0f, 0.0f, SIN, COS)
+	return dmVMath::Quat(0.0f, 0.0f, SIN, COS);
 }
 dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
 
@@ -912,7 +912,7 @@ static inline int UpdateArf(lua_State *L)
 						if(pt <= 193) {
 							double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
 							SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
-							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							anim_calculate = anim_calculate * (2.0 - anim_calculate);
 							SetScale( agol, 1.0 + 0.637 * anim_calculate );
 						}
 						else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
@@ -920,7 +920,7 @@ static inline int UpdateArf(lua_State *L)
 						// Anim: Set Rotation & Scale (R)
 						{
 							double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
-							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							anim_calculate = anim_calculate * (2.0 - anim_calculate);
 							SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
 							SetScale( agor, 1.0 + 0.637 * anim_calculate );
 						}
@@ -968,7 +968,7 @@ static inline int UpdateArf(lua_State *L)
 						if(dt <= 193) {
 							double anim_calculate = (double)dt * 0.005181347150259;   // 1/193
 							SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
-							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							anim_calculate = anim_calculate * (2.0 - anim_calculate);
 							SetScale( agol, 1.0 + 0.637 * anim_calculate );
 						}
 						else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
@@ -976,7 +976,7 @@ static inline int UpdateArf(lua_State *L)
 						// Anim: Set Rotation & Scale (R)
 						{
 							double anim_calculate = (double)dt * 0.002702702702702;   // 1/370
-							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							anim_calculate = anim_calculate * (2.0 - anim_calculate);
 							SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
 							SetScale( agor, 1.0 + 0.637 * anim_calculate );
 						}
@@ -1020,7 +1020,7 @@ static inline int UpdateArf(lua_State *L)
 				if( pt<=193 ) {
 					double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
 					SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
-					anim_calculate = animr_calculate * (2.0 - anim_calculate);
+					anim_calculate = anim_calculate * (2.0 - anim_calculate);
 					SetScale( agol, 1.0 + 0.637 * anim_calculate );
 				}
 				else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
@@ -1028,7 +1028,7 @@ static inline int UpdateArf(lua_State *L)
 				// Anim: Set Rotation & Scale (R)
 				{
 					double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
-					anim_calculate = animr_calculate * (2.0 - anim_calculate);
+					anim_calculate = anim_calculate * (2.0 - anim_calculate);
 					SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
 					SetScale( agor, 1.0 + 0.637 * anim_calculate );
 				}
