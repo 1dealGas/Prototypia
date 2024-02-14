@@ -83,6 +83,14 @@
 #include <unordered_map>
 #include <vector>
 
+// Typedefs & Enums
+typedef dmVMath::Vector3 v3, *v3p;
+typedef dmVMath::Vector4 v4, *v4p;
+enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
+	   HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
+typedef dmGameObject::HInstance GO;
+typedef dmVMath::Point3 p3;
+
 // Data & Globals
 // For Safety Concern, Nothing will happen if !ArfSize.
 static uint32_t ArfSize = 0;
@@ -187,17 +195,15 @@ static inline void GetORIG(const float p1, const float p2, uint8_t et, const boo
 		orig_cache[ocnum] = orig_pdp;
 	}
 }
+static inline dmVMath::Quat GetZQuad(const double degree) {
+	GetSINCOS( degree * 0.5 );
+	return dmVMath::Quat(0.0f, 0.0f, SIN, COS)
+}
+dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
 
 
 // Input Functions
-static dmVMath::Vector3* T[10];
-typedef dmVMath::Vector3 v3, *v3p;
-typedef dmVMath::Vector4 v4, *v4p;
-enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
-	   HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
-typedef dmGameObject::HInstance GO;
-typedef dmVMath::Point3 p3;
-
+static v3* T[10];
 // Recommended Usage of "SetTouches"
 //     local v3,T = vmath.vector3, Arf2.NewTable(10,0);    for i=1,10 do T[i]=v3() end
 //     Arf2.SetTouches( T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10] )
@@ -877,9 +883,12 @@ static inline int UpdateArf(lua_State *L)
 					hgo_used++; }
 				case HINT_JUDGED: {
 					if( pt <= 370 ) {
+
+						// Anim: Set Position
 						p3 agopos(posx, posy, -pt*0.00001f);
-						SetPosition( agol, agopos );
-						SetPosition( agor, agopos );
+						SetPosition( agol, agopos );		SetPosition( agor, agopos );
+
+						// Anim: Set tint.w
 						if( pt<73 ) {
 							float tintw = pt * 0.01f;
 							tintw = 0.637f * tintw * (2.f - tintw);
@@ -890,7 +899,9 @@ static inline int UpdateArf(lua_State *L)
 							tintw = 0.637f * tintw * (2.f - tintw);
 							atint -> setW( 0.637f - tintw );
 						}
-						if ( elt>=-37 && elt<=37 ) {
+
+						// Anim: Set tint.x/y/z
+						if( elt>=-37 && elt<=37 ) {
 							if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
 							else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
 						}
@@ -898,8 +909,26 @@ static inline int UpdateArf(lua_State *L)
 							if( elt>37 ) 	atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
 							else 			atint -> setX(A_EARLY_R).setY(A_EARLY_G).setZ(A_EARLY_B);
 						}
-						lua_pushnumber(L, pt);	lua_rawseti(L, 3, ++ago_used);
-					} }							// Sh*t from C++
+
+						// Anim: Set Rotation & Scale (L)
+						if(pt <= 193) {
+							double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
+							SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							SetScale( agol, 1.0 + 0.637 * anim_calculate );
+						}
+						else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+
+						// Anim: Set Rotation & Scale (R)
+						{
+							double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
+							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+							SetScale( agor, 1.0 + 0.637 * anim_calculate );
+						}
+
+						ago_used++;
+					} }
 					break;
 				case HINT_SWEEPED: {
 					float hl_rt = 0.437f - dt*0.00037f;
@@ -909,7 +938,7 @@ static inline int UpdateArf(lua_State *L)
 				case HINT_AUTO: {
 					if( dt>0 ) {
 
-						// HGo
+						// Hint
 						if (dt<101) {
 							SetPosition( hgo, p3(posx, posy, -0.01f) );
 							if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
@@ -917,10 +946,11 @@ static inline int UpdateArf(lua_State *L)
 							hgo_used++;
 						}
 
-						// AGo
+						// Anim: Set Position
 						p3 agopos(posx, posy, -dt*0.00001f);
-						SetPosition( agol, agopos );
-						SetPosition( agor, agopos );
+						SetPosition( agol, agopos );		SetPosition( agor, agopos );
+
+						// Anim: Set tint.w
 						if( dt<73 ) {
 							float tintw = dt * 0.01f;
 							tintw = 0.637f * tintw * (2.f - tintw);
@@ -931,9 +961,29 @@ static inline int UpdateArf(lua_State *L)
 							tintw = 0.637f * tintw * (2.f - tintw);
 							atint -> setW( 0.637f - tintw );
 						}
+
+						// Anim: Set tint.x/y/z
 						if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
 						else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
-						lua_pushnumber(L, pt);	lua_rawseti(L, 3, ++ago_used);
+
+						// Anim: Set Rotation & Scale (L)
+						if(dt <= 193) {
+							double anim_calculate = (double)dt * 0.005181347150259;   // 1/193
+							SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							SetScale( agol, 1.0 + 0.637 * anim_calculate );
+						}
+						else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+
+						// Anim: Set Rotation & Scale (R)
+						{
+							double anim_calculate = (double)dt * 0.002702702702702;   // 1/370
+							anim_calculate = animr_calculate * (2.0 - anim_calculate);
+							SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+							SetScale( agor, 1.0 + 0.637 * anim_calculate );
+						}
+
+						ago_used++;
 					}
 					else {
 						htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
@@ -945,9 +995,11 @@ static inline int UpdateArf(lua_State *L)
 			else if(
 				(ch_status==HINT_JUDGED || ch_status==HINT_JUDGED_LIT) && ( pt<=370 )
 			) {
+				// Anim: Set Position
 				p3 agopos(posx, posy, -dt*0.00001f);
-				SetPosition( agol, agopos );
-				SetPosition( agor, agopos );
+				SetPosition( agol, agopos );		SetPosition( agor, agopos );
+
+				// Anim: Set tint.w
 				if( pt<73 ) {
 					float tintw = pt * 0.01f;
 					tintw = 0.637f * tintw * (2.f - tintw);
@@ -958,12 +1010,32 @@ static inline int UpdateArf(lua_State *L)
 					tintw = 0.637f * tintw * (2.f - tintw);
 					atint -> setW( 0.637f - tintw );
 				}
+
+				// Anim: Set tint.x/y/z
 				if ( elt<=37 ) {
 					if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
 					else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
 				}
 				else 				atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
-				lua_pushnumber(L, pt);	lua_rawseti(L, 3, ++ago_used);
+
+				// Anim: Set Rotation & Scale (L)
+				if( pt<=193 ) {
+					double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
+					SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+					anim_calculate = animr_calculate * (2.0 - anim_calculate);
+					SetScale( agol, 1.0 + 0.637 * anim_calculate );
+				}
+				else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+
+				// Anim: Set Rotation & Scale (R)
+				{
+					double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
+					anim_calculate = animr_calculate * (2.0 - anim_calculate);
+					SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+					SetScale( agor, 1.0 + 0.637 * anim_calculate );
+				}
+
+				ago_used++;
 			}
 		}
 	}
