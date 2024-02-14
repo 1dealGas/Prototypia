@@ -84,6 +84,7 @@
 #include <vector>
 
 // Typedefs & Enums
+struct pdp {float p; float dp;} ;
 typedef dmVMath::Vector3 v3, *v3p;
 typedef dmVMath::Vector4 v4, *v4p;
 enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
@@ -103,12 +104,11 @@ static float SIN, COS;
 static uint16_t special_hint, dt_p1, dt_p2;
 static int8_t mindt = -37, maxdt = 37, idelta = 0;
 static std::unordered_map<uint32_t,uint8_t> last_wgo;
+static std::unordered_map<int16_t,pdp> orig_cache;
 static std::vector<uint32_t> blnums;
 
 
 // Assistant Ease Functions
-struct pdp {float p; float dp;} ;
-static std::unordered_map<int16_t,pdp> orig_cache;
 static inline uint16_t mod_degree( uint64_t deg ) {
 	// Actually while(xxx)···
 	do {
@@ -303,11 +303,11 @@ static inline uint8_t HStatus(uint64_t Hint){
 	bool HS_TAG = (bool)(Hint >> 19);
 	Hint &= 0x7ffff;
 	if( Hint==1 ) {
-		if(HS_TAG)			return HINT_AUTO;
+		if(HS_TAG)		return HINT_AUTO;
 		else			return HINT_SWEEPED;
 	}
 	else if(Hint) {
-		if(HS_TAG)			return HINT_JUDGED_LIT;
+		if(HS_TAG)		return HINT_JUDGED_LIT;
 		else			return HINT_JUDGED;
 	}
 	else {
@@ -628,8 +628,8 @@ static inline int UpdateArf(lua_State *L)
 
 			uint32_t poskey = (uint32_t)(px * 1009.0f) + (uint32_t)(py * 1013.0f);
 			if( last_wgo.count(poskey) ) {   // Overlapped
-				lua_pushnumber(L, 1.0);
-				lua_rawseti(L, 2, last_wgo[poskey]+1);
+				SetScale( T_WGO[ last_wgo[poskey] ], 0.637f );
+				lua_pushnumber(L, 1.0);			lua_rawseti(L, 2, last_wgo[poskey]+1);
 			}
 			else {
 				last_wgo[poskey] = wgo_used;
@@ -792,8 +792,8 @@ static inline int UpdateArf(lua_State *L)
 
 							uint32_t poskey = (uint32_t)(px * 1009.0f) + (uint32_t)(py * 1013.0f);
 							if( last_wgo.count(poskey) ) {   // Overlapped
-								lua_pushnumber(L, 1.0);
-								lua_rawseti(L, 2, last_wgo[poskey]+1);
+								SetScale( T_WGO[ last_wgo[poskey] ], 0.637f );
+								lua_pushnumber(L, 1.0);			lua_rawseti(L, 2, last_wgo[poskey]+1);
 							}
 							else {
 								last_wgo[poskey] = wgo_used;
