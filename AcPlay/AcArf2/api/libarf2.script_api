@@ -19,7 +19,7 @@
       type: number
     - name: hgo_required
       type: number
-  - name: SetVecs
+  - name: SetTbls
     type: function
     parameters:
     - name: wish_gos

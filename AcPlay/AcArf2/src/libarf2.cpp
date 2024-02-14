@@ -328,7 +328,7 @@ static v4p *T_HTINT = nullptr, *T_ATINT = nullptr;
 // InitArf(buf, is_auto) -> before, total_hints, wgo_required, hgo_required
 // Recommended Usage (Requires Defold 1.6.4 or Newer):
 //     local buf = sys.load_buffer( "Arf/1011.ar" )   -- Also allows a path on your disk.
-//     local b,t,w,h = InitArf(buf)
+//     local b,t,w,h = Arf2.InitArf(buf)
 // Before calling FinalArf(), DO NOT remove the reference of the Arf2 buffer.
 static inline int InitArf(lua_State *L)
 { if(ArfSize) return 0;
@@ -373,7 +373,7 @@ static inline int InitArf(lua_State *L)
 	return 4;
 }
 
-// SetVecs(table_wgo/hgo/agol/agor/htint/atint)
+// SetTbls(table_wgo/hgo/agol/agor/htint/atint)
 // Recommended Usage:
 //     local wpos,hpos,apos,htint,atint
 //     if b then   -- Don't forget the judging.
@@ -383,10 +383,10 @@ static inline int InitArf(lua_State *L)
 //         agor = Arf2.NewTable(h,0);		for i=1,h do agor[i] = factory.create(···) end
 //         htint = Arf2.NewTable(h,0);		for i=1,h do htint[i] = vmath.vector4() end
 //         atint = Arf2.NewTable(h,0);		for i=1,h do atint[i] = vmath.vector4() end
-//         SetVecs(wgo,hgo,agol,agor,htint,atint)
+//         Arf2.SetTbls(wgo,hgo,agol,agor,htint,atint)
 //     end
 // Before calling FinalArf(), DO NOT deref these Tables.
-static inline int SetVecs(lua_State *L)
+static inline int SetTbls(lua_State *L)
 { if( !ArfSize || T_WGO!=nullptr ) return 0;
 
 	uint8_t wgo_required = Arf->wgo_required();
@@ -1205,7 +1205,7 @@ static inline int SetAnmitsu(lua_State *L) { allow_anmitsu	= lua_toboolean(L, 1)
 static const luaL_reg M[] =   // Considering Adding a "JudgeArfController" Function.
 {
 	{"SetXScale", SetXS}, {"SetYScale", SetYS}, {"SetXDelta", SetXD}, {"SetYDelta", SetYD},
-	{"InitArf", InitArf}, {"SetVecs", SetVecs}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
+	{"InitArf", InitArf}, {"SetTbls", SetTbls}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
 	{"SetTouches", SetTouches}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArf},
 	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
 	{"NewTable", NewTable}, {0, 0}
