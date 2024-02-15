@@ -355,7 +355,7 @@ static inline int InitArf(lua_State *L)
 	}
 
 	// Do API Stuff
-	DM_LUA_STACK_CHECK(L, 4);
+	lua_checkstack(L, 4);   // DM_LUA_STACK_CHECK(L, 4);
 	special_hint = Arf->special_hint();
 	lua_pushnumber( L, Arf->before() );				lua_pushnumber( L, total_hints );
 	lua_pushnumber( L, Arf->wgo_required() );		lua_pushnumber( L, Arf->hgo_required() );
@@ -388,7 +388,7 @@ static inline int SetTbls(lua_State *L)
 	T_HTINT = (v4p*)malloc( sizeof(v4p) * hgo_required );
 	T_ATINT = (v4p*)malloc( sizeof(v4p) * hgo_required );
 
-	DM_LUA_STACK_CHECK(L, 5);
+	lua_checkstack(L, 5);   // DM_LUA_STACK_CHECK(L, 5);
 	for( uint8_t i=0; i<wgo_required; i++ ) {
 		lua_rawgeti(L, 1, i+1);		T_WGO[i] = dmScript::CheckGOInstance(L, 7);		lua_pop(L, 1);
 	}
@@ -409,7 +409,7 @@ static inline int UpdateArf(lua_State *L)
 {S
 	// Prepare Returns & Process msTime
 	// Z Distribution: Wish{0,0.05,0.1,0.15}  Hint(-0.06,0)
-	DM_LUA_STACK_CHECK(L, 4);
+	lua_checkstack(L, 4);   // DM_LUA_STACK_CHECK(L, 4);
 	uint8_t wgo_used, hgo_used, ago_used;			uint16_t hint_lost;
 	uint32_t mstime = (uint32_t)luaL_checknumber(L, 1);
 	{
@@ -1194,7 +1194,7 @@ static inline int SetRotDeg(lua_State *L) {
 	return 0;
 }
 static inline int NewTable(lua_State *L) {
-	DM_LUA_STACK_CHECK(L, 1);
+	lua_checkstack(L, 1);   // DM_LUA_STACK_CHECK(L, 1);
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
 	return 1;
 }
