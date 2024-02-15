@@ -1,3 +1,12 @@
+// Aerials Player C++ Part
+#include "includes.h"   // Use quotes when including sth in "src"
+#pragma once
+
+
+// Judge Range Setting
+#define JUDGE_RANGE 37   // [0,100)
+#define JR_REV 63   // 100 - JUDGE_RANGE
+
 // Hint Color Settings
 #define H_EARLY_R 0.275f
 #define H_EARLY_G 0.495f
@@ -25,11 +34,6 @@
 #define A_LATE_R 0.63671875f
 #define A_LATE_G 0.38671875f
 #define A_LATE_B 0.3125f
-
-// Judge Range Setting
-// [0,100)
-#define JUDGE_RANGE 37
-#define JR_REV 63
 
 
 // Macros of Bitwise Operations
@@ -71,27 +75,6 @@
 #define TAG 0x8000000000000000
 
 
-// Includes & Caches
-#include <dmsdk/sdk.h>
-#include <dmsdk/dlib/vmath.h>
-#include <dmsdk/dlib/buffer.h>
-#include <dmsdk/script/script.h>
-#include <dmsdk/gameobject/gameobject.h>
-#include <ease_constants.h> // extern const double DSIN[901], DCOS[901],
-							//					   ESIN[1001], ECOS[1001], RCP[8192];
-#include <arf2_generated.h>
-#include <unordered_map>
-#include <vector>
-
-// Typedefs & Enums
-struct pdp {float p; float dp;} ;
-typedef dmVMath::Vector3 v3, *v3p;
-typedef dmVMath::Vector4 v4, *v4p;
-enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
-	   HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
-typedef dmGameObject::HInstance GO;
-typedef dmVMath::Point3 p3;
-
 // Data & Globals
 // For Safety Concern, Nothing will happen if !ArfSize.
 static uint32_t ArfSize = 0;
@@ -106,6 +89,12 @@ static int8_t mindt = -37, maxdt = 37, idelta = 0;
 static std::unordered_map<uint32_t,uint8_t> last_wgo;
 static std::unordered_map<int16_t,pdp> orig_cache;
 static std::vector<uint32_t> blnums;
+
+// Typedefs
+typedef dmVMath::Vector3 v3, *v3p;
+typedef dmVMath::Vector4 v4, *v4p;
+typedef dmGameObject::HInstance GO;
+typedef dmVMath::Point3 p3;
 
 
 // Assistant Ease Functions
@@ -318,7 +307,7 @@ static inline uint8_t HStatus(uint64_t Hint){
 
 
 
-/* Script APIs, Under Construction
+/* Script APIs
    S --> Safety guaranteed, by precluding the memory leakage.  */
 static Arf2* Arf = nullptr;
 static GO *T_WGO = nullptr, *T_HGO = nullptr, *T_AGO_L = nullptr, *T_AGO_R = nullptr;
@@ -1183,10 +1172,22 @@ static inline int FinalArf(lua_State *L)
 }
 
 
-static inline int SetXS(lua_State *L) { xscale = luaL_checknumber(L, 1); return 0; }
-static inline int SetYS(lua_State *L) { yscale = luaL_checknumber(L, 1); return 0; }
-static inline int SetXD(lua_State *L) { xdelta = luaL_checknumber(L, 1); return 0; }
-static inline int SetYD(lua_State *L) { ydelta = luaL_checknumber(L, 1); return 0; }
+static inline int SetXS(lua_State *L) {
+	xscale = luaL_checknumber(L, 1);
+	return 0;
+}
+static inline int SetYS(lua_State *L) {
+	yscale = luaL_checknumber(L, 1);
+	return 0;
+}
+static inline int SetXD(lua_State *L) {
+	xdelta = luaL_checknumber(L, 1);
+	return 0;
+}
+static inline int SetYD(lua_State *L) {
+	ydelta = luaL_checknumber(L, 1);
+	return 0;
+}
 static inline int SetRotDeg(lua_State *L) {
 	GetSINCOS( luaL_checknumber(L, 1) );
 	rotsin = SIN;	rotcos = COS;
@@ -1197,22 +1198,11 @@ static inline int NewTable(lua_State *L) {
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
 	return 1;
 }
-static inline int SetDaymode(lua_State *L) { daymode		= lua_toboolean(L, 1);	return 0; }
-static inline int SetAnmitsu(lua_State *L) { allow_anmitsu	= lua_toboolean(L, 1);	return 0; }
-
-
-// Defold Binding Related Stuff
-static const luaL_reg M[] =   // Considering Adding a "JudgeArfController" Function.
-{
-	{"SetXScale", SetXS}, {"SetYScale", SetYS}, {"SetXDelta", SetXD}, {"SetYDelta", SetYD},
-	{"InitArf", InitArf}, {"SetTbls", SetTbls}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
-	{"SetTouches", SetTouches}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArf},
-	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
-	{"NewTable", NewTable}, {0, 0}
-};
-static inline dmExtension::Result LuaInit(dmExtension::Params* p) {
-	luaL_register(p->m_L, "Arf2", M);		lua_pop(p->m_L, 1);		return dmExtension::RESULT_OK;
-}   // Defold Restriction, Must Get the Lua Stack Balanced in the Initiation Process.
-static inline dmExtension::Result OK(dmExtension::Params* params) { return dmExtension::RESULT_OK; }
-static inline dmExtension::Result APPOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
-DM_DECLARE_EXTENSION(libArf2, "libArf2", APPOK, APPOK, LuaInit, 0, 0, OK)
+static inline int SetDaymode(lua_State *L) {
+	daymode	= lua_toboolean(L, 1);
+	return 0;
+}
+static inline int SetAnmitsu(lua_State *L) {
+	allow_anmitsu = lua_toboolean(L, 1);
+	return 0;
+}

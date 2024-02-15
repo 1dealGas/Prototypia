@@ -1,4 +1,4 @@
-name: "libArf2"
+name: "AcPlay"
 
 platforms:
     x86_64-osx:
@@ -7,11 +7,11 @@ platforms:
 
     x86-win32:
         context:
-            flags: ["-std=c++14", "-Ofast"]
+            flags: ["-std=c++14", "/O2"]
 
     x86_64-win32:
         context:
-            flags: ["-std=c++14", "-Ofast"]
+            flags: ["-std=c++14", "/O2"]
 
     armv7-android:
         context:
