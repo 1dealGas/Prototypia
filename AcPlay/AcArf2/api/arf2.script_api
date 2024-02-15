@@ -6,8 +6,8 @@
   - name: InitArf
     type: function
     parameters:
-    - name: str
-      type: string
+    - name: buf
+      type: table
     - name: is_auto
       type: boolean
     returns:
