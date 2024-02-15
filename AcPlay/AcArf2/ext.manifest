@@ -7,11 +7,11 @@ platforms:
 
     x86-win32:
         context:
-            flags: ["-std=c++14", "/O2"]
+            flags: ["-std=c++14", "-Ofast"]
 
     x86_64-win32:
         context:
-            flags: ["-std=c++14", "/O2"]
+            flags: ["-std=c++14", "-Ofast"]
 
     armv7-android:
         context:
