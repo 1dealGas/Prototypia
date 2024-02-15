@@ -1,13 +1,7 @@
 Aerials Player v2 (Defold Lua Script & C++)
 
-
 --  Recommended Reading Order for Source Codes:
 1. Arf2.fbs
-2. libarf2.script_api
-3. libarf2.cpp
+2. arf2.script_api
+3. includes.h  ->  libarf2.hpp  ->  ext.cpp
 4. AcPlay.lua & AcInput.lua
-
-
---  This module is required by the Prototypia Viewer.
-    Be sure to copy the "AcArf2" volume into the root volume of the Viewer project
-    before opening the Viewer Project.
