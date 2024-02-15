@@ -340,8 +340,8 @@ static inline int InitArf(lua_State *L)
 	// memcpy(ArfBuf, B, ArfSize);
 
 	// Switched to the Defold Buffer.
-	dmBuffer::HBuffer B = dmScript::CheckBufferUnpack(L, 1);
-	dmBuffer::GetBytes(B, (void**)ArfBuf, &ArfSize);
+	dmScript::LuaHBuffer *B = dmScript::CheckBuffer(L, 1);
+	dmBuffer::GetBytes(B -> m_Buffer, (void**)&ArfBuf, &ArfSize);
 	if(!ArfSize) return 0;
 
 	// Register Arf  &  Set Auto Status
