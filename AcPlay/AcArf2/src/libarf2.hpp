@@ -834,7 +834,7 @@ static inline int UpdateArf(lua_State *L)
 			u = H_X(current_hint);			float dx = ( (int16_t)u - 3072 ) * 0.0078125f * xscale;
 			u = H_Y(current_hint);			float dy = ( (int16_t)u - 1536 ) * 0.0078125f * yscale;
 			posx = (8.0f + dx*rotcos - dy*rotsin + xdelta) * 112.5f;
-			posy = (4.0f + dx*rotsin + dy*rotcos + ydelta) * 112.5f;
+			posy = (dx*rotsin + dy*rotcos + ydelta) * 112.5f + 360.0f;   // 4*112.5 + 90 = 360
 			}
 
 			// Prepare Render Elements
