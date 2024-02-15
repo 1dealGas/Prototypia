@@ -15,10 +15,10 @@
 
 --
 -- Modified by 1dealGas:
---     Only Use "Fixed Fit" & "GUI" Projections
+--     Only Use "Fixed Fit" & "GUI" Projections (Cameras are Banned)
 --     Convert indentations to Tabs
 --     Cache API Functions & Enums
--- We will strip the useless encapsulation soon.
+--     Strip Several Encapsulations We Considered Useless
 --
 local hash = hash
 local pairs = pairs
@@ -48,8 +48,6 @@ local render_draw = render.draw
 --
 local MSG_CLEAR_COLOR =         hash("clear_color")
 local MSG_WINDOW_RESIZED =      hash("window_resized")
-local MSG_SET_VIEW_PROJ =       hash("set_view_projection")
-local DEFAULT_NEAR, DEFAULT_FAR, DEFAULT_ZOOM = -1, 1, 1
 local render_BUFFER_COLOR_BIT = render.BUFFER_COLOR_BIT
 local render_BUFFER_DEPTH_BIT = render.BUFFER_DEPTH_BIT
 local render_BUFFER_STENCIL_BIT = render.BUFFER_STENCIL_BIT
@@ -60,179 +58,143 @@ local render_STATE_CULL_FACE = render.STATE_CULL_FACE
 local render_STATE_BLEND = render.STATE_BLEND
 local render_STATE_STENCIL_TEST = render.STATE_STENCIL_TEST
 
+--
+-- Unwraped State & Camera Args
+-- Near = -1, Far = 1, Zoom = 1
+--
+local state_clear_buffers = {}
+local p_tile, p_gui, p_text, p_particle, p_model
+
+local state_window_w = 0
+local state_window_h = 0
+local state_window_w_prev = 0
+local state_window_h_prev = 0
+local state_width = 0
+local state_height = 0
+
+local cw_frustum, cg_frustum = {}, {}
+local cw_view, cg_view = vmath_matrix4(), vmath_matrix4()
+local cw_proj, cg_proj
+
+state_clear_buffers[render_BUFFER_COLOR_BIT] = vmath_vector4(0, 0, 0, 0)
+state_clear_buffers[render_BUFFER_DEPTH_BIT] = 1
+state_clear_buffers[render_BUFFER_STENCIL_BIT] = 0
+
 
 --
--- Projection that centers and fits content with maintained aspect ratio
+-- Last Encapsulation Layer
 --
-local function get_fixed_fit_projection(camera, state)
-	local projected_width = state.window_width
-	local projected_height = state.window_height
-
-	local wr = state.window_width / state.width
-	local hr = state.window_height / state.height
-
-	if wr >= hr then
-		camera.zoom = hr
-		projected_width = projected_width / hr
-		projected_height = projected_height / hr
-	else
-		camera.zoom = wr
-		projected_width = projected_width / wr
-		projected_height = projected_height / wr
-	end
-
-	local left = (state.width - projected_width) / 2
-	local bottom = (state.height - projected_height) / 2
-	return vmath_matrix4_orthographic(left, left + projected_width, bottom, bottom + projected_height, camera.near, camera.far)
-end
-
-local function update_state(state)
-	state.window_width = render_get_window_width()
-	state.window_height = render_get_window_height()
-	state.valid = state.window_width > 0 and state.window_height > 0
-	if not state.valid then
+local function update_state(w, h)
+	state_window_w = w or render_get_window_width()
+	state_window_h = h or render_get_window_height()
+	if not (state_window_w > 0 and state_window_h > 0) then
 		return false
 	end
-	-- Make sure state updated only once when resize window
-	if state.window_width == state.prev_window_width and state.window_height == state.prev_window_height then
+	if state_window_w == state_window_w_prev and state_window_h == state_window_h_prev then
 		return true
 	end
-	state.prev_window_width = state.window_width
-	state.prev_window_height = state.window_height
-	state.width = render_get_width()
-	state.height = render_get_height()
+	state_window_w_prev = state_window_w
+	state_window_h_prev = state_window_h
+	state_width = render_get_width()
+	state_height = render_get_height()
 
-	local c_w = state.camera_world
-	c_w.proj = get_fixed_fit_projection(c_w, state)
-	c_w.frustum.frustum = c_w.proj * c_w.view
+	-- World Camera: Fixed Fit
+	local wr = state_window_w / state_width
+	local hr = state_window_h / state_height
 
-	local c_g = state.camera_gui
-	c_g.proj = vmath_matrix4_orthographic(0, state.window_width, 0, state.window_height, c_g.near, c_g.far)
-	c_g.frustum.frustum = c_g.proj * c_g.view
+	local projected_width, projected_height
+	if wr >= hr then
+		projected_width = state_window_w / hr
+		projected_height = state_window_h / hr
+	else
+		projected_width = state_window_w / wr
+		projected_height = state_window_h / wr
+	end
+
+	local left = (state_width - projected_width) / 2
+	local bottom = (state_height - projected_height) / 2
+
+	cw_proj = vmath_matrix4_orthographic(left, left + projected_width, bottom, bottom + projected_height, -1, 1)
+	cw_frustum.frustum = cw_proj * cw_view
+
+	-- GUI Camera
+	cg_proj = vmath_matrix4_orthographic(0, state_window_w, 0, state_window_h, -1, 1)
+	cg_frustum.frustum = cg_proj * cg_view
 
 	return true
 end
 
-local function create_camera(state, name, is_main_camera, near, far, zoom)
 
-	local camera = {}
-	camera.frustum = {}
-	camera.view = vmath_matrix4()
-	camera.near = near == nil and DEFAULT_NEAR or near
-	camera.far = far == nil and DEFAULT_FAR or far
-	camera.zoom = zoom == nil and DEFAULT_ZOOM or zoom
-
-	if is_main_camera then
-		state.main_camera = camera
-	end
-	state[name] = camera
-	return camera
-end
-
-
+--
+-- Defold Gameloop Funcs
+--
 function init(self)
-
-	local color = vmath_vector4(0, 0, 0, 0)
-	color.x = sys_get_config_number("render.clear_color_red", 0)
-	color.y = sys_get_config_number("render.clear_color_green", 0)
-	color.z = sys_get_config_number("render.clear_color_blue", 0)
-	color.w = sys_get_config_number("render.clear_color_alpha", 0)
-
-	local state = {}
-	state.clear_buffers = {
-		[render_BUFFER_COLOR_BIT] = color,
-		[render_BUFFER_DEPTH_BIT] = 1,
-		[render_BUFFER_STENCIL_BIT] = 0
-	}
-
-	create_camera(state, "camera_world", true)
-	create_camera(state, "camera_gui")
-	update_state(state)
-
-	local predicates = {}
-	local _tile, _gui, _text, _particle, _model = "tile", "gui", "text", "particle", "model"
-	predicates[_tile] = render_predicate( {_tile} )
-	predicates[_gui] = render_predicate( {_gui} )
-	predicates[_text] = render_predicate( {_text} )
-	predicates[_particle] = render_predicate( {_particle} )
-	predicates[_model] = render_predicate( {_model} )
-	
-	self.state = state
-	self.predicates = predicates
+	-- You can only access render.* functions and values from a render script instance (.render_script file)
+	p_tile = render_predicate( {"tile"} )
+	p_gui = render_predicate( {"gui"} )
+	p_text = render_predicate( {"text"} )
+	p_particle = render_predicate( {"particle"} )
+	p_model = render_predicate( {"model"} )
+	update_state()
 end
-
 
 function update(self)
-	local state = self.state
-	if not state.valid then
-		if not update_state(state) then
+
+	-- Check if the state is valid
+	--
+	if not (state_window_w > 0 and state_window_h > 0) then
+		if not update_state() then
 			return
 		end
 	end
 
-	local predicates = self.predicates
-	-- clear screen buffers
+	-- Clear screen buffers
 	--
-	-- turn on depth_mask before `render.clear()` to clear it as well
-	render_set_depth_mask(true)
+	render_set_depth_mask(true)   -- turn on depth_mask before `render.clear()` to clear it as well
 	render_set_stencil_mask(0xff)
-	render_clear(state.clear_buffers)
+	render_clear(state_clear_buffers)
 
-	-- setup camera view and projection
+	-- Setup camera view and projection
 	--
-	local camera_world = state.camera_world
-	render_set_viewport(0, 0, state.window_width, state.window_height)
-	render_set_view(camera_world.view)
-	render_set_projection(camera_world.proj)
+	render_set_viewport(0, 0, state_window_w, state_window_h)
+	render_set_view(cw_view)
+	render_set_projection(cw_proj)
 
-	-- set states used for all the world predicates
+	-- Set states used for all the world predicates
 	render_set_blend_func(render_BLEND_SRC_ALPHA, render_BLEND_ONE_MINUS_SRC_ALPHA)
 	render_enable_state(render_STATE_DEPTH_TEST)
 
-	-- render `model` predicate for default 3D material
+	-- Render `model` predicate for default 3D material
 	--
 	render_enable_state(render_STATE_CULL_FACE)
-	render_draw(predicates.model, camera_world.frustum)
+	render_draw(p_model, cw_frustum)
 	render_set_depth_mask(false)
 	render_disable_state(render_STATE_CULL_FACE)
 
-	-- render the other components: sprites, tilemaps, particles etc
+	-- Render the other components: sprites, tilemaps, particles etc
 	--
 	render_enable_state(render_STATE_BLEND)
-	render_draw(predicates.tile, camera_world.frustum)
-	render_draw(predicates.particle, camera_world.frustum)
+	render_draw(p_tile, cw_frustum)   -- Sprites are using the "tile" tag
+	render_draw(p_particle, cw_frustum)
 	render_disable_state(render_STATE_DEPTH_TEST)
 	render_draw_debug3d()
 
-	-- render GUI
+	-- Render GUI
 	--
-	local camera_gui = state.camera_gui
-	render_set_view(camera_gui.view)
-	render_set_projection(camera_gui.proj)
+	render_set_view(cg_view)
+	render_set_projection(cg_proj)
 
 	render_enable_state(render_STATE_STENCIL_TEST)
-	render_draw(predicates.gui, camera_gui.frustum)
-	render_draw(predicates.text, camera_gui.frustum)
+	render_draw(p_gui, cg_frustum)
+	render_draw(p_text, cg_frustum)
 	render_disable_state(render_STATE_STENCIL_TEST)
 	render_disable_state(render_STATE_BLEND)
 end
 
-
 function on_message(self, message_id, message)
-	local state = self.state
 	if message_id == MSG_CLEAR_COLOR then
 		local color = message.color
-		if color then
-			state.clear_buffers[render_BUFFER_COLOR_BIT] = color
-		end
-	elseif message_id == MSG_WINDOW_RESIZED then update_state(state)
-	elseif message_id == MSG_SET_VIEW_PROJ then
-		self.camera_projection = message.projection or vmath_matrix4()
-
-		local camera = state.camera_world
-		camera.view = message.view
-		camera.proj = get_fixed_fit_projection(camera, state)
-		camera.frustum.frustum = camera.proj * camera.view
-
+		if color then state_clear_buffers[render_BUFFER_COLOR_BIT] = color end
+	elseif message_id == MSG_WINDOW_RESIZED then update_state(message.width, message.height)
 	end
 end
