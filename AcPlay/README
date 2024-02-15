@@ -1,7 +1,7 @@
 Aerials Player v2 (Defold Lua Script & C++)
 
 --  Recommended Reading Order for Source Codes:
-1. Arf2.fbs
+1. Arf2.fbs (or Arf2echo.fbs)
 2. arf2.script_api
 3. includes.h  ->  libarf2.hpp  ->  ext.cpp
 4. AcPlay.lua & AcInput.lua
