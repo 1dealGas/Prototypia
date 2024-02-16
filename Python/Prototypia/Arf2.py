@@ -241,7 +241,7 @@ class WishGroup:
 		func(self)
 		return self
 
-	def GET(self, bartime:float) -> Union[ None, Tuple[float,float,float,float,PosNode,PosNode] ]:
+	def GET(self, bartime:float) -> Union[ None, Tuple[float,float,float,float,PosNode,Union[PosNode,None]] ]:
 		'''
 		--------
 		Not suitable for method chaining
@@ -266,7 +266,11 @@ class WishGroup:
 		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 		elif bartime < self.__nodes[0].bartime: return
-		elif bartime >= self.__nodes[-1].bartime: return
+		elif bartime > self.__nodes[-1].bartime: return
+		elif bartime == self.__nodes[-1].bartime:
+			nd:PosNode = self.__nodes[-1].bartime
+			nd_actual = nd.curve_end if nd.curve_end >= nd.curve_init else nd.curve_init
+			return(nd.x, nd.y, 1, nd_actual, nd, None)
 
 		for i in range(pnsize-1):
 			current_posnode = self.__nodes[i]
@@ -542,6 +546,7 @@ class WishGroup:
 
 		i_result = self.GET(bartime)
 		if i_result == None: return self
+		elif i_result[5] == None: return self
 		elif bartime == i_result[4].bartime  or  bartime == i_result[5].bartime: return self
 		else:
 
@@ -1072,6 +1077,15 @@ def Arf2Compile() -> None:
 		for c in childs_AWCRH:
 			new_hint = Hint( c.bartime, wg )
 			Arf2Prototype.hint.append(new_hint)
+	
+	# Discard Useless WishGroups & WishGroups that has less than 2 PosNodes
+	new_wg = []
+	for wg in Arf2Prototype.wish:
+		if wg()["useless"]: pass
+		elif len( wg()["nodes"] ) < 2: pass
+		else: new_wg.append(wg)
+	Arf2Prototype.wish = new_wg
+	new_wg = None
 
 	# Calculate Hint Params, and Deduplicate
 	hlist:list[Hint] = Arf2Prototype.hint
@@ -1108,15 +1122,6 @@ def Arf2Compile() -> None:
 	for h in h_dict.values(): Arf2Prototype.hint.append(h)
 	h_dict = None
 	hlist = None
-
-	# Discard Useless WishGroups & WishGroups that has less than 2 PosNodes
-	new_wg = []
-	for wg in Arf2Prototype.wish:
-		if wg()["useless"]: pass
-		elif len( wg()["nodes"] ) < 2: pass
-		else: new_wg.append(wg)
-	Arf2Prototype.wish = new_wg
-	new_wg = None
 
 	# Calculate Object Params: Other mstimes & _dt for WishChilds
 	for wg in Arf2Prototype.wish:
