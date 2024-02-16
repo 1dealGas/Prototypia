@@ -865,7 +865,7 @@ def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 		dbpmprint()
 		dbpm0 = -2400
 
-	m[0].dt_ratio = dbpm0 / 15000.0
+	m[0].dt_ratio = dbpm0 / 3750.0   # Bars Per Minute
 	for i in range(1, len(m)):
 		__last:MergedTimeNode = m[i-1]
 		__current:MergedTimeNode = m[i]
@@ -886,7 +886,7 @@ def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 			dbpmprint()
 			current_dbpm = -2400
 
-		__current.dt_ratio = current_dbpm / 15000.0
+		__current.dt_ratio = current_dbpm / 3750.0   # Bars Per Minute
 
 	# Deduplicate by dt_ratio  &  Calculate dt_ms
 	m_d:list[MergedTimeNode] = [ m[0] ]

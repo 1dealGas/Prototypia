@@ -12,7 +12,7 @@
 //    | PosY  | Linear |  ECOS  |  ESIN  | InQuad if sgn >= 0 , OutQuad else |
 //    | Angle | Stasis | Linear | InQuad |              OutQuad              |
 
-// 2. DTime System
+// 2. DTime System   BPM: Beats Per Minute
 //    Ratio = BPM * Scale / 15000;   Ratio = dx/d(mstime) or dy/d(mstime).
 //    Range of DBPM(BPM*Scale): [-2400, -0.15]&[0.15, 2400].
 //    Flashback: Ratio will be ratio_x105/(-100000.f) if base_x105[i]>base_x105[i+1].
