@@ -851,7 +851,7 @@ def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 	m.sort(key = lambda mtn: mtn.bar)   # Sort
 
 	# Fill bpm, scale, dt_ratio
-	dbpm0 = float(m[0].bpm * m[0].scale)
+	dbpm0 = float(m[0].bpm * 4 * m[0].scale)   # Bars Per Minute
 	if dbpm0 > 2400:
 		dbpmprint()
 		dbpm0 = 2400
@@ -865,13 +865,13 @@ def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 		dbpmprint()
 		dbpm0 = -2400
 
-	m[0].dt_ratio = dbpm0 / 3750.0   # Bars Per Minute
+	m[0].dt_ratio = dbpm0 / 15000.0
 	for i in range(1, len(m)):
 		__last:MergedTimeNode = m[i-1]
 		__current:MergedTimeNode = m[i]
 		if __current.bpm == None: __current.bpm = __last.bpm
 		if __current.scale == None: __current.scale = __last.scale
-		current_dbpm = float(__current.bpm * __current.scale)
+		current_dbpm = float(__current.bpm * 4 * __current.scale)   # Bars Per Minute
 
 		if current_dbpm > 2400:
 			dbpmprint()
@@ -886,7 +886,7 @@ def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 			dbpmprint()
 			current_dbpm = -2400
 
-		__current.dt_ratio = current_dbpm / 3750.0   # Bars Per Minute
+		__current.dt_ratio = current_dbpm / 15000.0
 
 	# Deduplicate by dt_ratio  &  Calculate dt_ms
 	m_d:list[MergedTimeNode] = [ m[0] ]
