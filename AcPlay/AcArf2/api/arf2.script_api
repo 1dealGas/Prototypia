@@ -22,17 +22,15 @@
   - name: SetTbls
     type: function
     parameters:
-    - name: wish_gos
+    - name: table_wpos
       type: table
-    - name: hint_gos
+    - name: table_hpos
       type: table
-    - name: anim_l_gos
+    - name: table_apos
       type: table
-    - name: anim_r_gos
+    - name: table_htint
       type: table
-    - name: hint_tint
-      type: table
-    - name: anim_tint
+    - name: table_atint
       type: table
 
 
@@ -41,7 +39,9 @@
     parameters:
     - name: mstime
       type: number
-    - name: wish_info
+    - name: table_winfo
+      type: table
+    - name: table_ainfo
       type: table
     returns:
     - name: hint_lost
