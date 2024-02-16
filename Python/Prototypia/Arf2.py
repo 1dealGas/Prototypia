@@ -268,7 +268,7 @@ class WishGroup:
 		elif bartime < self.__nodes[0].bartime: return
 		elif bartime > self.__nodes[-1].bartime: return
 		elif bartime == self.__nodes[-1].bartime:
-			nd:PosNode = self.__nodes[-1].bartime
+			nd:PosNode = self.__nodes[-1]
 			nd_actual = nd.curve_end if nd.curve_end >= nd.curve_init else nd.curve_init
 			return(nd.x, nd.y, 1, nd_actual, nd, None)
 
