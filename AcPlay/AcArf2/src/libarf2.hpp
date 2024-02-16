@@ -382,13 +382,13 @@ static inline int SetTbls(lua_State *L)
 
 	lua_checkstack(L, 4);
 	for( uint8_t i=0; i<wgo_required; i++ ) {
-		lua_rawgeti(L, 1, i+1);		T_WPOS[i] = dmScript::CheckVector3(L, 7);		lua_pop(L, 1);
+		lua_rawgeti(L, 1, i+1);		T_WPOS[i] = dmScript::CheckVector3(L, 6);		lua_pop(L, 1);
 	}
 	for( uint8_t i=0, ii=1; i<hgo_required; ii = (++i) + 1 ) {
-		lua_rawgeti(L, 2, ii);		T_HPOS[i] = dmScript::CheckVector3(L, 7);
-		lua_rawgeti(L, 3, ii);		T_APOS[i] = dmScript::CheckVector3(L, 8);
-		lua_rawgeti(L, 4, ii);		T_HTINT[i] = dmScript::CheckVector4(L, 9);		T_HTINT[i] -> setW(1.0f);
-		lua_rawgeti(L, 5, ii);		T_ATINT[i] = dmScript::CheckVector4(L, 10);		lua_pop(L, 4);
+		lua_rawgeti(L, 2, ii);		T_HPOS[i] = dmScript::CheckVector3(L, 6);
+		lua_rawgeti(L, 3, ii);		T_APOS[i] = dmScript::CheckVector3(L, 7);
+		lua_rawgeti(L, 4, ii);		T_HTINT[i] = dmScript::CheckVector4(L, 8);		T_HTINT[i] -> setW(1.0f);
+		lua_rawgeti(L, 5, ii);		T_ATINT[i] = dmScript::CheckVector4(L, 9);		lua_pop(L, 4);
 	}
 	return 0;
 }
