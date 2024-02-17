@@ -76,7 +76,7 @@ local cw_frustum, cg_frustum = {}, {}
 local cw_view, cg_view = vmath_matrix4(), vmath_matrix4()
 local cw_proj, cg_proj
 
-state_clear_buffers[render_BUFFER_COLOR_BIT] = vmath_vector4(0, 0, 0, 0)
+state_clear_buffers[render_BUFFER_COLOR_BIT] = vmath_vector4(0.185, 0.185, 0.185, 0)
 state_clear_buffers[render_BUFFER_DEPTH_BIT] = 1
 state_clear_buffers[render_BUFFER_STENCIL_BIT] = 0
 
