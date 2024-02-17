@@ -753,7 +753,7 @@ static inline int UpdateArf(lua_State *L)
 								lua_rawgeti(L, T_WGO, lwid+1);
 
 								GO WGO = dmScript::CheckGOInstance(L, E_UPD);
-								SetScale( T_WGO, 0.637f );
+								SetScale( WGO, 0.637f );
 
 								lua_pop(L, 1);
 								lua_pushnumber(L, 1.0);				lua_rawseti(L, T_WTINT, lwid + 1);
@@ -779,9 +779,9 @@ static inline int UpdateArf(lua_State *L)
 						}		break;
 					}
 				}
-			}
-		}   // L. Mutate Info
-	}		current_wishgroup -> mutate_info( CLEARPRG(info) + SETNP(node_progress) + SETCP(child_progress) );
+			}   // L. Mutate Info
+		}		current_wishgroup -> mutate_info( CLEARPRG(info) + SETNP(node_progress) + SETCP(child_progress) );
+	}
 
 
 	// Sweep Hints, then Render Hints & Effects
@@ -1038,7 +1038,7 @@ static inline int JudgeArf(lua_State *L)
 	v3p T[10];
 	for( uint8_t i=0; i<10; i++ ) {
 		lua_rawgeti(L, T_TOUCHES, i+1);
-		T[i] = dmScript::CheckVector4(L, E_JUD);
+		T[i] = dmScript::CheckVector3(L, E_JUD);
 		lua_pop(L, 1);
 	}
 
@@ -1147,9 +1147,8 @@ static inline int JudgeArf(lua_State *L)
 	}
 
 	// No need to check the stack size since we popped 4 Lua values.
-	lua_pushnumber(L, hint_hit);		lua_pushnumber(L, hint_lost);
-	lua_pushboolean(L, special_hint_judged);
-	return 3;
+	lua_pushnumber(L, hint_hit);				lua_pushnumber(L, hint_lost);
+	lua_pushboolean(L, special_hint_judged);	return 3;
 }
 
 
