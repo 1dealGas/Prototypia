@@ -560,7 +560,7 @@ static inline int UpdateArf(lua_State *L)
 			{
 				float pdx = (node_x - 8.0f) * xscale,	pdy = (node_y - 4.0f) * yscale;
 				px = 112.5f * ( 8.0f + pdx*rotcos - pdy*rotsin + xdelta );
-				py = 112.5f * ( 4.0f + pdx*rotsin + pdy*rotcos + ydelta ) + 90.0f;
+				py = (pdx*rotsin + pdy*rotcos + ydelta) * 112.5f + 540.0f;   // 4*112.5 + 90 = 540
 			}
 			if( px<66.0f || px>1734.0f || py<66.0f || py>1014.0f ) break;
 
@@ -735,7 +735,7 @@ static inline int UpdateArf(lua_State *L)
 								float pdx = (node_x + radius*COS - 8.0f) * xscale;
 								float pdy = (node_y + radius*SIN - 4.0f) * yscale;
 								px = 112.5f * ( 8.0f + pdx*rotcos - pdy*rotsin + xdelta );
-								py = 112.5f * ( 4.0f + pdx*rotsin + pdy*rotcos + ydelta ) + 90.0f;
+								py = (pdx*rotsin + pdy*rotcos + ydelta) * 112.5f + 540.0f;
 							}
 							if( px<66.0f || px>1734.0f || py<66.0f || py>1014.0f ) break;
 
@@ -1146,7 +1146,7 @@ static inline int JudgeArf(lua_State *L)
 
 static inline int FinalArf(lua_State *L)
 {
-	// No Buffer Size Checking, for there aren't any free() call in this function.
+	// No Buffer Size Checking, for there isn't any free() call in this function.
 	// The Chart[Fumen] Buffer will be GCed after its Handle in Lua is derefed.
 	orig_cache.clear();
 	Arf = nullptr;		ArfBuf = nullptr;
@@ -1174,7 +1174,7 @@ static inline int SetRotDeg(lua_State *L) {
 	return 0;
 }
 static inline int SetDaymode(lua_State *L) {
-	daymode	= lua_toboolean(L, 1);
+	daymode = lua_toboolean(L, 1);
 	return 0;
 }
 static inline int SetAnmitsu(lua_State *L) {
