@@ -19,19 +19,8 @@
       type: number
     - name: hgo_required
       type: number
-  - name: SetTbls
+  - name: FinalArf
     type: function
-    parameters:
-    - name: table_wpos
-      type: table
-    - name: table_hpos
-      type: table
-    - name: table_apos
-      type: table
-    - name: table_htint
-      type: table
-    - name: table_atint
-      type: table
 
 
   - name: UpdateArf
@@ -39,9 +28,19 @@
     parameters:
     - name: mstime
       type: number
-    - name: table_winfo
+    - name: table_wgo
       type: table
-    - name: table_ainfo
+    - name: table_hgo
+      type: table
+    - name: table_agol
+      type: table
+    - name: table_agor
+      type: table
+    - name: table_wtint
+      type: table
+    - name: table_htint
+      type: table
+    - name: table_atint
       type: table
     returns:
     - name: hint_lost
@@ -54,11 +53,6 @@
       type: number
 
 
-  - name: SetTouches
-    type: function
-    parameters:
-    - name: v3__no1_to_no10
-      type: Vector3
   - name: SetIDelta
     type: function
     parameters:
@@ -73,6 +67,8 @@
       type: boolean
     - name: any_released
       type: boolean
+    - name: table_touches
+      type: table
     returns:
     - name: hint_hit
       type: number
@@ -81,9 +77,6 @@
     - name: special_hint_judged
       type: boolean
 
-
-  - name: FinalArf
-    type: function
 
   - name: SetXScale
     type: function
@@ -114,7 +107,7 @@
     parameters:
     - name: rotdeg
       type: number
-  
+
   - name: SetDaymode
     type: function
     parameters:
@@ -126,6 +119,7 @@
     parameters:
     - name: is_daymode
       type: boolean
+
 
   - name: NewTable
     type: function

@@ -16,6 +16,24 @@
 
 
 // Structs & Enums
-struct pdp {float p; float dp;} ;
-enum { HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
-	   HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO };
+struct pdp {   // 2-float Structure
+	float p;
+	float dp;
+};
+
+enum {   // Hint Judge Constants
+	HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
+	HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO
+};
+
+enum {   // Table Update Constants
+	T_WGO = 2, T_HGO, T_AGO_L, T_AGO_R,
+	T_WTINT, T_HTINT, T_ATINT,
+	T_TOUCHES = 4
+};
+
+enum {   // Table Acquire Constants
+	I_MS = 1,
+	E_UPD = 8,
+	E_JUD = 5
+};

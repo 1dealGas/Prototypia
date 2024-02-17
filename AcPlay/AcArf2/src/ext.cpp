@@ -6,11 +6,15 @@
 // Module "Arf2"
 static const luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Function.
 {
+
+	{"InitArf", InitArf}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
+	{"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArf},
+
 	{"SetXScale", SetXS}, {"SetYScale", SetYS}, {"SetXDelta", SetXD}, {"SetYDelta", SetYD},
-	{"InitArf", InitArf}, {"SetTbls", SetTbls}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
-	{"SetTouches", SetTouches}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArf},
 	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
+
 	{"NewTable", NewTable}, {0, 0}
+
 };
 
 
