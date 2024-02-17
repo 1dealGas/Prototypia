@@ -370,71 +370,73 @@ static inline int UpdateArf(lua_State *L)
 	// For Arf2 charts(fumens), init_ms of each layer's 1st DeltaNode must be 0ms.
 	// [) Left Close, Right Open
 	double dt1; {
-	bool found;		auto dts1 = Arf -> dts_layer1();		auto dts1_last = dts1->size() - 1;
-	while(!found) {
-		if( dt_p1 >= dts1_last ) {   // "==" is replaced by ">=" to enhance the robustness.
-			uint64_t last_deltanode = dts1 -> Get(dts1_last);		uint64_t u;
-			u = D_HI(last_deltanode);								uint32_t init_ms = u*2;
-			if( init_ms <= mstime ) {
-				u = D_HB(last_deltanode);						double base = (double)u * 0.00002;
-				u = D_R(last_deltanode);						double ratio = (double)u * 0.00001;
-				dt1 = base + ratio * (mstime - init_ms);		found = true;	break;
+		bool found;		auto dts1 = Arf -> dts_layer1();		auto dts1_last = dts1->size() - 1;
+		while(!found) {
+			if( dt_p1 >= dts1_last ) {   // "==" is replaced by ">=" to enhance the robustness.
+				uint64_t last_deltanode = dts1 -> Get(dts1_last);		uint64_t u;
+				u = D_HI(last_deltanode);								uint32_t init_ms = u*2;
+				if( init_ms <= mstime ) {
+					u = D_HB(last_deltanode);						double base = (double)u * 0.00002;
+					u = D_R(last_deltanode);						double ratio = (double)u * 0.00001;
+					dt1 = base + ratio * (mstime - init_ms);		found = true;	break;
+				}
+				else dt_p1--;
 			}
-			else dt_p1--;
+			while( dt_p1 < dts1_last ) {   // ++ or --? Not determined this time.
+				uint64_t u;
+
+				uint64_t next_deltanode = dts1 -> Get(dt_p1+1);
+				u = D_HI(next_deltanode);						uint32_t next_init_ms = u*2;
+				if( mstime >= next_init_ms ) { dt_p1++; continue; }
+
+				uint64_t current_deltanode = dts1 -> Get(dt_p1);
+				u = D_HI(current_deltanode);					uint32_t current_init_ms = u*2;
+				if( mstime < current_init_ms ) { dt_p1--; continue; }
+
+				u = D_HB(next_deltanode);						double next_base = (double)u * 0.00002;
+				u = D_HB(current_deltanode);					double current_base = (double)u * 0.00002;
+				u = D_R(current_deltanode);						double current_ratio = (double)u * 0.00001;
+				if( current_base > next_base ) dt1 = current_base - current_ratio * (mstime - current_init_ms);
+				else dt1 = current_base + current_ratio * (mstime - current_init_ms);
+				found = true;	break;
+			}
 		}
-		while( dt_p1 < dts1_last ) {   // ++ or --? Not determined this time.
-			uint64_t u;
-
-			uint64_t next_deltanode = dts1 -> Get(dt_p1+1);
-			u = D_HI(next_deltanode);						uint32_t next_init_ms = u*2;
-			if( mstime >= next_init_ms ) { dt_p1++; continue; }
-
-			uint64_t current_deltanode = dts1 -> Get(dt_p1);
-			u = D_HI(current_deltanode);					uint32_t current_init_ms = u*2;
-			if( mstime < current_init_ms ) { dt_p1--; continue; }
-
-			u = D_HB(next_deltanode);						double next_base = (double)u * 0.00002;
-			u = D_HB(current_deltanode);					double current_base = (double)u * 0.00002;
-			u = D_R(current_deltanode);						double current_ratio = (double)u * 0.00001;
-			if( current_base > next_base ) dt1 = current_base - current_ratio * (mstime - current_init_ms);
-			else dt1 = current_base + current_ratio * (mstime - current_init_ms);
-			found = true;	break;
-		}
-	} }
+	}
 
 	// Same. It makes no sense to use an array/vector for the stuff fixed to contain 2 elements.
 	double dt2; {
 	bool found;		auto dts2 = Arf -> dts_layer2();		auto dts2_last = dts2->size() - 1;
 	while(!found) {
-		if( dt_p2 >= dts2_last ) {
-			uint64_t last_deltanode = dts2 -> Get(dts2_last);		uint64_t u;
-			u = D_HI(last_deltanode);								uint32_t init_ms = u*2;
-			if( init_ms <= mstime ) {
-				u = D_HB(last_deltanode);						double base = (double)u * 0.00002;
-				u = D_R(last_deltanode);						double ratio = (double)u * 0.00001;
-				dt2 = base + ratio * (mstime - init_ms);		found = true;	break;
+			if( dt_p2 >= dts2_last ) {
+				uint64_t last_deltanode = dts2 -> Get(dts2_last);		uint64_t u;
+				u = D_HI(last_deltanode);								uint32_t init_ms = u*2;
+				if( init_ms <= mstime ) {
+					u = D_HB(last_deltanode);						double base = (double)u * 0.00002;
+					u = D_R(last_deltanode);						double ratio = (double)u * 0.00001;
+					dt2 = base + ratio * (mstime - init_ms);		found = true;	break;
+				}
+				else dt_p2--;
 			}
-			else dt_p2--;
+			while( dt_p2 < dts2_last ) {
+				uint64_t u;
+
+				uint64_t next_deltanode = dts2 -> Get(dt_p2+1);
+				u = D_HI(next_deltanode);						uint32_t next_init_ms = u*2;
+				if( mstime >= next_init_ms ) { dt_p2++; continue; }
+
+				uint64_t current_deltanode = dts2 -> Get(dt_p2);
+				u = D_HI(current_deltanode);					uint32_t current_init_ms = u*2;
+				if( mstime < current_init_ms ) { dt_p2--; continue; }
+
+				u = D_HB(next_deltanode);						double next_base = (double)u * 0.00002;
+				u = D_HB(current_deltanode);					double current_base = (double)u * 0.00002;
+				u = D_R(current_deltanode);						double current_ratio = (double)u * 0.00001;
+				if( current_base > next_base ) dt2 = current_base - current_ratio * (mstime - current_init_ms);
+				else dt2 = current_base + current_ratio * (mstime - current_init_ms);
+				found = true;	break;
+			}
 		}
-		while( dt_p2 < dts2_last ) {
-			uint64_t u;
-
-			uint64_t next_deltanode = dts2 -> Get(dt_p2+1);
-			u = D_HI(next_deltanode);						uint32_t next_init_ms = u*2;
-			if( mstime >= next_init_ms ) { dt_p2++; continue; }
-
-			uint64_t current_deltanode = dts2 -> Get(dt_p2);
-			u = D_HI(current_deltanode);					uint32_t current_init_ms = u*2;
-			if( mstime < current_init_ms ) { dt_p2--; continue; }
-
-			u = D_HB(next_deltanode);						double next_base = (double)u * 0.00002;
-			u = D_HB(current_deltanode);					double current_base = (double)u * 0.00002;
-			u = D_R(current_deltanode);						double current_ratio = (double)u * 0.00001;
-			if( current_base > next_base ) dt2 = current_base - current_ratio * (mstime - current_init_ms);
-			else dt2 = current_base + current_ratio * (mstime - current_init_ms);
-			found = true;	break;
-		}
-	} }
+	}
 
 
 	// Search & Interpolate & Render Wishes
@@ -456,148 +458,154 @@ static inline int UpdateArf(lua_State *L)
 		uint16_t child_progress = (uint16_t)W_CP(info);
 
 		// B. Nodes
-		bool node_found; 	float node_x, node_y;
-	{	auto nodes = current_wishgroup -> nodes();
-
-		uint32_t current_ms;
-		uint8_t nodes_bound = nodes->size() - 1;
+		bool node_found;
+		float node_x, node_y;
 		{
-			if(nodes_bound < 1)										continue;
-			else if( mstime < (uint32_t)P_M( nodes->Get(0) ) )		continue;
-			else if( node_progress >= nodes_bound )					node_progress = nodes_bound - 1;
-		}
-		while( node_progress<nodes_bound ) {   // A "break;" added at the end of the circulation body.
-			// 1. Info & Judgement
-			uint64_t next_node = nodes -> Get(node_progress+1);
-			uint64_t current_node = nodes -> Get(node_progress);
+			uint32_t current_ms;
+			auto nodes = current_wishgroup -> nodes();
 
-			uint32_t next_ms = (uint32_t)P_M(next_node);
-					 current_ms = (uint32_t)P_M(current_node);
-
-			if( mstime < current_ms ) { node_progress--; continue; }
-			else if( mstime >= next_ms ) { node_progress++; continue; }
-			node_found = true;
-
-			// 2. Interpolation
-			float node_ratio;
+			uint8_t nodes_bound = nodes->size() - 1;
 			{
-				uint32_t difms = next_ms - current_ms;
-				if(!difms)				node_ratio = 0.0f;
-				else if(difms<8193)		node_ratio = (mstime-current_ms) * RCP[ difms-1 ];
-				else					node_ratio = (mstime-current_ms) / (float)difms;
+				if(nodes_bound < 1)										continue;
+				else if( mstime < (uint32_t)P_M( nodes->Get(0) ) )		continue;
+				else if( node_progress >= nodes_bound )					node_progress = nodes_bound - 1;
 			}
 
-		{	uint8_t et = (uint8_t)P_E(current_node);
-			if(et) {
-				float x1, y1, dx, dy;
-				float curve_init = P_CI(current_node) * 0.001956947162f;
-				{	if(curve_init > 1.0f)			curve_init = 1.0f;
-					else if(curve_init < 0.0f)		curve_init = 0.0f;	}
-				float curve_end = P_CE(current_node) * 0.001956947162f;
-				{	if(curve_end > 1.0f)			curve_end = 1.0f;
-					else if(curve_end < 0.0f)		curve_end = 0.0f;	}
+			while( node_progress<nodes_bound ) {   // A "break;" added at the end of the circulation body.
+				// 1. Info & Judgement
+				uint64_t next_node = nodes -> Get(node_progress+1);
+				uint64_t current_node = nodes -> Get(node_progress);
 
-				if( curve_init==0.0f && curve_end==1.0f ) {
-					x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
-					y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
-					dx = ( P_X(next_node) - 2048 ) * 0.0078125f - x1;
-					dy = ( P_Y(next_node) - 1024 ) * 0.0078125f - y1;
-				}
-				else {
-					// Get the true x1,dx
-					float fm_x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
-					float fm_x2 = ( P_X(next_node) - 2048 ) * 0.0078125f;
-					GetORIG(fm_x1, fm_x2, et, false, curve_init, curve_end, x1, dx);
+				uint32_t next_ms = (uint32_t)P_M(next_node);
+						 current_ms = (uint32_t)P_M(current_node);
 
-					// Get the true y1,dy
-					float fm_y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
-					float fm_y2 = ( P_Y(next_node) - 1024 ) * 0.0078125f;
-					GetORIG(fm_y1, fm_y2, et, true, curve_init, curve_end, y1, dy);
+				if( mstime < current_ms ) { node_progress--; continue; }
+				else if( mstime >= next_ms ) { node_progress++; continue; }
+				node_found = true;
+
+				// 2. Interpolation
+				float node_ratio;
+				{
+					uint32_t difms = next_ms - current_ms;
+					if(!difms)				node_ratio = 0.0f;
+					else if(difms<8193)		node_ratio = (mstime-current_ms) * RCP[ difms-1 ];
+					else					node_ratio = (mstime-current_ms) / (float)difms;
 				}
 
+				{
+					uint8_t et = (uint8_t)P_E(current_node);
+					if(et) {
+						float x1, y1, dx, dy;
+						float curve_init = P_CI(current_node) * 0.001956947162f;
+						{	if(curve_init > 1.0f)			curve_init = 1.0f;
+							else if(curve_init < 0.0f)		curve_init = 0.0f;	}
+						float curve_end = P_CE(current_node) * 0.001956947162f;
+						{	if(curve_end > 1.0f)			curve_end = 1.0f;
+							else if(curve_end < 0.0f)		curve_end = 0.0f;	}
 
-				switch(et) {
-					case 1: {
-						uint16_t curve_ratio = (uint16_t)
-											   ( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
-						node_x = x1 + dx * ESIN[curve_ratio];
-						node_y = y1 + dy * ECOS[curve_ratio]; }
-						break;
-					case 2: {
-						uint16_t curve_ratio = (uint16_t)
-											   ( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
-						node_x = x1 + dx * ECOS[curve_ratio];
-						node_y = y1 + dy * ESIN[curve_ratio]; }
-						break;
-					default: {   // case 3
-						float ease_ratio; {
-							if(curve_init > curve_end) {
-								// The ACTUAL init ratio of the curve IS "curve_end" here
-								ease_ratio = curve_end + (curve_init - curve_end) * node_ratio;
-								ease_ratio = 1.0f - ease_ratio;
-								ease_ratio = 1.0f - ease_ratio * ease_ratio;
-							}
-							else {
-								ease_ratio = curve_init + (curve_end - curve_init) * node_ratio;
-								ease_ratio *= ease_ratio;
-							}
+						if( curve_init==0.0f && curve_end==1.0f ) {
+							x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
+							y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
+							dx = ( P_X(next_node) - 2048 ) * 0.0078125f - x1;
+							dy = ( P_Y(next_node) - 1024 ) * 0.0078125f - y1;
 						}
-						node_x = x1 + dx * ease_ratio;
-						node_y = y1 + dy * ease_ratio; }
+						else {
+							// Get the true x1,dx
+							float fm_x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
+							float fm_x2 = ( P_X(next_node) - 2048 ) * 0.0078125f;
+							GetORIG(fm_x1, fm_x2, et, false, curve_init, curve_end, x1, dx);
+
+							// Get the true y1,dy
+							float fm_y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
+							float fm_y2 = ( P_Y(next_node) - 1024 ) * 0.0078125f;
+							GetORIG(fm_y1, fm_y2, et, true, curve_init, curve_end, y1, dy);
+						}
+
+
+						switch(et) {
+							case 1: {
+								uint16_t curve_ratio = (uint16_t)
+													( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
+								node_x = x1 + dx * ESIN[curve_ratio];
+								node_y = y1 + dy * ECOS[curve_ratio]; }
+								break;
+							case 2: {
+								uint16_t curve_ratio = (uint16_t)
+													( 1000 * ( curve_init + (curve_end-curve_init) * node_ratio ) );
+								node_x = x1 + dx * ECOS[curve_ratio];
+								node_y = y1 + dy * ESIN[curve_ratio]; }
+								break;
+							default: {   // case 3
+								float ease_ratio; {
+									if(curve_init > curve_end) {
+										// The ACTUAL init ratio of the curve IS "curve_end" here
+										ease_ratio = curve_end + (curve_init - curve_end) * node_ratio;
+										ease_ratio = 1.0f - ease_ratio;
+										ease_ratio = 1.0f - ease_ratio * ease_ratio;
+									}
+									else {
+										ease_ratio = curve_init + (curve_end - curve_init) * node_ratio;
+										ease_ratio *= ease_ratio;
+									}
+								}
+								node_x = x1 + dx * ease_ratio;
+								node_y = y1 + dy * ease_ratio; }
+						}
+					}
+					else {
+						float x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
+						float y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
+						float dx = ( P_X(next_node) - 2048 ) * 0.0078125f - x1;
+						float dy = ( P_Y(next_node) - 1024 ) * 0.0078125f - y1;
+						node_x = x1 + dx * node_ratio;
+						node_y = y1 + dy * node_ratio;
+					}
 				}
-			}
-			else {
-				float x1 = ( P_X(current_node) - 2048 ) * 0.0078125f;
-				float y1 = ( P_Y(current_node) - 1024 ) * 0.0078125f;
-				float dx = ( P_X(next_node) - 2048 ) * 0.0078125f - x1;
-				float dy = ( P_Y(next_node) - 1024 ) * 0.0078125f - y1;
-				node_x = x1 + dx * node_ratio;
-				node_y = y1 + dy * node_ratio;
+
+				// 3. Param Setting
+				{
+					float px,py; {
+						float pdx = (node_x - 8.0f) * xscale,	pdy = (node_y - 4.0f) * yscale;
+						px = 112.5f * ( 8.0f + pdx*rotcos - pdy*rotsin + xdelta );
+						py = (pdx*rotsin + pdy*rotcos + ydelta) * 112.5f + 540.0f;   // 4*112.5 + 90 = 540
+					}
+					if( px<66.0f || px>1734.0f || py<66.0f || py>1014.0f ) break;
+
+					uint32_t poskey = (uint32_t)(px * 1009.0f) + (uint32_t)(py * 1013.0f);
+					if( last_wgo.count(poskey) ) {   // Overlapped
+						uint8_t lwid = last_wgo[poskey];
+						lua_rawgeti(L, T_WGO, lwid+1);
+
+						GO WGO = dmScript::CheckGOInstance(L, E_UPD);
+						SetScale(WGO, 0.637f);
+
+						lua_pop(L, 1);
+						lua_pushnumber(L, 1.0);		lua_rawseti(L, T_WTINT, lwid + 1);
+					}
+					else {
+						float wst_ratio; {
+							uint32_t dms_from_1st_node; {
+								if(node_progress)	dms_from_1st_node = mstime - (uint32_t)P_M( nodes->Get(0) );
+								else				dms_from_1st_node = mstime - current_ms;
+							}
+							if( dms_from_1st_node > 237 ) wst_ratio = 1.0f;
+							else						  wst_ratio = dms_from_1st_node * 0.00421940928270042194092827f;
+						}
+
+						last_wgo[poskey] = wgo_used; {
+							lua_rawgeti(L, T_WGO, wgo_used+1);
+							GO WGO = dmScript::CheckGOInstance(L, E_UPD);
+							SetPosition( WGO, p3(px, py, of_layer2 ? 0.1f : 0.0f) );
+							SetScale( WGO, 0.637f * wst_ratio );
+							lua_pop(L, 1);
+						}
+
+						lua_pushnumber(L, wst_ratio);
+						lua_rawseti(L, T_WTINT, ++wgo_used);
+					}
+				}	break;
 			}
 		}
-		{	// 3. Param Setting
-			float px,py;
-			{
-				float pdx = (node_x - 8.0f) * xscale,	pdy = (node_y - 4.0f) * yscale;
-				px = 112.5f * ( 8.0f + pdx*rotcos - pdy*rotsin + xdelta );
-				py = (pdx*rotsin + pdy*rotcos + ydelta) * 112.5f + 540.0f;   // 4*112.5 + 90 = 540
-			}
-			if( px<66.0f || px>1734.0f || py<66.0f || py>1014.0f ) break;
-
-			uint32_t poskey = (uint32_t)(px * 1009.0f) + (uint32_t)(py * 1013.0f);
-			if( last_wgo.count(poskey) ) {   // Overlapped
-				uint8_t lwid = last_wgo[poskey];
-				lua_rawgeti(L, T_WGO, lwid+1);
-
-				GO WGO = dmScript::CheckGOInstance(L, E_UPD);
-				SetScale(WGO, 0.637f);
-
-				lua_pop(L, 1);
-				lua_pushnumber(L, 1.0);		lua_rawseti(L, T_WTINT, lwid + 1);
-			}
-			else {
-				float wst_ratio; {
-					uint32_t dms_from_1st_node; {
-						if(node_progress)	dms_from_1st_node = mstime - (uint32_t)P_M( nodes->Get(0) );
-						else				dms_from_1st_node = mstime - current_ms;
-					}
-					if( dms_from_1st_node > 237 ) wst_ratio = 1.0f;
-					else						  wst_ratio = dms_from_1st_node * 0.00421940928270042194092827f;
-				}
-
-				last_wgo[poskey] = wgo_used; {
-					lua_rawgeti(L, T_WGO, wgo_used+1);
-					GO WGO = dmScript::CheckGOInstance(L, E_UPD);
-					SetPosition( WGO, p3(px, py, of_layer2 ? 0.1f : 0.0f) );
-					SetScale( WGO, 0.637f * wst_ratio );
-					lua_pop(L, 1);
-				}
-
-				lua_pushnumber(L, wst_ratio);
-				lua_rawseti(L, T_WTINT, ++wgo_used);
-			}
-		}	break;
-	}}
 
 		// C. Childs
 		if(node_found) {
@@ -745,7 +753,7 @@ static inline int UpdateArf(lua_State *L)
 								lua_rawgeti(L, T_WGO, lwid+1);
 
 								GO WGO = dmScript::CheckGOInstance(L, E_UPD);
-								SetScale( T_WGO[lwid], 0.637f );
+								SetScale( T_WGO, 0.637f );
 
 								lua_pop(L, 1);
 								lua_pushnumber(L, 1.0);				lua_rawseti(L, T_WTINT, lwid + 1);
@@ -767,243 +775,244 @@ static inline int UpdateArf(lua_State *L)
 
 								lua_pushnumber(L, wst_ratio);
 								lua_rawseti(L, T_WTINT, ++wgo_used);
-							}}
-						}			break;
+							}
+						}		break;
 					}
 				}
-			}   // L. Mutate Info
-		}		current_wishgroup -> mutate_info( CLEARPRG(info) + SETNP(node_progress) + SETCP(child_progress) );
-	}
-
-
-  { // Sweep Hints, then Render Hints & Effects
-	auto hint = Arf -> mutable_hint();		auto idx_size = Arf -> index() -> size();
-	uint32_t _group = which_widx;			uint16_t which_group = _group>1 ? _group-1 : 0 ;
-			 _group = which_group + 3;		uint16_t byd1_group = _group<idx_size ? _group : idx_size;
-
-	for(; which_group<byd1_group; which_group++) {
-		auto current_hint_ids = Arf -> index() -> Get( which_group ) -> hidx();
-		auto how_many_hints = current_hint_ids->size();
-
-		for(uint8_t i=0; i<how_many_hints; i++) {
-			auto current_hint_id = current_hint_ids -> Get(i);
-			auto current_hint = hint -> Get( current_hint_id );
-
-			uint64_t u;   // Acquire the status of current Hint.
-			u = H_M(current_hint);			int32_t dt = mstime - (int32_t)u;
-			if(dt < -510) break;			if(dt > 470) continue;   // Asserted to be sorted.
-
-			uint8_t ch_status = HStatus(current_hint);
-			if( (ch_status<2) && dt>100 ) {   // Sweep, before generating rendering parameters.
-				current_hint = PUREHINT(current_hint) + SWEEP;
-				hint -> Mutate(current_hint_id, current_hint);
-				ch_status = HINT_SWEEPED;
-				hint_lost += 1;
 			}
-			u = H_JM(current_hint);			int32_t pt = mstime - (int32_t)u;
-											int32_t elt = dt - pt - idelta;
+		}   // L. Mutate Info
+	}		current_wishgroup -> mutate_info( CLEARPRG(info) + SETNP(node_progress) + SETCP(child_progress) );
 
-			float posx, posy; {
-				u = H_X(current_hint);		float dx = ( (int16_t)u - 3072 ) * 0.0078125f * xscale;
-				u = H_Y(current_hint);		float dy = ( (int16_t)u - 1536 ) * 0.0078125f * yscale;
-				posx = (8.0f + dx*rotcos - dy*rotsin + xdelta) * 112.5f;
-				posy = (dx*rotsin + dy*rotcos + ydelta) * 112.5f + 540.0f;   // 4*112.5 + 90 = 540
-			}
 
-			// Prepare Render Elements
-			lua_rawgeti(L, T_HGO, hgo_used+1);		GO hgo = dmScript::CheckGOInstance(L, E_UPD);
-			lua_rawgeti(L, T_HTINT, hgo_used+1);	v4p htint = dmScript::CheckVector4(L, E_UPD+1);
-			lua_rawgeti(L, T_AGO_L, ago_used+1);	GO agol = dmScript::CheckGOInstance(L, E_UPD+2);
-			lua_rawgeti(L, T_AGO_R, ago_used+1);	GO agor = dmScript::CheckGOInstance(L, E_UPD+3);
-			lua_rawgeti(L, T_ATINT, ago_used+1);	v4p atint = dmScript::CheckVector4(L, E_UPD+4);
-			lua_pop(L, 5);
+	// Sweep Hints, then Render Hints & Effects
+	{
+		auto hint = Arf -> mutable_hint();		auto idx_size = Arf -> index() -> size();
+		uint32_t _group = which_widx;			uint16_t which_group = _group>1 ? _group-1 : 0 ;
+				_group = which_group + 3;		uint16_t byd1_group = _group<idx_size ? _group : idx_size;
 
-			// Start The Access.
-			if( dt < -370 ) {
-				float hi_rt = 0.1337f + (float)(0.07 * (510+dt) / 140.0);
-				htint -> setX(hi_rt).setY(hi_rt).setZ(hi_rt);
-				SetPosition( hgo, p3(posx, posy, -(0.05f + dt*0.00001f)) );
-				hgo_used++;
-			}
-			else if( dt <= 370 ) switch(ch_status) {
-				case HINT_NONJUDGED_NONLIT: {
-					htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
-					SetPosition( hgo, p3(posx, posy, -0.04f) );
-					hgo_used++;}	break;
-				case HINT_NONJUDGED_LIT: {
-					htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
-					SetPosition( hgo, p3(posx, posy, -0.03f) );
-					hgo_used++;	}	break;
-				case HINT_JUDGED_LIT: {   // No "break" here
-					SetPosition( hgo, p3(posx, posy, -0.01f) );
-					if ( elt>=-37 && elt<=37 ) {
-						if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
-						else 			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
-					}
-					else {
-						if( elt>37 ) 	htint -> setX(H_LATE_R).setY(H_LATE_G).setZ(H_LATE_B);
-						else 			htint -> setX(H_EARLY_R).setY(H_EARLY_G).setZ(H_EARLY_B);
-					}
-					hgo_used++; }
-				case HINT_JUDGED:
-					if( pt <= 370 ) {
+		for(; which_group<byd1_group; which_group++) {
+			auto current_hint_ids = Arf -> index() -> Get( which_group ) -> hidx();
+			auto how_many_hints = current_hint_ids->size();
 
-						// Anim: Set Position
-						p3 agopos(posx, posy, -pt*0.00001f);
-						SetPosition( agol, agopos );		SetPosition( agor, agopos );
+			for(uint8_t i=0; i<how_many_hints; i++) {
+				auto current_hint_id = current_hint_ids -> Get(i);
+				auto current_hint = hint -> Get( current_hint_id );
 
-						// Anim: Set tint.w
-						if( pt<73 ) {
-							float tintw = pt * 0.01f;
-							tintw = 0.637f * tintw * (2.f - tintw);
-							atint -> setW( 0.17199f + tintw );
-						}
-						else {
-							float tintw = (pt-73) * 0.003367003367f;   // "/297.0f"
-							tintw = 0.637f * tintw * (2.f - tintw);
-							atint -> setW( 0.637f - tintw );
-						}
+				uint64_t u;   // Acquire the status of current Hint.
+				u = H_M(current_hint);			int32_t dt = mstime - (int32_t)u;
+				if(dt < -510) break;			if(dt > 470) continue;   // Asserted to be sorted.
 
-						// Anim: Set tint.x/y/z
-						if( elt>=-37 && elt<=37 ) {
-							if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
-							else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
-						}
-						else {
-							if( elt>37 ) 	atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
-							else 			atint -> setX(A_EARLY_R).setY(A_EARLY_G).setZ(A_EARLY_B);
-						}
+				uint8_t ch_status = HStatus(current_hint);
+				if( (ch_status<2) && dt>100 ) {   // Sweep, before generating rendering parameters.
+					current_hint = PUREHINT(current_hint) + SWEEP;
+					hint -> Mutate(current_hint_id, current_hint);
+					ch_status = HINT_SWEEPED;
+					hint_lost += 1;
+				}
+				u = H_JM(current_hint);			int32_t pt = mstime - (int32_t)u;
+												int32_t elt = dt - pt - idelta;
 
-						// Anim: Set Rotation & Scale (L)
-						if(pt <= 193) {
-							double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
-							SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
-							anim_calculate = anim_calculate * (2.0 - anim_calculate);
-							SetScale( agol, 1.0 + 0.637 * anim_calculate );
-						}
-						else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+				float posx, posy; {
+					u = H_X(current_hint);		float dx = ( (int16_t)u - 3072 ) * 0.0078125f * xscale;
+					u = H_Y(current_hint);		float dy = ( (int16_t)u - 1536 ) * 0.0078125f * yscale;
+					posx = (8.0f + dx*rotcos - dy*rotsin + xdelta) * 112.5f;
+					posy = (dx*rotsin + dy*rotcos + ydelta) * 112.5f + 540.0f;   // 4*112.5 + 90 = 540
+				}
 
-						// Anim: Set Rotation & Scale (R)
-						{
-							double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
-							anim_calculate = anim_calculate * (2.0 - anim_calculate);
-							SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
-							SetScale( agor, 1.0 + 0.637 * anim_calculate );
-						}
+				// Prepare Render Elements
+				lua_rawgeti(L, T_HGO, hgo_used+1);		GO hgo = dmScript::CheckGOInstance(L, E_UPD);
+				lua_rawgeti(L, T_HTINT, hgo_used+1);	v4p htint = dmScript::CheckVector4(L, E_UPD+1);
+				lua_rawgeti(L, T_AGO_L, ago_used+1);	GO agol = dmScript::CheckGOInstance(L, E_UPD+2);
+				lua_rawgeti(L, T_AGO_R, ago_used+1);	GO agor = dmScript::CheckGOInstance(L, E_UPD+3);
+				lua_rawgeti(L, T_ATINT, ago_used+1);	v4p atint = dmScript::CheckVector4(L, E_UPD+4);
+				lua_pop(L, 5);
 
-						ago_used++;
-					}
-					break;
-				case HINT_SWEEPED: {
-					float hl_rt = 0.437f - dt*0.00037f;
-					htint -> setX(hl_rt);		hl_rt *= 0.51f;		htint -> setY(hl_rt).setZ(hl_rt);
-					SetPosition( hgo, p3(posx, posy, -0.02f + dt*0.00001f) );
-					hgo_used++;	}	break;
-				case HINT_AUTO: {
-					if( dt>0 ) {
-
-						// Hint
-						if (dt<101) {
-							SetPosition( hgo, p3(posx, posy, -0.01f) );
-							if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
-							else 			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
-							hgo_used++;
-						}
-
-						// Anim: Set Position
-						p3 agopos(posx, posy, -dt*0.00001f);
-						SetPosition( agol, agopos );		SetPosition( agor, agopos );
-
-						// Anim: Set tint.w
-						if( dt<73 ) {
-							float tintw = dt * 0.01f;
-							tintw = 0.637f * tintw * (2.f - tintw);
-							atint -> setW( 0.17199f + tintw );
-						}
-						else {
-							float tintw = (dt-73) * 0.003367003367f;   // "/297.0f"
-							tintw = 0.637f * tintw * (2.f - tintw);
-							atint -> setW( 0.637f - tintw );
-						}
-
-						// Anim: Set tint.x/y/z
-						if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
-						else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
-
-						// Anim: Set Rotation & Scale (L)
-						if(dt <= 193) {
-							double anim_calculate = (double)dt * 0.005181347150259;   // 1/193
-							SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
-							anim_calculate = anim_calculate * (2.0 - anim_calculate);
-							SetScale( agol, 1.0 + 0.637 * anim_calculate );
-						}
-						else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
-
-						// Anim: Set Rotation & Scale (R)
-						{
-							double anim_calculate = (double)dt * 0.002702702702702;   // 1/370
-							anim_calculate = anim_calculate * (2.0 - anim_calculate);
-							SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
-							SetScale( agor, 1.0 + 0.637 * anim_calculate );
-						}
-
-						ago_used++;
-					}
-					else {
+				// Start The Access.
+				if( dt < -370 ) {
+					float hi_rt = 0.1337f + (float)(0.07 * (510+dt) / 140.0);
+					htint -> setX(hi_rt).setY(hi_rt).setZ(hi_rt);
+					SetPosition( hgo, p3(posx, posy, -(0.05f + dt*0.00001f)) );
+					hgo_used++;
+				}
+				else if( dt <= 370 ) switch(ch_status) {
+					case HINT_NONJUDGED_NONLIT: {
 						htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
 						SetPosition( hgo, p3(posx, posy, -0.04f) );
+						hgo_used++;}	break;
+					case HINT_NONJUDGED_LIT: {
+						htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
+						SetPosition( hgo, p3(posx, posy, -0.03f) );
+						hgo_used++;	}	break;
+					case HINT_JUDGED_LIT: {   // No "break" here
+						SetPosition( hgo, p3(posx, posy, -0.01f) );
+						if ( elt>=-37 && elt<=37 ) {
+							if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
+							else 			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
+						}
+						else {
+							if( elt>37 ) 	htint -> setX(H_LATE_R).setY(H_LATE_G).setZ(H_LATE_B);
+							else 			htint -> setX(H_EARLY_R).setY(H_EARLY_G).setZ(H_EARLY_B);
+						}
 						hgo_used++; }
-					}
-				// default:
-			}
-			else if(
-				(ch_status==HINT_JUDGED || ch_status==HINT_JUDGED_LIT) && ( pt<=370 )
-			) {
-				// Anim: Set Position
-				p3 agopos(posx, posy, -dt*0.00001f);
-				SetPosition( agol, agopos );		SetPosition( agor, agopos );
+					case HINT_JUDGED:
+						if( pt <= 370 ) {
 
-				// Anim: Set tint.w
-				if( pt<73 ) {
-					float tintw = pt * 0.01f;
-					tintw = 0.637f * tintw * (2.f - tintw);
-					atint -> setW( 0.17199f + tintw );
-				}
-				else {
-					float tintw = (pt-73) * 0.003367003367003367f;   // 1/297 = 0.003367···
-					tintw = 0.637f * tintw * (2.f - tintw);
-					atint -> setW( 0.637f - tintw );
-				}
+							// Anim: Set Position
+							p3 agopos(posx, posy, -pt*0.00001f);
+							SetPosition( agol, agopos );		SetPosition( agor, agopos );
 
-				// Anim: Set tint.x/y/z
-				if ( elt<=37 ) {
-					if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
-					else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
-				}
-				else 				atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
+							// Anim: Set tint.w
+							if( pt<73 ) {
+								float tintw = pt * 0.01f;
+								tintw = 0.637f * tintw * (2.f - tintw);
+								atint -> setW( 0.17199f + tintw );
+							}
+							else {
+								float tintw = (pt-73) * 0.003367003367f;   // "/297.0f"
+								tintw = 0.637f * tintw * (2.f - tintw);
+								atint -> setW( 0.637f - tintw );
+							}
 
-				// Anim: Set Rotation & Scale (L)
-				if( pt<=193 ) {
-					double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
-					SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
-					anim_calculate = anim_calculate * (2.0 - anim_calculate);
-					SetScale( agol, 1.0 + 0.637 * anim_calculate );
-				}
-				else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+							// Anim: Set tint.x/y/z
+							if( elt>=-37 && elt<=37 ) {
+								if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
+								else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
+							}
+							else {
+								if( elt>37 ) 	atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
+								else 			atint -> setX(A_EARLY_R).setY(A_EARLY_G).setZ(A_EARLY_B);
+							}
 
-				// Anim: Set Rotation & Scale (R)
+							// Anim: Set Rotation & Scale (L)
+							if(pt <= 193) {
+								double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
+								SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+								anim_calculate = anim_calculate * (2.0 - anim_calculate);
+								SetScale( agol, 1.0 + 0.637 * anim_calculate );
+							}
+							else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+
+							// Anim: Set Rotation & Scale (R)
+							{
+								double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
+								anim_calculate = anim_calculate * (2.0 - anim_calculate);
+								SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+								SetScale( agor, 1.0 + 0.637 * anim_calculate );
+							}
+
+							ago_used++;
+						}
+						break;
+					case HINT_SWEEPED: {
+						float hl_rt = 0.437f - dt*0.00037f;
+						htint -> setX(hl_rt);		hl_rt *= 0.51f;		htint -> setY(hl_rt).setZ(hl_rt);
+						SetPosition( hgo, p3(posx, posy, -0.02f + dt*0.00001f) );
+						hgo_used++;	}	break;
+					case HINT_AUTO: {
+						if( dt>0 ) {
+
+							// Hint
+							if (dt<101) {
+								SetPosition( hgo, p3(posx, posy, -0.01f) );
+								if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
+								else 			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
+								hgo_used++;
+							}
+
+							// Anim: Set Position
+							p3 agopos(posx, posy, -dt*0.00001f);
+							SetPosition( agol, agopos );		SetPosition( agor, agopos );
+
+							// Anim: Set tint.w
+							if( dt<73 ) {
+								float tintw = dt * 0.01f;
+								tintw = 0.637f * tintw * (2.f - tintw);
+								atint -> setW( 0.17199f + tintw );
+							}
+							else {
+								float tintw = (dt-73) * 0.003367003367f;   // "/297.0f"
+								tintw = 0.637f * tintw * (2.f - tintw);
+								atint -> setW( 0.637f - tintw );
+							}
+
+							// Anim: Set tint.x/y/z
+							if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
+							else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
+
+							// Anim: Set Rotation & Scale (L)
+							if(dt <= 193) {
+								double anim_calculate = (double)dt * 0.005181347150259;   // 1/193
+								SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+								anim_calculate = anim_calculate * (2.0 - anim_calculate);
+								SetScale( agol, 1.0 + 0.637 * anim_calculate );
+							}
+							else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+
+							// Anim: Set Rotation & Scale (R)
+							{
+								double anim_calculate = (double)dt * 0.002702702702702;   // 1/370
+								anim_calculate = anim_calculate * (2.0 - anim_calculate);
+								SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+								SetScale( agor, 1.0 + 0.637 * anim_calculate );
+							}
+
+							ago_used++;
+						}
+						else {
+							htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
+							SetPosition( hgo, p3(posx, posy, -0.04f) );
+							hgo_used++; }
+						}
+					// default:
+				}
+				else if( (ch_status==HINT_JUDGED || ch_status==HINT_JUDGED_LIT) && (pt<=370) )
 				{
-					double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
-					anim_calculate = anim_calculate * (2.0 - anim_calculate);
-					SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
-					SetScale( agor, 1.0 + 0.637 * anim_calculate );
-				}
+					// Anim: Set Position
+					p3 agopos(posx, posy, -dt*0.00001f);
+					SetPosition( agol, agopos );		SetPosition( agor, agopos );
 
-				ago_used++;
+					// Anim: Set tint.w
+					if( pt<73 ) {
+						float tintw = pt * 0.01f;
+						tintw = 0.637f * tintw * (2.f - tintw);
+						atint -> setW( 0.17199f + tintw );
+					}
+					else {
+						float tintw = (pt-73) * 0.003367003367003367f;   // 1/297 = 0.003367···
+						tintw = 0.637f * tintw * (2.f - tintw);
+						atint -> setW( 0.637f - tintw );
+					}
+
+					// Anim: Set tint.x/y/z
+					if ( elt<=37 ) {
+						if(daymode) 	atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
+						else 			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
+					}
+					else 				atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
+
+					// Anim: Set Rotation & Scale (L)
+					if( pt<=193 ) {
+						double anim_calculate = (double)pt * 0.005181347150259;   // 1/193
+						SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+						anim_calculate = anim_calculate * (2.0 - anim_calculate);
+						SetScale( agol, 1.0 + 0.637 * anim_calculate );
+					}
+					else { SetRotation( agol, D73 );		SetScale( agol, 1.637f ); }
+
+					// Anim: Set Rotation & Scale (R)
+					{
+						double anim_calculate = (double)pt * 0.002702702702702;   // 1/370
+						anim_calculate = anim_calculate * (2.0 - anim_calculate);
+						SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+						SetScale( agor, 1.0 + 0.637 * anim_calculate );
+					}
+
+					ago_used++;
+				}
 			}
 		}
 	}
-}
+
 	// Do Returns. No need to check the capacity of Lua Stack.
 	lua_pushnumber( L, hint_lost );		lua_pushnumber( L, wgo_used );
 	lua_pushnumber( L, hgo_used );		lua_pushnumber( L, ago_used );

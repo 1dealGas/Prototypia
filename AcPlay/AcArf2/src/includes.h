@@ -8,6 +8,7 @@
 #include <dmsdk/dlib/vmath.h>
 #include <dmsdk/dlib/buffer.h>
 #include <dmsdk/script/script.h>
+#include <dmsdk/gameobject/gameobject.h>
 #include <ease_constants.h> // extern const double DSIN[901], DCOS[901],
 							//					   ESIN[1001], ECOS[1001], RCP[8192];
 #include <arf2_generated.h>
