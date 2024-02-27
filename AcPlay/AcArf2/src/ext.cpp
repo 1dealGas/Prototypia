@@ -1,5 +1,4 @@
 // Defold Binding Related Stuff for Aerials
-// #include "p_functions.hpp"
 #pragma once
 
 
@@ -20,8 +19,13 @@ static const luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Fu
 
 
 inline dmExtension::Result LuaInit(dmExtension::Params* p) {
-	luaL_register(p->m_L, "Arf2", Arf2);
-    lua_pop(p->m_L, 1);   // Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process.
+	lua_State* L = p->m_L;
+
+	// Register Modules
+	luaL_register(L, "Arf2", Arf2);
+
+	// Do API Stuff
+    lua_pop(L, 1);   // Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process.
     return dmExtension::RESULT_OK;
 }
 
