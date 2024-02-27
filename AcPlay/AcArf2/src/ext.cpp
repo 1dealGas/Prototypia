@@ -1,9 +1,10 @@
 // Defold Binding Related Stuff for Aerials
-#include "libarf2.hpp"   // Use quotes when including sth in "src"
+// #include "p_functions.hpp"
 #pragma once
 
 
 // Module "Arf2"
+#include "p_functions.hpp"
 static const luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Function.
 {
 
@@ -18,17 +19,17 @@ static const luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Fu
 };
 
 
-static inline dmExtension::Result LuaInit(dmExtension::Params* p) {
+inline dmExtension::Result LuaInit(dmExtension::Params* p) {
 	luaL_register(p->m_L, "Arf2", Arf2);
     lua_pop(p->m_L, 1);   // Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process.
     return dmExtension::RESULT_OK;
 }
 
-static inline dmExtension::Result OK(dmExtension::Params* params) {
+inline dmExtension::Result OK(dmExtension::Params* params) {
     return dmExtension::RESULT_OK;
 }
 
-static inline dmExtension::Result APPOK(dmExtension::AppParams* params) {
+inline dmExtension::Result APPOK(dmExtension::AppParams* params) {
     return dmExtension::RESULT_OK;
 }
 
