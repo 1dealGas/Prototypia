@@ -118,3 +118,11 @@ class Arf {
 	}
 
 };
+
+// Link Symbols
+ArDeltaNode* Arf::d1;
+ArDeltaNode* Arf::d2;
+ArIndex* Arf::index;
+ArWishGroup* Arf::wish;
+ArHint* Arf::hint;
+ArHint* Arf::echo;

@@ -54,7 +54,7 @@ static uint16_t dt_p1, dt_p2;
 static int8_t mindt = -37, maxdt = 37, idelta = 0;
 static std::unordered_map<uint32_t,uint8_t> last_wgo;
 static std::unordered_map<int16_t,pdp> orig_cache;
-static std::vector<ArHint&> blocked;
+static std::vector<ArHint*> blocked;
 
 
 // Ease System Functions
@@ -147,7 +147,7 @@ inline dmVMath::Quat GetZQuad(const double degree) {
 	GetSINCOS( degree * 0.5 );
 	return dmVMath::Quat(0.0f, 0.0f, SIN, COS);
 }
-constexpr dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
+static const dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
 
 
 
