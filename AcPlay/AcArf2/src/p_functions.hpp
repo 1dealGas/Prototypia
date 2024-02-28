@@ -3,10 +3,6 @@
 #pragma once
 
 
-// Judge Range Setting   [0,100)
-constexpr uint8_t JUDGE_RANGE = 37;
-constexpr uint8_t JR_REV = 100 - JUDGE_RANGE;
-
 // Hint Color Settings
 #define H_EARLY_R 0.275f
 #define H_EARLY_G 0.495f
@@ -35,6 +31,9 @@ constexpr uint8_t JR_REV = 100 - JUDGE_RANGE;
 #define A_LATE_G 0.38671875f
 #define A_LATE_B 0.3125f
 
+// Judge Range Setting   [0,100)
+constexpr uint8_t JUDGE_RANGE = 37;
+
 
 // Typedefs
 typedef dmVMath::Vector3 v3, *v3p;
@@ -52,106 +51,12 @@ static bool daymode, allow_anmitsu;
 static float SIN, COS;
 static uint16_t dt_p1, dt_p2;
 static int8_t mindt = -37, maxdt = 37, idelta = 0;
-static std::unordered_map<uint32_t,uint8_t> last_wgo;
-static std::unordered_map<int16_t,pdp> orig_cache;
+static std::unordered_map<uint32_t, uint8_t> last_wgo;
+static std::unordered_map<int16_t, ab> orig_cache;
 static std::vector<ArHint*> blocked;
 
 
-// Ease System Functions
-inline uint16_t mod_degree(uint64_t deg) {
-	// Actually while(xxx)···
-	do {
-		if(deg > 7200)  deg -= (deg > 14400) ? 14400 : 7200 ;
-		else			deg -= 3600;
-	}
-	while(deg > 3600);
-	return deg;
-}
-inline void GetSINCOS(const double degree) {
-	if( degree >= 0 ) {
-		uint64_t deg = (uint64_t)(degree*10.0);			deg = (deg>3600) ? mod_degree(deg) : deg ;
-		if(deg > 1800) {
-			if(deg > 2700)	{ SIN = -DSIN[3600-deg];	COS = DCOS[3600-deg];  }
-			else 			{ SIN = -DSIN[deg-1800];	COS = -DCOS[deg-1800]; }
-		}
-		else {
-			if(deg > 900)	{ SIN = DSIN[1800-deg];		COS = -DCOS[1800-deg]; }
-			else			{ SIN = DSIN[deg]; 			COS = DCOS[deg];	   }
-		}
-	}
-	else {   // sin(-x) = -sin(x), cos(-x) = cos(x)
-		uint64_t deg = (uint64_t)(-degree*10.0);		deg = (deg>3600) ? mod_degree(deg) : deg ;
-		if(deg > 1800) {
-			if(deg > 2700)	{ SIN = DSIN[3600-deg];		COS = DCOS[3600-deg];  }
-			else 			{ SIN = DSIN[deg-1800];		COS = -DCOS[deg-1800]; }
-		}
-		else {
-			if(deg > 900)	{ SIN = -DSIN[1800-deg];	COS = -DCOS[1800-deg]; }
-			else			{ SIN = -DSIN[deg]; 		COS = DCOS[deg];	   }
-		}
-	}
-}
-inline void GetORIG(const float p1, const float p2, uint8_t et, const bool for_y,
-					float curve_init, float curve_end, float &p, float &dp) {
-
-	// EaseType in this func:
-	// 0 -> ESIN   1 -> ECOS   2 -> InQuad   3 -> OutQuad
-
-	// EaseType Check: InQuad & OutQuad
-	if(et == 3) {
-		if(curve_init >= curve_end) {   // 3.OutQuad
-			const float s = curve_init;
-			curve_init = curve_end;		curve_end = s;
-		}
-		else et = 2;   // 2.Inquad
-	}
-	else if(for_y && et==2) et = 0;		// ESIN & ECOS for Axis Y   (ECOS 1->1  ESIN 2->0)
-	else et -= 1;						// ESIN & ECOS for Axis X   (ECOS 2->1  ESIN 1->0)
-
-	// Hashnum Caculation & Cache Searching
-	typedef int16_t I;
-	const I H = (I)(p1*131) + (I)(p2*137) + (I)(curve_init*521) + (I)(curve_end*523) + (I)(et*1009);
-	if( orig_cache.count(H) ) {
-		const pdp orig_pdp = orig_cache[H];
-		p = orig_pdp.p;		dp = orig_pdp.dp;
-	}
-
-	// Cache Miss Calculation
-	else {
-		double fci = curve_init;		double fce = curve_end;
-		switch(et) {
-			case 0: {
-				fci = ESIN[ (uint16_t)(1000 * fci) ];
-				fce = ESIN[ (uint16_t)(1000 * fce) ]; }
-				break;
-			case 1: {
-				fci = ECOS[ (uint16_t)(1000 * fci) ];
-				fce = ECOS[ (uint16_t)(1000 * fce) ]; }
-				break;
-			case 2: {
-				fci *= fci;		fce *= fce; }		break;
-			case 3: {
-				fci = 1.0 - fci;		fci = 1.0 - fci * fci;
-				fce = 1.0 - fce;		fce = 1.0 - fce * fce; }
-			default:;
-		}
-
-		// To control the scale of the precision loss, the divisions here won't be optimized.
-		// The orig_cache should work.
-		const double dnm = fce - fci;
-		p = (fce*p1 - fci*p2) / dnm;		dp = (p2 - p1) / dnm;
-		orig_cache[H] = {p, dp};
-	}
-}
-inline dmVMath::Quat GetZQuad(const double degree) {
-	GetSINCOS( degree * 0.5 );
-	return dmVMath::Quat(0.0f, 0.0f, SIN, COS);
-}
-static const dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
-
-
-
-// Script APIs
+// Init Function
 static int InitArf(lua_State* L)
 {
 	// InitArf(buf, is_auto) -> before, total_hints, wgo_required, hgo_required
@@ -373,7 +278,204 @@ static int InitArf(lua_State* L)
 }
 
 
+// Judge Functions
+static int SetIDelta(lua_State *L) {
+	constexpr uint8_t JR_REV = 100 - JUDGE_RANGE;
+	const int8_t _id = luaL_checknumber(L, 1);
+	if( _id>=-JR_REV && _id<=JR_REV )
+	{ idelta = _id;		mindt = -JUDGE_RANGE + _id;		maxdt = JUDGE_RANGE + _id; }
+	else
+	{ idelta = 0;		mindt = -JUDGE_RANGE;			maxdt = JUDGE_RANGE; }
+	return 0;
+}
+inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const uint8_t vf_count) {
 
+	// Unpack the Hint
+	const float hl = 731.25f + hint.c_dx * rotcos - hint.c_dy * rotsin + xdelta;   // 900 - 112.5 * 1.5
+	const float hd = 371.25f + hint.c_dx * rotsin + hint.c_dy * rotcos + ydelta;   // 540 - 112.5 * 1.5
+	const float hr = hl + 337.5f, hu = hd + 337.5f;
+
+	// Detect Touches
+	for( uint8_t i=0; i<vf_count; i++ ) {
+		const float x = valid_fingers[i].a;
+		if( (x>=hl) && x<=hr ) {
+			const float y = valid_fingers[i].b;
+			if( (y>=hd) && y<=hu ) return true;
+		}
+	}
+
+	// Process Detection Failure
+	return false;
+}
+inline bool is_safe_to_anmitsu(ArHint& hint) {
+
+	// Preparations
+	if(!allow_anmitsu) return false;
+	const float hl = hint.c_dx - 337.5f, hr = hint.c_dx + 337.5f;
+	const float hd = hint.c_dy - 337.5f, hu = hint.c_dy + 337.5f;
+
+	// Iterate blocked blocks
+	const uint16_t bs = blocked.size();
+	for( uint16_t i=0; i<bs; i++ ) {
+		const float x = blocked[i] -> c_dx;
+		if( (x>hl) && x<hr ) {
+			const float y = blocked[i] -> c_dy;
+			if( (y>hu) && y<hd ) return false;
+		}
+	}
+
+	// Register "Safe to Anmitsu" Hints
+	blocked.push_back(&hint);
+	return true;
+}
+static int JudgeArf(lua_State* L) {
+	// JudgeArf(mstime, table_touch)
+	//       -> hint_hit, hint_early, hint_late, special_hint_judged
+	if( !before ) return 0;
+
+	// State Variables
+	bool any_pressed = false, any_released = false, special_hint_judged = false;
+	lua_Number hint_hit = 0, hint_early = 0, hint_late = 0;
+	uint32_t mstime = luaL_checknumber(L, 1);
+
+	// Prepare the Iteration Scale
+	uint16_t location_group = mstime>>9 ;   // floordiv 512
+
+	// Unpack Touches
+	ab vf[10];
+	uint8_t vfcount = 0;
+	for( uint8_t i=0; i<10; i++ ) {
+		lua_rawgeti(L, 2, i+1);
+		const v3p f = dmScript::CheckVector3(L, -1);
+		lua_pop(L, 1);
+
+		switch( (uint8_t)f->getZ() ) {
+			case 1:
+				any_pressed = true;   // No break here
+			case 2:
+				vf[vfcount].a = f->getX();
+				vf[vfcount].b = f->getY();
+				vfcount++;
+				break;
+			case 3:
+				any_released = true;
+				break;
+			default:;
+		}
+	}
+
+	// Start Judging
+	if(any_released) blocked.clear();
+	if(any_pressed) {
+
+	}
+	else {
+
+	}
+
+	// Do Returns
+	lua_checkstack(L, 4);
+	lua_pushnumber(L, hint_hit);	lua_pushnumber(L, hint_early);		lua_pushnumber(L, hint_late);
+	lua_pushboolean(L, special_hint_judged);
+	return 4;
+}
+
+
+// Update Functions
+inline uint16_t mod_degree(uint64_t deg) {
+	// Actually while(xxx)···
+	do {
+		if(deg > 7200)  deg -= (deg > 14400) ? 14400 : 7200 ;
+		else			deg -= 3600;
+	}
+	while(deg > 3600);
+	return deg;
+}
+inline void GetSINCOS(const double degree) {
+	if( degree >= 0 ) {
+		uint64_t deg = (uint64_t)(degree*10.0);			deg = (deg>3600) ? mod_degree(deg) : deg ;
+		if(deg > 1800) {
+			if(deg > 2700)	{ SIN = -DSIN[3600-deg];	COS = DCOS[3600-deg];  }
+			else 			{ SIN = -DSIN[deg-1800];	COS = -DCOS[deg-1800]; }
+		}
+		else {
+			if(deg > 900)	{ SIN = DSIN[1800-deg];		COS = -DCOS[1800-deg]; }
+			else			{ SIN = DSIN[deg]; 			COS = DCOS[deg];	   }
+		}
+	}
+	else {   // sin(-x) = -sin(x), cos(-x) = cos(x)
+		uint64_t deg = (uint64_t)(-degree*10.0);		deg = (deg>3600) ? mod_degree(deg) : deg ;
+		if(deg > 1800) {
+			if(deg > 2700)	{ SIN = DSIN[3600-deg];		COS = DCOS[3600-deg];  }
+			else 			{ SIN = DSIN[deg-1800];		COS = -DCOS[deg-1800]; }
+		}
+		else {
+			if(deg > 900)	{ SIN = -DSIN[1800-deg];	COS = -DCOS[1800-deg]; }
+			else			{ SIN = -DSIN[deg]; 		COS = DCOS[deg];	   }
+		}
+	}
+}
+inline void GetORIG(const float p1, const float p2, uint8_t et, const bool for_y,
+					float curve_init, float curve_end, float &p, float &dp) {
+
+	// EaseType in this func:
+	// 0 -> ESIN   1 -> ECOS   2 -> InQuad   3 -> OutQuad
+
+	// EaseType Check: InQuad & OutQuad
+	if(et == 3) {
+		if(curve_init >= curve_end) {   // 3.OutQuad
+			const float s = curve_init;
+			curve_init = curve_end;		curve_end = s;
+		}
+		else et = 2;   // 2.Inquad
+	}
+	else if(for_y && et==2) et = 0;		// ESIN & ECOS for Axis Y   (ECOS 1->1  ESIN 2->0)
+	else et -= 1;						// ESIN & ECOS for Axis X   (ECOS 2->1  ESIN 1->0)
+
+	// Hashnum Caculation & Cache Searching
+	typedef int16_t I;
+	const I H = (I)(p1*131) + (I)(p2*137) + (I)(curve_init*521) + (I)(curve_end*523) + (I)(et*1009);
+	if( orig_cache.count(H) ) {
+		const ab orig_pdp = orig_cache[H];
+		p = orig_pdp.a;		dp = orig_pdp.b;
+	}
+
+	// Cache Miss Calculation
+	else {
+		double fci = curve_init;		double fce = curve_end;
+		switch(et) {
+			case 0: {
+				fci = ESIN[ (uint16_t)(1000 * fci) ];
+				fce = ESIN[ (uint16_t)(1000 * fce) ]; }
+				break;
+			case 1: {
+				fci = ECOS[ (uint16_t)(1000 * fci) ];
+				fce = ECOS[ (uint16_t)(1000 * fce) ]; }
+				break;
+			case 2: {
+				fci *= fci;		fce *= fce; }		break;
+			case 3: {
+				fci = 1.0 - fci;		fci = 1.0 - fci * fci;
+				fce = 1.0 - fce;		fce = 1.0 - fce * fce; }
+			default:;
+		}
+
+		// To control the scale of the precision loss, the divisions here won't be optimized.
+		// The orig_cache should work.
+		const double dnm = fce - fci;
+		p = (fce*p1 - fci*p2) / dnm;		dp = (p2 - p1) / dnm;
+		orig_cache[H] = {p, dp};
+	}
+}
+inline dmVMath::Quat GetZQuad(const double degree) {
+	GetSINCOS( degree * 0.5 );
+	return dmVMath::Quat(0.0f, 0.0f, SIN, COS);
+}
+static const dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
+
+
+
+// Sundries
 static int FinalArf(lua_State *L) {
 	Arf::clear();
 	orig_cache.clear();

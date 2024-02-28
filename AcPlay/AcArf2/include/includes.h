@@ -17,7 +17,7 @@
 
 
 // Commons
-struct pdp { float p,dp; };   // 2-float Structure
+struct ab { float a,b; };   // 2-float Structure
 enum {
 	// Hint Judge Constants
 	HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
