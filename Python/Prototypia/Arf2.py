@@ -524,7 +524,7 @@ class WishGroup:
 		self.__useless = bool(useless)
 		return self
 
-	def try_interpolate(self, bar:float, nmr:int=0, dnm:int=1) -> Self:
+	def try_interpolate(self, bar:float, nmr:int = 0, dnm:int = 1, apply_to_anglenodes:bool = False) -> Self:
 		'''
 		Try to add a PosNode based on the interpolation result,
 		accoring to the Bartime input and the current PosNode list.
@@ -536,6 +536,8 @@ class WishGroup:
 			bar (float): Bartime integer or the Original Bartime
 			nmr (int): Numerator to specify the internal position in a bar. Example 5/16 -> 5
 			dnm (int): Denominator to specify the internal position in a bar. Example 5/16 -> 16
+			apply_to_anglenodes(bool): If true, the interpolation will be applied to AngleNodes
+									   of WishChilids belonging to the calling WishGroup.
 
 		Returns:
 			Self (WishGroup): for Method Chaining Usage.
@@ -544,6 +546,42 @@ class WishGroup:
 		if bartime < 0:
 			raise ValueError("Bartime(bar+nmr/dnm) must be larger than 0.")
 
+		# AngleNode Process
+		if apply_to_anglenodes:
+			for c in self.__childs:
+				current_anodes = c.anodes   # AngleNode: Tuple(Bartime, Angle, EaseType)
+				ansize = len(current_anodes)
+				if ansize == 1:
+					current_anodes[0] = (0, current_anodes[0][1], 0)
+					continue
+				elif bartime < current_anodes[0][1]: continue
+				elif bartime > current_anodes[-1][1]: continue
+
+				for i in range(ansize-1):
+					current_anode = current_anodes[i]
+					next_anode = current_anodes[i+1]
+
+					# bartime [t1,t2)
+					t1 = current_anode[1]
+					t2 = next_anode[1]
+					if bartime < t1  or  bartime >= t2: continue
+
+					ratio = (bartime - t1) / (t2 - t1)
+					easetype = current_anode[2]
+					if easetype > 1:
+						print("\n----------------")
+						print("Warning:")
+						print("The partial ease support is not yet implemented for AngleNodes.")
+						print("Appending AngleNodes with EaseType InQuad/OutQuad acorss the BPM Edge")
+						print("is not recommended.")
+						print("----------------\n")
+						continue
+					elif easetype == 1:
+						new_angle = int(current_anode[1] + (next_anode[1] - current_anode[1]) * ratio)
+						current_anodes.append( (bartime, new_angle, 1) )
+						current_anodes.sort(key = lambda an: an[0])
+
+		# PosNode Process
 		i_result = self.GET(bartime)
 		if i_result == None: return self
 		elif i_result[5] == None: return self
@@ -677,7 +715,7 @@ class WishGroup:
 			while len(self.__nodes) > 2  and  self.__nodes[0].bartime < 0:
 				self.__nodes.pop(0)
 			if len(self.__nodes) < 2  or  self.__nodes[0].bartime < 0:
-				raise MoveError("After the Triming Process, No enough PosNode(s) remain(s).")
+				raise MoveError("After the Triming Process, No enough PosNode remains.")
 		while len(self.__childs) > 0  and  self.__childs[0].bartime < 0:
 			self.__childs.pop(0)
 		while len(self.__mhints) > 0  and  self.__mhints[0].bartime < 0:
@@ -841,6 +879,7 @@ class MergedTimeNode:
 		self.dt_ms = None
 		self.dt_base = None
 		self.dt_ratio = None
+
 def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 	def dbpmprint() -> None:
 		print("\n----------------")
@@ -1008,6 +1047,13 @@ def Arf2Compile() -> None:
 		return
 	UpdateBPM()
 
+	# Interpolation at the BPM Edges
+	if len(Arf2Prototype.bpms) > 1:
+		for b in Arf2Prototype.bpms:
+			if(bpmbar := b[0]):   # Optimization
+				for w in Arf2Prototype.wish:
+					w.try_interpolate(bpmbar, 0, 1, True)
+
 	# Merge Bartimes and Dts
 	dict_layer1:dict[float,MergedTimeNode] = {}
 	dict_layer2:dict[float,MergedTimeNode] = {}
@@ -1077,7 +1123,7 @@ def Arf2Compile() -> None:
 		for c in childs_AWCRH:
 			new_hint = Hint( c.bartime, wg )
 			Arf2Prototype.hint.append(new_hint)
-	
+
 	# Discard Useless WishGroups & WishGroups that has less than 2 PosNodes
 	new_wg = []
 	for wg in Arf2Prototype.wish:
@@ -1579,7 +1625,7 @@ def Arf2Compile() -> None:
 	# File Saving & Backup
 	## Get the Directory & Filename of calling *.py file(without extension)
 	fnm:str = os.path.basename( sys.argv[0] ) .removesuffix(".py")
-	dir:str = os.getcwd()
+	dir:str = os.path.dirname( sys.argv[0] )
 
 	## If the *.ar file exists, backup it
 	path:str = os.path.join(dir, fnm + ".ar")
