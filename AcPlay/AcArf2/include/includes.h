@@ -21,15 +21,11 @@ struct ab { float a,b; };   // 2-float Structure
 enum {
 	// Hint Judge Constants
 	HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
-	HINT_JUDGED = 10, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO,
+	HINT_JUDGED, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO,
 
 	// Table Update Constants
 	T_WGO = 2, T_HGO, T_AGO_L, T_AGO_R,
-	T_WTINT, T_HTINT, T_ATINT,
-	T_TOUCHES = 4,
-
-	// Table Acquire Constants
-	I_MS = 1, E_UPD = 9, E_JUD = 5
+	T_WTINT, T_HTINT, T_ATINT
 };
 
 /* A hack method to get the elem count of a new[] array */

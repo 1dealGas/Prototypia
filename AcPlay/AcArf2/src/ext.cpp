@@ -37,4 +37,4 @@ inline dmExtension::Result APPOK(dmExtension::AppParams* params) {
     return dmExtension::RESULT_OK;
 }
 
-DM_DECLARE_EXTENSION(AcPlay, "AcPlay", APPOK, APPOK, LuaInit, 0, 0, OK)
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", APPOK, APPOK, LuaInit, nullptr, nullptr, OK)

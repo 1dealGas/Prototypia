@@ -325,7 +325,7 @@ inline bool is_safe_to_anmitsu(ArHint& hint) {
 	}
 
 	// Register "Safe to Anmitsu" Hints
-	blocked.push_back(&hint);
+	blocked.emplace_back(&hint);
 	return true;
 }
 static int JudgeArf(lua_State* L) {
@@ -336,10 +336,18 @@ static int JudgeArf(lua_State* L) {
 	// State Variables
 	bool any_pressed = false, any_released = false, special_hint_judged = false;
 	lua_Number hint_hit = 0, hint_early = 0, hint_late = 0;
-	uint32_t mstime = luaL_checknumber(L, 1);
+	const uint32_t mstime = luaL_checknumber(L, 1);
 
 	// Prepare the Iteration Scale
-	uint16_t location_group = mstime>>9 ;   // floordiv 512
+	uint16_t current_group = 0; {
+		const uint16_t location_group = mstime >> 9 ;   // floordiv 512
+		current_group = (location_group > 1) ? (location_group - 1) : 0 ;
+	}
+	uint16_t beyond_group = 0; {
+		beyond_group = current_group + 3;
+		const uint16_t group_count = COUNT(Arf::index);
+		beyond_group = (beyond_group > group_count) ? beyond_group : group_count ;
+	}
 
 	// Unpack Touches
 	ab vf[10];
@@ -367,10 +375,97 @@ static int JudgeArf(lua_State* L) {
 	// Start Judging
 	if(any_released) blocked.clear();
 	if(any_pressed) {
+		uint32_t min_time = 0;
+		for( ; current_group < beyond_group; current_group++ ) {
+			const auto hint_ids = Arf::index[current_group].hidx;
+			const uint8_t hint_count = COUNT(hint_ids);
 
+			for( uint8_t i=0; i<hint_count; i++ ) {
+				const auto current_hint_id = hint_ids[i];
+				auto& current_hint = Arf::hint[current_hint_id];
+
+				// Jump Judging based on the Sort Assumption
+				const int32_t dt = mstime - current_hint.ms;
+				if(dt < -510) break;
+				if(dt > 470) continue;
+
+				// Hint Status Manipulation
+				const bool htn = has_touch_near(current_hint, vf, vfcount);
+				switch(current_hint.status) {
+					case HINT_NONJUDGED_NONLIT:   // No break here
+					case HINT_NONJUDGED_LIT:
+						if(htn) {
+							if( (dt >= -100) && dt <= 100 ) {
+								const bool ista = is_safe_to_anmitsu(current_hint);
+
+								if(!min_time) {
+
+									// Data Update
+									min_time = current_hint.ms;
+									if(current_hint_id == special_hint) special_hint_judged = (bool)special_hint;
+									current_hint.status = HINT_JUDGED_LIT;
+									current_hint.judged_ms = mstime;
+
+									// Classify
+									if(dt < mindt) hint_early++ ;
+									else if(dt <= maxdt) hint_hit++ ;
+									else hint_late++ ;
+
+								}
+								else if( (current_hint.ms == min_time) || ista ) {
+
+									// Data Update
+									if(current_hint_id == special_hint) special_hint_judged = (bool)special_hint;
+									current_hint.status = HINT_JUDGED_LIT;
+									current_hint.judged_ms = mstime;
+
+									// Classify
+									if(dt < mindt) hint_early++ ;
+									else if(dt <= maxdt) hint_hit++ ;
+									else hint_late++ ;
+
+								}
+								else current_hint.status = HINT_NONJUDGED_LIT;
+
+							}
+							else current_hint.status = HINT_NONJUDGED_LIT;
+						}
+						else current_hint.status = HINT_NONJUDGED_NONLIT;
+					case HINT_JUDGED_LIT:
+						if(!htn) current_hint.status = HINT_JUDGED;
+						break;
+					default:;
+				}
+			}
+		}
 	}
-	else {
+	else for( ; current_group < beyond_group; current_group++ ) {
+		const auto hint_ids = Arf::index[current_group].hidx;
+		const uint8_t hint_count = COUNT(hint_ids);
 
+		for( uint8_t i=0; i<hint_count; i++ ) {
+			const auto current_hint_id = hint_ids[i];
+			auto& current_hint = Arf::hint[current_hint_id];
+
+			// Jump Judging based on the Sort Assumption
+			const int32_t dt = mstime - current_hint.ms;
+			if(dt < -510) break;
+			if(dt > 470) continue;
+
+			// Hint Status Manipulation
+			const bool htn = has_touch_near(current_hint, vf, vfcount);
+			switch(current_hint.status) {
+				case HINT_NONJUDGED_NONLIT:   // No break here
+				case HINT_NONJUDGED_LIT:
+					if(htn) current_hint.status = HINT_NONJUDGED_LIT;
+					else current_hint.status = HINT_NONJUDGED_NONLIT;
+					break;
+				case HINT_JUDGED_LIT:
+					if(!htn) current_hint.status = HINT_JUDGED;
+					break;
+				default:;
+			}
+		}
 	}
 
 	// Do Returns
