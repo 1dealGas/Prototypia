@@ -30,6 +30,7 @@ Node(ArHint)
 	uint32_t ms = 0;
 /*--------------------------------*/
 	uint32_t judged_ms = 0;
+	uint8_t elstatus = 0;   // To Utilize the Memory Alignment Padding Better
 	uint8_t status = 0;
 End
 
@@ -105,8 +106,7 @@ class Arf {
 	static ArIndex* index;
 
 	static ArWishGroup* wish;
-	static ArHint* hint;
-	static ArHint* echo;
+	static ArHint *hint, *echo;
 
 	static void clear() {
 		if(d1) { delete[] d1;	d1 = nullptr; }

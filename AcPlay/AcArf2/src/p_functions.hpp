@@ -49,6 +49,7 @@ static bool daymode, allow_anmitsu;
 
 // Internals
 static float SIN, COS;
+static uint32_t last_ms;
 static uint16_t dt_p1, dt_p2;
 static int8_t mindt = -37, maxdt = 37, idelta = 0;
 static std::unordered_map<uint32_t, uint8_t> last_wgo;
@@ -57,8 +58,7 @@ static std::vector<ArHint*> blocked;
 
 
 // Init Function
-static int InitArf(lua_State* L)
-{
+static int InitArf(lua_State* L) {
 	// InitArf(buf, is_auto) -> before, total_hints, wgo_required, hgo_required
 	// Recommended Usage (Requires Defold 1.6.4 or Newer):
 	//     local buf = sys.load_buffer( "Arf/1011.ar" )   -- Also allows a path on your disk.
@@ -76,7 +76,7 @@ static int InitArf(lua_State* L)
 	allow_anmitsu = true;
 	xdelta = ydelta = rotsin = 0.0f;
 	xscale = yscale = rotcos = 1.0f;
-	dt_p1 = dt_p2 = 0;
+	last_ms = dt_p1 = dt_p2 = 0;
 
 	// Ensure a clean Initialization
 	last_wgo.clear();
@@ -343,8 +343,7 @@ static int JudgeArf(lua_State* L) {
 		const uint16_t location_group = mstime >> 9 ;   // floordiv 512
 		current_group = (location_group > 1) ? (location_group - 1) : 0 ;
 	}
-	uint16_t beyond_group = 0; {
-		beyond_group = current_group + 3;
+	uint16_t beyond_group = current_group + 3; {
 		const uint16_t group_count = COUNT(Arf::index);
 		beyond_group = (beyond_group > group_count) ? beyond_group : group_count ;
 	}
@@ -371,13 +370,13 @@ static int JudgeArf(lua_State* L) {
 			default:;
 		}
 	}
+	{ if(any_released) blocked.clear(); }
 
 	// Start Judging
-	if(any_released) blocked.clear();
 	if(any_pressed) {
 		uint32_t min_time = 0;
 		for( ; current_group < beyond_group; current_group++ ) {
-			const auto hint_ids = Arf::index[current_group].hidx;
+			const auto hint_ids = Arf::index[current_group].hidx;	if(!hint_ids) continue;
 			const uint8_t hint_count = COUNT(hint_ids);
 
 			for( uint8_t i=0; i<hint_count; i++ ) {
@@ -402,27 +401,43 @@ static int JudgeArf(lua_State* L) {
 
 									// Data Update
 									min_time = current_hint.ms;
-									if(current_hint_id == special_hint) special_hint_judged = (bool)special_hint;
+									if(current_hint_id == special_hint) {
+										special_hint_judged = (bool)special_hint;
+									}
 									current_hint.status = HINT_JUDGED_LIT;
 									current_hint.judged_ms = mstime;
 
 									// Classify
-									if(dt < mindt) hint_early++ ;
-									else if(dt <= maxdt) hint_hit++ ;
-									else hint_late++ ;
+									if(dt < mindt) {
+										current_hint.elstatus = HINT_EARLY;
+										++hint_early;
+									}
+									else if(dt <= maxdt) ++hint_hit;
+									else {
+										current_hint.elstatus = HINT_LATE;
+										++hint_late;
+									}
 
 								}
 								else if( (current_hint.ms == min_time) || ista ) {
 
 									// Data Update
-									if(current_hint_id == special_hint) special_hint_judged = (bool)special_hint;
+									if(current_hint_id == special_hint) {
+										special_hint_judged = (bool)special_hint;
+									}
 									current_hint.status = HINT_JUDGED_LIT;
 									current_hint.judged_ms = mstime;
 
 									// Classify
-									if(dt < mindt) hint_early++ ;
-									else if(dt <= maxdt) hint_hit++ ;
-									else hint_late++ ;
+									if(dt < mindt) {
+										current_hint.elstatus = HINT_EARLY;
+										++hint_early;
+									}
+									else if(dt <= maxdt) ++hint_hit;
+									else {
+										current_hint.elstatus = HINT_LATE;
+										++hint_late;
+									}
 
 								}
 								else current_hint.status = HINT_NONJUDGED_LIT;
@@ -440,7 +455,7 @@ static int JudgeArf(lua_State* L) {
 		}
 	}
 	else for( ; current_group < beyond_group; current_group++ ) {
-		const auto hint_ids = Arf::index[current_group].hidx;
+		const auto hint_ids = Arf::index[current_group].hidx;	if(!hint_ids) continue;
 		const uint8_t hint_count = COUNT(hint_ids);
 
 		for( uint8_t i=0; i<hint_count; i++ ) {
@@ -477,6 +492,7 @@ static int JudgeArf(lua_State* L) {
 
 
 // Update Functions
+static const dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
 inline uint16_t mod_degree(uint64_t deg) {
 	// Actually while(xxx)···
 	do {
@@ -566,7 +582,36 @@ inline dmVMath::Quat GetZQuad(const double degree) {
 	GetSINCOS( degree * 0.5 );
 	return dmVMath::Quat(0.0f, 0.0f, SIN, COS);
 }
-static const dmVMath::Quat D73(0.0f, 0.0f, 0.594822786751341f, 0.803856860617217f);
+static int UpdateArf(lua_State* L) {
+	// UpdateArf(mstime, table_wgo/hgo/agol/agor/wtint/htint/atint)
+	//        -> hint_lost, wgo/hgo/ago_used
+	if( !before ) return 0;
+
+	// Prepare Returns & Process msTime
+	// Z Distribution: Wish{0,0.05,0.1,0.15}  Hint(-0.06,0)
+	uint8_t wgo_used = 0, hgo_used = 0, ago_used = 0;			uint16_t hint_lost = 0;
+	uint32_t mstime = (uint32_t)luaL_checknumber(L, 1); {
+		if(mstime < 2)					mstime = 2;
+		else if( mstime >= before )		return 0;
+	}
+
+	// Check DTimes
+	// This time, we use the last_ms cache to condition the fallback iteration.
+	double dt1 = 0.0; {}
+	double dt2 = 0.0; {}
+
+
+	/* Process Wish(es) */ {}
+
+
+	/* Process Hint(s) */ {}
+
+
+	// Clean Up & Do Returns
+	lua_checkstack(L, 4);				lua_pushnumber(L, hint_lost);
+	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
+	last_ms = mstime;					last_wgo.clear();					return 4;
+}
 
 
 
