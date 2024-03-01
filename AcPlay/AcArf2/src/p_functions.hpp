@@ -36,8 +36,8 @@ constexpr uint8_t JUDGE_RANGE = 37;
 
 
 // Typedefs
-typedef dmVMath::Vector3 v3, *v3p;
-typedef dmVMath::Vector4 v4, *v4p;
+typedef dmVMath::Vector3 v3i, *v3;
+typedef dmVMath::Vector4 v4i, *v4;
 typedef dmGameObject::HInstance GO;
 typedef dmVMath::Point3 p3;
 
@@ -93,6 +93,8 @@ static int InitArf(lua_State* L) {
 
 
 	// Decode Stuff
+	// Code Style: If there is no element in a container, we'll remain the handle as nullptr.
+	//             Be Sure to Detect Nullptrs before Using Containers.
 	auto A = GetArf2( ArfBuf );
 	before = A -> before();
 	special_hint = A -> special_hint();
@@ -253,7 +255,7 @@ static int InitArf(lua_State* L) {
 	auto hint = A -> hint();
 	uint16_t hint_size = hint -> size();
 	if(hint_size) {
-		uint8_t init_status = lua_toboolean(L, 2) ? HINT_AUTO : HINT_NONJUDGED_NONLIT;
+		uint8_t init_status = lua_toboolean(L, 2) ? HINT_AUTO : HINT_NONJUDGED;
 		Arf::hint = new ArHint[hint_size];
 
 		for(uint16_t i = 0; i < hint_size; i++) {
@@ -345,7 +347,7 @@ static int JudgeArf(lua_State* L) {
 	}
 	uint16_t beyond_group = current_group + 3; {
 		const uint16_t group_count = COUNT(Arf::index);
-		beyond_group = (beyond_group > group_count) ? beyond_group : group_count ;
+		beyond_group = (beyond_group < group_count) ? beyond_group : group_count ;
 	}
 
 	// Unpack Touches
@@ -353,7 +355,7 @@ static int JudgeArf(lua_State* L) {
 	uint8_t vfcount = 0;
 	for( uint8_t i=0; i<10; i++ ) {
 		lua_rawgeti(L, 2, i+1);
-		const v3p f = dmScript::CheckVector3(L, -1);
+		const v3 f = dmScript::CheckVector3(L, -1);
 		lua_pop(L, 1);
 
 		switch( (uint8_t)f->getZ() ) {
@@ -391,7 +393,7 @@ static int JudgeArf(lua_State* L) {
 				// Hint Status Manipulation
 				const bool htn = has_touch_near(current_hint, vf, vfcount);
 				switch(current_hint.status) {
-					case HINT_NONJUDGED_NONLIT:   // No break here
+					case HINT_NONJUDGED:   // No break here
 					case HINT_NONJUDGED_LIT:
 						if(htn) {
 							if( (dt >= -100) && dt <= 100 ) {
@@ -410,12 +412,12 @@ static int JudgeArf(lua_State* L) {
 									// Classify
 									if(dt < mindt) {
 										current_hint.elstatus = HINT_EARLY;
-										++hint_early;
+										hint_early++;
 									}
-									else if(dt <= maxdt) ++hint_hit;
+									else if(dt <= maxdt) hint_hit++;
 									else {
 										current_hint.elstatus = HINT_LATE;
-										++hint_late;
+										hint_late++;
 									}
 
 								}
@@ -431,12 +433,12 @@ static int JudgeArf(lua_State* L) {
 									// Classify
 									if(dt < mindt) {
 										current_hint.elstatus = HINT_EARLY;
-										++hint_early;
+										hint_early++;
 									}
-									else if(dt <= maxdt) ++hint_hit;
+									else if(dt <= maxdt) hint_hit++;
 									else {
 										current_hint.elstatus = HINT_LATE;
-										++hint_late;
+										hint_late++;
 									}
 
 								}
@@ -445,7 +447,7 @@ static int JudgeArf(lua_State* L) {
 							}
 							else current_hint.status = HINT_NONJUDGED_LIT;
 						}
-						else current_hint.status = HINT_NONJUDGED_NONLIT;
+						else current_hint.status = HINT_NONJUDGED;
 					case HINT_JUDGED_LIT:
 						if(!htn) current_hint.status = HINT_JUDGED;
 						break;
@@ -470,10 +472,10 @@ static int JudgeArf(lua_State* L) {
 			// Hint Status Manipulation
 			const bool htn = has_touch_near(current_hint, vf, vfcount);
 			switch(current_hint.status) {
-				case HINT_NONJUDGED_NONLIT:   // No break here
+				case HINT_NONJUDGED:   // No break here
 				case HINT_NONJUDGED_LIT:
 					if(htn) current_hint.status = HINT_NONJUDGED_LIT;
-					else current_hint.status = HINT_NONJUDGED_NONLIT;
+					else current_hint.status = HINT_NONJUDGED;
 					break;
 				case HINT_JUDGED_LIT:
 					if(!htn) current_hint.status = HINT_JUDGED;
@@ -587,28 +589,337 @@ static int UpdateArf(lua_State* L) {
 	//        -> hint_lost, wgo/hgo/ago_used
 	if( !before ) return 0;
 
-	// Prepare Returns & Process msTime
+	/* Prepare Returns & Process msTime */
 	// Z Distribution: Wish{0,0.05,0.1,0.15}  Hint(-0.06,0)
-	uint8_t wgo_used = 0, hgo_used = 0, ago_used = 0;			uint16_t hint_lost = 0;
 	uint32_t mstime = (uint32_t)luaL_checknumber(L, 1); {
-		if(mstime < 2)					mstime = 2;
-		else if( mstime >= before )		return 0;
+		if(mstime < 2)											mstime = 2;
+		else if( (mstime == last_ms) || mstime >= before )		return 0;
+	}
+	const uint16_t location_group = mstime >> 9 ;   // floordiv 512
+
+	uint16_t hint_lost = 0;
+	uint8_t wgo_used = 0, hgo_used = 0, ago_used = 0;
+
+
+	/* Check DTimes */
+	// We use the last_ms cache to condition the fallback iteration this time.
+	double dt1 = 0.0; {
+
+		// Tail Judging
+		// Prototypia guarantees that init_ms of the 1st DetlaNode of each layer equals to 0
+		const uint16_t dt_tail = COUNT(Arf::d1) - 1;
+		const auto& node_l = Arf::d1[dt_tail];
+		if( mstime >= node_l.init_ms )
+			dt1 = node_l.base + (mstime - node_l.init_ms) * node_l.ratio;
+
+		// Iterating When Tail Judging Fails
+		else {
+			if( mstime < last_ms )   // Regression
+				while( (dt_p1 > 0) && Arf::d1[dt_p1].init_ms > mstime ) dt_p1--;
+
+			for( ; dt_p1 < dt_tail; dt_p1++ ) {
+				const auto& node_n = Arf::d1[dt_p1 + 1];
+				if( mstime < node_n.init_ms ) {   // Actually  if( mstime >= node_n.init_ms ) continue;
+					const auto& node_c = Arf::d1[dt_p1];
+					if( node_c.ratio > node_n.ratio )
+						dt1 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
+					else
+						dt1 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
+				}
+			}
+		}
 	}
 
-	// Check DTimes
-	// This time, we use the last_ms cache to condition the fallback iteration.
-	double dt1 = 0.0; {}
-	double dt2 = 0.0; {}
+	double dt2 = 0.0; {
+
+		// Tail Judging
+		const uint16_t dt_tail = COUNT(Arf::d2) - 1;
+		const auto& node_l = Arf::d2[dt_tail];
+		if( mstime >= node_l.init_ms )
+			dt2 = node_l.base + (mstime - node_l.init_ms) * node_l.ratio;
+
+		// Iterating When Tail Judging Fails
+		else {
+			if( mstime < last_ms )   // Regression
+				while( (dt_p2 > 0) && Arf::d2[dt_p2].init_ms > mstime ) dt_p2--;
+
+			for( ; dt_p2 < dt_tail; dt_p2++ ) {
+				const auto& node_n = Arf::d2[dt_p2 + 1];
+				if( mstime < node_n.init_ms ) {   // Actually  if( mstime >= node_n.init_ms ) continue;
+					const auto& node_c = Arf::d2[dt_p2];
+					if( node_c.ratio > node_n.ratio )
+						dt2 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
+					else
+						dt2 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
+				}
+			}
+		}
+	}
 
 
-	/* Process Wish(es) */ {}
+	/* Process Wish(es) */ {
+
+	}
 
 
-	/* Process Hint(s) */ {}
+	/* Process Hint(s) */ {
+
+		// Prepare the Iteration Scale
+		uint16_t current_group = (location_group > 1) ? (location_group - 1) : 0 ;
+		uint16_t beyond_group = current_group + 3; {
+			const uint16_t group_count = COUNT(Arf::index);
+			beyond_group = (beyond_group < group_count) ? beyond_group : group_count ;
+		}
+
+		// Group Iteration
+		for( ; current_group < beyond_group; current_group++ ) {
+			const auto hint_ids = Arf::index[current_group].hidx;	if(!hint_ids) continue;
+			const uint8_t hint_count = COUNT(hint_ids);
+
+			// Element Iteration
+			for(uint8_t i=0; i<hint_count; i++) {
+				const auto current_hint_id = hint_ids[i];
+				auto& current_hint = Arf::hint[current_hint_id];
+
+				/* Calculate Dt & Jump Judging based on the Sort Assumption */
+				const int32_t dt = mstime - current_hint.ms;
+				const int32_t jdt = mstime - current_hint.judged_ms;
+				if (dt > 470) continue;
+				if (dt < -510) break;
+
+				/* Do Hint Sweeping */
+				if( dt>100 && (current_hint.status==HINT_NONJUDGED || current_hint.status==HINT_NONJUDGED_LIT) ) {
+					current_hint.status = HINT_SWEEPED;
+					hint_lost++;
+				}
+
+				/* Calculate the Real Position & Prepare Rennder Elements */
+				const float x = 900.f + current_hint.c_dx * rotcos - current_hint.c_dy * rotsin + xdelta;
+				const float y = 540.f + current_hint.c_dx * rotsin + current_hint.c_dy * rotcos + ydelta;
+				lua_rawgeti(L, T_HGO, hgo_used+1);	GO hgo = dmScript::CheckGOInstance(L, -1);
+				lua_rawgeti(L, T_HTINT, hgo_used+1);	v4 htint = dmScript::CheckVector4(L, -1);
+				lua_rawgeti(L, T_AGO_L, ago_used+1);	GO agol = dmScript::CheckGOInstance(L, -1);
+				lua_rawgeti(L, T_AGO_R, ago_used+1);	GO agor = dmScript::CheckGOInstance(L, -1);
+				lua_rawgeti(L, T_ATINT, ago_used+1);	v4 atint = dmScript::CheckVector4(L, -1);
+				lua_pop(L, 5);
+
+				/* Pass Hint & Anim Params */
+				// Specify all tint.w as 1 in the initialization
+				if( dt < -370 ) {
+					SetPosition( hgo, p3(x, y, -(0.05f + dt*0.00001f)) );
+					const float color = 0.1337f + (float)(0.07 * (510+dt) / 140.0);
+					htint -> setX(color).setY(color).setZ(color);
+					hgo_used++;
+				}
+				else if( dt <= 370 ) switch(current_hint.status) {
+					case HINT_NONJUDGED:
+						htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
+						SetPosition( hgo, p3(x, y, -0.04f) );
+						hgo_used++;
+						break;
+					case HINT_NONJUDGED_LIT:
+						htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
+						SetPosition( hgo, p3(x, y, -0.04f) );
+						hgo_used++;
+						break;
+					case HINT_JUDGED_LIT:   // No break here
+						SetPosition( hgo, p3(x, y, -0.01f) );
+						switch(current_hint.elstatus) {
+							case HINT_HIT:
+								{
+									if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
+									else			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
+								}
+								break;
+							case HINT_EARLY:
+								htint -> setX(H_EARLY_R).setY(H_EARLY_G).setZ(H_EARLY_B);
+								break;
+							case HINT_LATE:
+								htint -> setX(H_LATE_R).setY(H_LATE_G).setZ(H_LATE_B);
+								break;
+							default:;
+						}
+						hgo_used++;
+					case HINT_JUDGED:
+						if(jdt <= 370) {
+							// Anim Settings
+							ago_used++;
+
+							/* Position */ {
+								p3 agopos(x, y, -jdt * 0.00001f);
+								SetPosition(agol, agopos);
+								SetPosition(agor, agopos);
+							}
+
+							/* tint.w */
+							if(jdt < 73) {
+								float tintw = jdt * 0.01f;
+								tintw = 0.637f * tintw * (2.0f - tintw);
+								atint -> setW( 0.17199f + tintw );
+							}
+							else {
+								float tintw = (jdt - 73) * 0.003367003367003367f;   // 1/297 = 0.003367···
+								tintw = 0.637f * tintw * (2.0f - tintw);
+								atint -> setW(0.637f - tintw);
+							}
+
+							/* tint.xyz */
+							switch(current_hint.elstatus) {
+								case HINT_HIT:
+									{
+										if(daymode)		atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
+										else			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
+									}
+									break;
+								case HINT_EARLY:
+									atint -> setX(A_EARLY_R).setY(A_EARLY_G).setZ(A_EARLY_B);
+									break;
+								case HINT_LATE:
+									atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
+									break;
+								default:;
+							}
+
+							/* Rotation & Scale */ {
+								double anim_calculate = 0.0;
+
+								if(jdt <= 193) {
+									anim_calculate = jdt * 0.005181347150259;   // 1/193
+									SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+									anim_calculate = anim_calculate * (2.0 - anim_calculate);
+									SetScale( agol, 1.0 + 0.637 * anim_calculate );
+								}
+								else {
+									SetRotation(agol, D73);
+									SetScale(agol, 1.637f);
+								}
+
+								anim_calculate = jdt * 0.002702702702702;   // 1/370
+								anim_calculate = anim_calculate * (2.0 - anim_calculate);
+								SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+								SetScale( agor, 1.0 + 0.637 * anim_calculate );
+							}
+						}
+						break;
+					case HINT_SWEEPED:
+						{
+							float color = 0.437f - dt*0.00037f;
+							htint -> setX(color);		color *= 0.51f;		htint -> setY(color).setZ(color);
+							SetPosition( hgo, p3(x, y, -0.02f + dt*0.00001f) );
+							hgo_used++;
+						}
+						break;
+					case HINT_AUTO:
+
+						// Hint
+						{
+							if(dt < 0) {
+								htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
+								SetPosition( hgo, p3(x, y, -0.04f) );
+								hgo_used++;
+							}
+							else if(dt < 101) {
+								SetPosition( hgo, p3(x, y, -0.01f) );
+								if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
+								else 			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
+								hgo_used++;
+							}
+						}
+
+						// Anim
+						if(dt >= 0) {
+							ago_used++;
+
+							/* Position */ {
+								p3 agopos(x, y, -dt * 0.00001f);
+								SetPosition(agol, agopos);
+								SetPosition(agor, agopos);
+							}
+
+							/* tint.w */
+							if(dt < 73) {
+								float tintw = dt * 0.01f;
+								tintw = 0.637f * tintw * (2.0f - tintw);
+								atint -> setW( 0.17199f + tintw );
+							}
+							else {
+								float tintw = (dt - 73) * 0.003367003367003367f;   // 1/297 = 0.003367···
+								tintw = 0.637f * tintw * (2.0f - tintw);
+								atint -> setW(0.637f - tintw);
+							}
+
+							/* tint.xyz */ {
+								if(daymode)		atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
+								else			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
+							}
+
+							/* Rotation & Scale */
+							{
+								double anim_calculate = 0.0;
+
+								if(dt <= 193) {
+									anim_calculate = dt * 0.005181347150259;   // 1/193
+									SetRotation( agol, GetZQuad(45.0 + 28.0 * anim_calculate) );
+									anim_calculate = anim_calculate * (2.0 - anim_calculate);
+									SetScale( agol, 1.0 + 0.637 * anim_calculate );
+								}
+								else {
+									SetRotation(agol, D73);
+									SetScale(agol, 1.637f);
+								}
+
+								anim_calculate = dt * 0.002702702702702;   // 1/370
+								anim_calculate = anim_calculate * (2.0 - anim_calculate);
+								SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+								SetScale( agor, 1.0 + 0.637 * anim_calculate );
+							}
+						}
+						break;
+					default:;
+				}
+				else if( jdt<=370 && (current_hint.status==HINT_JUDGED || current_hint.status==HINT_JUDGED_LIT) ) {
+					// We only render the Anim here.
+					ago_used++;
+
+					/* Position */ {
+						p3 agopos(x, y, -jdt * 0.00001f);
+						SetPosition(agol, agopos);
+						SetPosition(agor, agopos);
+					}
+
+					/* tint.w */ {   // jdt must be larger than 270
+						float tintw = (jdt - 73) * 0.003367003367003367f;   // 1/297 = 0.003367···
+						tintw = 0.637f * tintw * (2.f - tintw);
+						atint -> setW(0.637f - tintw);
+					}
+
+					/* tint.xyz */ {
+						if(current_hint.elstatus == HINT_LATE) atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
+						else if(daymode) atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
+						else atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
+					}
+
+					/* Rotation & Scale */ {   // jdt must be larger than 270
+						SetRotation(agol, D73);
+						SetScale(agol, 1.637f);
+
+						double anim_calculate = jdt * 0.002702702702702;   // 1/370
+						anim_calculate = anim_calculate * (2.0 - anim_calculate);
+						SetRotation( agor, GetZQuad(45.0 - 8.0 * anim_calculate) );
+						SetScale( agor, 1.0 + 0.637 * anim_calculate );
+					}
+				}
+			}
+		}
+	}
 
 
-	// Clean Up & Do Returns
-	lua_checkstack(L, 4);				lua_pushnumber(L, hint_lost);
+	/* Process Echoes */
+	// NYI
+
+
+	/* Clean Up & Do Returns */
+	lua_checkstack(L, 4);			lua_pushnumber(L, hint_lost);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }

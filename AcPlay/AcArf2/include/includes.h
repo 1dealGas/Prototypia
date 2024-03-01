@@ -20,7 +20,7 @@
 struct ab { float a,b; };   // 2-float Structure
 enum {
 	// Hint Status Constants
-	HINT_NONJUDGED_NONLIT = 0, HINT_NONJUDGED_LIT,
+	HINT_NONJUDGED = 0, HINT_NONJUDGED_LIT,
 	HINT_JUDGED, HINT_JUDGED_LIT, HINT_SWEEPED, HINT_AUTO,
 
 	// Hint Judge Constants
