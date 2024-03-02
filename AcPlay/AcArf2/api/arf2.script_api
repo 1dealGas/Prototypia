@@ -19,6 +19,7 @@
       type: number
     - name: hgo_required
       type: number
+
   - name: FinalArf
     type: function
 
@@ -58,21 +59,20 @@
     parameters:
     - name: idelta
       type: number
+
   - name: JudgeArf
     type: function
     parameters:
     - name: mstime
       type: number
-    - name: any_pressed
-      type: boolean
-    - name: any_released
-      type: boolean
-    - name: table_touches
+    - name: table_touch
       type: table
     returns:
     - name: hint_hit
       type: number
-    - name: hint_lost
+    - name: hint_early
+      type: number
+    - name: hint_late
       type: number
     - name: special_hint_judged
       type: boolean
