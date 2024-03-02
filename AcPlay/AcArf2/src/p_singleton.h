@@ -20,8 +20,9 @@ Node(ArPosNode)
 	float c_dx = 0.0f,  c_dy = 0.0f;
 	uint32_t ms = 0;
 /*--------------------------------*/
-	float curve_init = 0.0f;
-	float curve_end = 0.0f;
+	float ci = 0.0f, x_fci = 0.0f, y_fci = 0.0f;
+	float ce = 0.0f, x_fce = 0.0f, y_fce = 0.0f;
+	float x_dnm = 0.0f, y_dnm = 0.0f;
 	uint8_t easetype = 0;
 End
 
@@ -120,9 +121,8 @@ class Arf {
 };
 
 // Link Symbols
+ArIndex* Arf::index;
 ArDeltaNode* Arf::d1;
 ArDeltaNode* Arf::d2;
-ArIndex* Arf::index;
+ArHint *Arf::hint, *Arf::echo;
 ArWishGroup* Arf::wish;
-ArHint* Arf::hint;
-ArHint* Arf::echo;
