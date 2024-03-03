@@ -890,8 +890,8 @@ static int UpdateArf(lua_State* L) {
 
 						/* Child Param Setting */ {
 							GetSINCOS(angle);
-							const float child_x = node_x + radius * COS;
-							const float child_y = node_y + radius * SIN;
+							const float child_x = node_x + radius * 112.5f * COS;
+							const float child_y = node_y + radius * 112.5f * SIN;
 
 							const float x = 900.f + (child_x * rotcos - child_y * rotsin) * xscale + xdelta;
 							if( (x>=66.0f) && x<=1734.0f ) {   // X trim
