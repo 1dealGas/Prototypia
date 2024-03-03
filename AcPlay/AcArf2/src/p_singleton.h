@@ -68,8 +68,8 @@ struct ArWishGroup {
 
 	float mvb = 0.0f;   // Max Visible Distance
 
-	uint16_t cp = 0;   // Progress of WishChilds Iteration
-	uint16_t ep = 0;   // Progress of EchoChilds Iteration
+	int16_t cp = -1;   // Progress of WishChilds Iteration
+	int16_t ep = -1;   // Progress of EchoChilds Iteration
 
 	uint8_t np = 0;   // Progress of PosNodes Iteration
 	bool ofl2 = false;    // Instance belonging to Layer 2 or Not
@@ -124,5 +124,5 @@ class Arf {
 ArIndex* Arf::index;
 ArDeltaNode* Arf::d1;
 ArDeltaNode* Arf::d2;
-ArHint *Arf::hint, *Arf::echo;
 ArWishGroup* Arf::wish;
+ArHint *Arf::hint, *Arf::echo;

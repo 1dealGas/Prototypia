@@ -353,8 +353,8 @@ static int SetIDelta(lua_State *L) {
 inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const uint8_t vf_count) {
 
 	// Unpack the Hint
-	const float hl = 731.25f + hint.c_dx * rotcos - hint.c_dy * rotsin + xdelta;   // 900 - 112.5 * 1.5
-	const float hd = 371.25f + hint.c_dx * rotsin + hint.c_dy * rotcos + ydelta;   // 540 - 112.5 * 1.5
+	const float hl = 731.25f + (hint.c_dx * rotcos - hint.c_dy * rotsin) * xscale + xdelta;   // 900 - 112.5 * 1.5
+	const float hd = 371.25f + (hint.c_dx * rotsin + hint.c_dy * rotcos) * yscale + ydelta;   // 540 - 112.5 * 1.5
 	const float hr = hl + 337.5f, hu = hd + 337.5f;
 
 	// Detect Touches
@@ -566,7 +566,7 @@ inline uint16_t mod_degree(uint64_t deg) {
 }
 inline void GetSINCOS(const double degree) {
 	if( degree >= 0 ) {
-		uint64_t deg = (uint64_t)(degree*10.0);			deg = (deg>3600) ? mod_degree(deg) : deg ;
+		auto deg = (uint64_t)(degree*10.0);			deg = (deg>3600) ? mod_degree(deg) : deg ;
 		if(deg > 1800) {
 			if(deg > 2700)	{ SIN = -DSIN[3600-deg];	COS = DCOS[3600-deg];  }
 			else 			{ SIN = -DSIN[deg-1800];	COS = -DCOS[deg-1800]; }
@@ -577,7 +577,7 @@ inline void GetSINCOS(const double degree) {
 		}
 	}
 	else {   // sin(-x) = -sin(x), cos(-x) = cos(x)
-		uint64_t deg = (uint64_t)(-degree*10.0);		deg = (deg>3600) ? mod_degree(deg) : deg ;
+		auto deg = (uint64_t)(-degree*10.0);		deg = (deg>3600) ? mod_degree(deg) : deg ;
 		if(deg > 1800) {
 			if(deg > 2700)	{ SIN = DSIN[3600-deg];		COS = DCOS[3600-deg];  }
 			else 			{ SIN = DSIN[deg-1800];		COS = -DCOS[deg-1800]; }
@@ -599,7 +599,7 @@ static int UpdateArf(lua_State* L) {
 
 	/* Prepare Returns & Process msTime */
 	// Z Distribution: Wish{0,0.05,0.1,0.15}  Hint(-0.06,0)
-	uint32_t mstime = (uint32_t)luaL_checknumber(L, 1); {
+	auto mstime = (uint32_t)luaL_checknumber(L, 1); {
 		if(mstime < 2)											mstime = 2;
 		else if( (mstime == last_ms) || mstime >= before )		return 0;
 	}
@@ -623,7 +623,7 @@ static int UpdateArf(lua_State* L) {
 		// Iterating When Tail Judging Fails
 		else {
 			if( mstime < last_ms )   // Regression
-				while( (dt_p1 > 0) && Arf::d1[dt_p1].init_ms > mstime ) dt_p1--;
+				while( (dt_p1 > 0) && mstime < Arf::d1[dt_p1].init_ms ) dt_p1--;
 
 			for( ; dt_p1 < dt_tail; dt_p1++ ) {
 				const auto& node_n = Arf::d1[dt_p1 + 1];
@@ -649,7 +649,7 @@ static int UpdateArf(lua_State* L) {
 		// Iterating When Tail Judging Fails
 		else {
 			if( mstime < last_ms )   // Regression
-				while( (dt_p2 > 0) && Arf::d2[dt_p2].init_ms > mstime ) dt_p2--;
+				while( (dt_p2 > 0) && mstime < Arf::d2[dt_p2].init_ms ) dt_p2--;
 
 			for( ; dt_p2 < dt_tail; dt_p2++ ) {
 				const auto& node_n = Arf::d2[dt_p2 + 1];
@@ -670,99 +670,269 @@ static int UpdateArf(lua_State* L) {
 		if(wish_ids) {
 
 			// Wish Iteration
-			const auto wish_count = COUNT(wish_ids);
-			for( uint8_t wi=0; wi<wish_count; wi++ ) {
+			const uint16_t wish_count = COUNT(wish_ids);
+			for( uint16_t wi=0; wi<wish_count; wi++ ) {
 				auto& wish_c = Arf::wish[ wish_ids[wi] ];
 
 				/* Node Iteration */
 				// Prototypia guarantees that each Wish has at least 2 PosNodes.
-				auto& nodes = wish_c.nodes;
+				const auto nodes = wish_c.nodes;
+				float node_x, node_y; {
 
-				// Jump Judging
-				if(mstime < nodes[0].ms) continue;
-				const auto nodes_tail = COUNT(nodes) - 1;
-				if(mstime >= nodes[nodes_tail].ms) continue;
+					// Jump Judging
+					if(mstime < nodes[0].ms) continue;   // Wish For loop
+					const auto nodes_tail = COUNT(nodes) - 1;
+					if(mstime >= nodes[nodes_tail].ms) continue;   // Wish For loop
 
-				// Regression
-				if(mstime < last_ms) {
-					while( (wish_c.np > 0) && nodes[ wish_c.np ].ms > mstime ) wish_c.np--;
-				}
-
-				// Pos Acquisition
-				float node_x, node_y;
-				while(wish_c.np < nodes_tail) {   // [)
-
-					/* Interval Acquisition */
-					const auto& node_c = nodes[ wish_c.np ];
-					const auto& node_n = nodes[ wish_c.np + 1 ];
-					if(node_n.ms >= mstime) {
-						wish_c.np++;
-						continue;
+					// Regression
+					if(mstime < last_ms) {
+						while( (wish_c.np > 0) && mstime < nodes[ wish_c.np ].ms ) wish_c.np--;
 					}
 
-					/* Ratio Acquisition */
-					float ratio; {
-						uint32_t difms = node_n.ms - node_c.ms;
-						if(!difms)				ratio = 0.0f;
-						else if(difms<8193)		ratio = (mstime - node_c.ms) * RCP[ difms-1 ];
-						else					ratio = (mstime - node_c.ms) / (float)difms;
-					}
+					// Pos Acquisition
+					while(wish_c.np < nodes_tail) {   // [)
 
-					/* Easing */
-					if(node_c.easetype) {
-						// Non-Linear:
-						// P = ( (fce - fr) * p1 + (fr - fci) * p2 ) * p_dnm
-						// P = p1 + fr * (p2 - p1)   when fce=1, fci = 0
-
-						// Get fr
-						float xfr, yfr;
-						xfr = yfr = ( node_c.ci + (node_c.ce - node_c.ci) * ratio );
-						switch(node_c.easetype) {
-							case 1:   /*  x -> ESIN   y -> ECOS  */
-								xfr = ESIN[ (uint16_t)(1000 * ratio) ];
-								yfr = ECOS[ (uint16_t)(1000 * ratio) ];
-								break;
-							case 2:   /*  x -> ECOS   y -> ESIN  */
-								xfr = ECOS[ (uint16_t)(1000 * ratio) ];
-								yfr = ESIN[ (uint16_t)(1000 * ratio) ];
-								break;
-							case 3:   // InQuad
-								xfr = yfr = (ratio * ratio);
-								break;
-							case 4:   // OutQuad
-								ratio = 1.0f - ratio;
-								xfr = yfr = (1.0f - ratio * ratio);
-								break;
-							default:;
+						/* Interval Acquisition */
+						const auto& node_c = nodes[ wish_c.np ];
+						const auto& node_n = nodes[ wish_c.np + 1 ];
+						if(mstime >= node_n.ms) {
+							wish_c.np++;
+							continue;   // Node While loop
 						}
 
-						// Apply the Formula
-						if( (node_c.ci != 0.0f) || (node_c.ce != 1.0f) ) {
-							node_x = (node_c.x_fce - xfr) * node_c.c_dx + (xfr - node_c.x_fci) * node_n.c_dx;
-							node_x *= node_c.x_dnm;
-							node_y = (node_c.y_fce - yfr) * node_c.c_dy + (yfr - node_c.y_fci) * node_n.c_dy;
-							node_y *= node_c.y_dnm;
+						/* Ratio Acquisition */
+						float ratio; {
+							uint32_t difms = node_n.ms - node_c.ms;
+							if(!difms)				ratio = 0.0f;
+							else if(difms<8193)		ratio = (mstime - node_c.ms) * RCP[ difms-1 ];
+							else					ratio = (mstime - node_c.ms) / (float)difms;
+						}
+
+						/* Easing */
+						if(node_c.easetype) {
+
+							// Get fr
+							float xfr, yfr;
+							xfr = yfr = ( node_c.ci + (node_c.ce - node_c.ci) * ratio );
+							switch(node_c.easetype) {
+								case 1:   /*  x -> ESIN   y -> ECOS  */
+									xfr = ESIN[ (uint16_t)(1000 * ratio) ];
+								yfr = ECOS[ (uint16_t)(1000 * ratio) ];
+								break;
+								case 2:   /*  x -> ECOS   y -> ESIN  */
+									xfr = ECOS[ (uint16_t)(1000 * ratio) ];
+								yfr = ESIN[ (uint16_t)(1000 * ratio) ];
+								break;
+								case 3:   // InQuad
+									xfr = yfr = (ratio * ratio);
+								break;
+								case 4:   // OutQuad
+									ratio = 1.0f - ratio;
+								xfr = yfr = (1.0f - ratio * ratio);
+								break;
+								default:;
+							}
+
+							// Apply the Formula
+							// P = ( (fce - fr) * p1 + (fr - fci) * p2 ) * p_dnm
+							// P = p1 + fr * (p2 - p1)   when fce=1, fci = 0
+							if( (node_c.ci != 0.0f) || (node_c.ce != 1.0f) ) {
+								node_x = (node_c.x_fce - xfr) * node_c.c_dx + (xfr - node_c.x_fci) * node_n.c_dx;
+								node_x *= node_c.x_dnm;
+								node_y = (node_c.y_fce - yfr) * node_c.c_dy + (yfr - node_c.y_fci) * node_n.c_dy;
+								node_y *= node_c.y_dnm;
+							}
+							else {
+								node_x = node_n.c_dx - node_c.c_dx;   // As dx
+								node_x = node_c.c_dx + node_x * xfr;
+								node_y = node_n.c_dy - node_c.c_dy;   // As dy
+								node_y = node_c.c_dy + node_y * yfr;
+							}
 						}
 						else {
 							node_x = node_n.c_dx - node_c.c_dx;   // As dx
-							node_x = node_c.c_dx + node_x * xfr;
+							node_x = node_c.c_dx + node_x * ratio;
 							node_y = node_n.c_dy - node_c.c_dy;   // As dy
-							node_y = node_c.c_dy + node_y * yfr;
+							node_y = node_c.c_dy + node_y * ratio;
 						}
-					}
-					else {
-						node_x = node_n.c_dx - node_c.c_dx;   // As dx
-						node_x = node_c.c_dx + node_x * ratio;
-						node_y = node_n.c_dy - node_c.c_dy;   // As dy
-						node_y = node_c.c_dy + node_y * ratio;
-					}
 
-					break;
+						break;   // Node While loop
+					}
 				}
 
-				// Self Param Setting
+				/* Self Param Setting */ {
+					const float x = 900.f + (node_x * rotcos - node_y * rotsin) * xscale + xdelta;
+					if( (x>=66.0f) && x<=1734.0f ) {   // X trim
+						const float y = 540.f + (node_x * rotsin + node_y * rotcos) * yscale + ydelta;
+						if( (y>=66.0f) && y<=1014.0f ) {   // Y trim
+							const uint32_t k = (uint32_t)(x * 1009.0f) + (uint32_t)(y * 1013.0f);
+							if( last_wgo.count(k) ) {   // Overlap trim
+								uint8_t lwidx_lua = last_wgo[k];
 
-				/* Child Iteration */
+								// tint.w Setting
+								lua_pushnumber(L, 1.0);
+								lua_rawseti(L, T_WTINT, lwidx_lua);
+
+								// Scale Setting
+								lua_rawgeti(L, T_WGO, lwidx_lua);
+								GO WGO = dmScript::CheckGOInstance(L, -1);
+								SetScale(WGO, 0.637f);
+								lua_pop(L, 1);
+							}
+							else {   // Pass
+								wgo_used++;   // This functions as the wgo_used result and lua index simultaneously
+
+								// tint.w Setting
+								float tintw = mstime - nodes[0].ms;
+								tintw = (tintw > 237) ? 1.0f : tintw * 0.0042194092827f;   // As  ms_passed / 237.0f
+								lua_pushnumber(L, tintw);
+								lua_rawseti(L, T_WTINT, wgo_used);
+
+								// Scale Setting
+								lua_rawgeti(L, T_WGO, wgo_used);
+								GO WGO = dmScript::CheckGOInstance(L, -1);
+								SetScale( WGO, 0.637f * tintw );
+								lua_pop(L, 1);
+							}
+						}
+					}
+				}
+
+				/* WishChild Iteration */
+				const auto childs = wish_c.childs;
+				if(childs) {   // current_dt < dt <= current_dt + mvb
+					const double current_dt = wish_c.ofl2 ? dt2 : dt1;
+
+					// Jump Judging
+					if(childs[0].dt - current_dt > wish_c.mvb) continue;   // Wish For Loop
+					const uint16_t child_count = COUNT(childs);
+					if(current_dt >= childs[ child_count-1 ].dt) continue;   // Wish For Loop
+
+					// Regression
+					// Child Progress: index_of_1st_child_disappeared, or -1
+					while( (wish_c.cp > -1) && current_dt < childs[ wish_c.cp ].dt ) wish_c.cp--;
+
+					// Process Childs
+					// We use an internal iterator, and sync the iteration progress to wish_c.cp
+					for(auto ci = (uint16_t)(wish_c.cp+1); ci < child_count; ci++) {
+						auto& child_c = childs[ci];   // Non-Const
+
+						// "Too Late" Judging
+						if(current_dt >= child_c.dt) {
+							wish_c.cp = ci;
+							continue;   // Child For Loop
+						}
+
+						// "Too Early" Judging
+						const double radius = child_c.dt - current_dt;   /* Radius Acquisition */
+						if(radius > wish_c.mvb) break;   // Child For Loop
+
+						/* Angle Iteration */
+						// Prototypia guarantees that each WishChild has at least 1 AngleNode.
+						double angle = 90.0; {
+							const auto anodes = child_c.anodes;
+							const uint8_t anodes_tail = COUNT(anodes) - 1;
+
+							if(mstime >= anodes[anodes_tail].ms) {   // Tail Judging
+								angle = anodes[anodes_tail].degree;
+							}
+							else if(mstime <= anodes[0].ms) {   // Head Judging
+								angle = anodes[0].degree;
+							}
+							else {   // Iteration when Needed
+
+								if(mstime < last_ms) {   // Regression
+									while( (child_c.ap > 0) && mstime < anodes[ child_c.ap ].ms ) child_c.ap--;
+								}
+
+								while(child_c.ap < anodes_tail) {   // Angle Acquisition
+
+									/* Interval Acquisition */
+									const auto& anode_c = anodes[ child_c.ap ];
+									const auto& anode_n = anodes[ child_c.ap + 1 ];
+									if(mstime >= anode_n.ms) {
+										child_c.ap++;
+										continue;   // Angle While loop
+									}
+
+									/* Angle Acquisition */
+									if(anode_c.easetype) {
+										float ratio; {
+											uint32_t difms = anode_n.ms - anode_c.ms;
+											if(!difms)				ratio = 0.0f;
+											else if(difms<8193)		ratio = (mstime - anode_c.ms) * RCP[ difms-1 ];
+											else					ratio = (mstime - anode_c.ms) / (float)difms;
+										}
+
+										/* Easing */
+										switch(anode_c.easetype) {
+											case 1:   // LINEAR
+												break;
+											case 2:   // INQUAD
+												ratio *= ratio;
+												break;
+											case 3:   // OUTQUAD
+												ratio = 1.0f - ratio;
+												ratio = 1.0f - ratio * ratio;
+												break;
+											default:;
+										}
+
+										angle = anode_c.degree + (anode_n.degree - anode_c.degree) * ratio;
+									}
+									else angle = anode_c.degree;
+									break;   // Angle While loop
+								}
+							}
+						}
+
+						/* Child Param Setting */ {
+							GetSINCOS(angle);
+							const float child_x = node_x + radius * COS;
+							const float child_y = node_y + radius * SIN;
+
+							const float x = 900.f + (child_x * rotcos - child_y * rotsin) * xscale + xdelta;
+							if( (x>=66.0f) && x<=1734.0f ) {   // X trim
+								const float y = 540.f + (child_x * rotsin + child_y * rotcos) * yscale + ydelta;
+								if( (y>=66.0f) && y<=1014.0f ) {   // Y trim
+									const uint32_t k = (uint32_t)(x * 1009.0f) + (uint32_t)(y * 1013.0f);
+									if( last_wgo.count(k) ) {   // Overlap trim
+										uint8_t lwidx_lua = last_wgo[k];
+
+										// tint.w Setting
+										lua_pushnumber(L, 1.0);
+										lua_rawseti(L, T_WTINT, lwidx_lua);
+
+										// Scale Setting
+										lua_rawgeti(L, T_WGO, lwidx_lua);
+										GO WGO = dmScript::CheckGOInstance(L, -1);
+										SetScale(WGO, 0.637f);
+										lua_pop(L, 1);
+									}
+									else {   // Pass
+										// This functions as the wgo_used result and lua index simultaneously
+										wgo_used++;
+
+										// tint.w Setting
+										// As (wish_c.mvb - radius) / (wish_c.mvb * 0.237f)
+										float tintw = 8192 * (wish_c.mvb - radius) *
+													  RCP[ (uint16_t)(wish_c.mvb * 1941.504f) ];
+										tintw = (tintw>1.0f) ? 1.0f : tintw;
+										lua_pushnumber(L, tintw);
+										lua_rawseti(L, T_WTINT, wgo_used);
+
+										// Scale Setting
+										lua_rawgeti(L, T_WGO, wgo_used);
+										GO WGO = dmScript::CheckGOInstance(L, -1);
+										SetScale( WGO, 0.637f * tintw );
+										lua_pop(L, 1);
+									}
+								}
+							}
+						}
+					}
+				}
+				/* EchoChild Iteration */   // NYI
 			}
 		}
 	}
@@ -788,8 +958,8 @@ static int UpdateArf(lua_State* L) {
 				auto& hint_c = Arf::hint[hint_cid];
 
 				/* Calculate Dt & Jump Judging based on the Sort Assumption */
-				const int32_t dt = mstime - hint_c.ms;
-				const int32_t jdt = mstime - hint_c.judged_ms;
+				const auto dt = (int32_t)mstime - (int32_t)hint_c.ms;
+				const auto jdt = (int32_t)mstime - (int32_t)hint_c.judged_ms;
 				if (dt > 470) continue;
 				if (dt < -510) break;
 
@@ -801,8 +971,8 @@ static int UpdateArf(lua_State* L) {
 
 				/* Calculate the Real Position & Prepare Rennder Elements */
 				using namespace dmScript;
-				const float x = 900.f + hint_c.c_dx * rotcos - hint_c.c_dy * rotsin + xdelta;
-				const float y = 540.f + hint_c.c_dx * rotsin + hint_c.c_dy * rotcos + ydelta;
+				const float x = 900.f + (hint_c.c_dx * rotcos - hint_c.c_dy * rotsin) * xscale + xdelta;
+				const float y = 540.f + (hint_c.c_dx * rotsin + hint_c.c_dy * rotcos) * yscale + ydelta;
 				lua_rawgeti(L, T_HGO, hgo_used+1);		const GO hgo = CheckGOInstance(L, -1);
 				lua_rawgeti(L, T_HTINT, hgo_used+1);	const v4 htint = CheckVector4(L, -1);
 				lua_rawgeti(L, T_AGO_L, ago_used+1);	const GO agol = CheckGOInstance(L, -1);
@@ -1029,7 +1199,7 @@ static int UpdateArf(lua_State* L) {
 
 
 	/* Clean Up & Do Returns */
-	lua_checkstack(L, 4);			lua_pushnumber(L, hint_lost);
+	lua_checkstack(L, 4);				lua_pushnumber(L, hint_lost);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }
