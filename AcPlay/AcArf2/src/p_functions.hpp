@@ -789,9 +789,10 @@ static int UpdateArf(lua_State* L) {
 								lua_pushnumber(L, tintw);
 								lua_rawseti(L, T_WTINT, wgo_used);
 
-								// Scale Setting
+								// Pos & Scale Setting
 								lua_rawgeti(L, T_WGO, wgo_used);
 								GO WGO = dmScript::CheckGOInstance(L, -1);
+								SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.1f : 0.0f) );
 								SetScale( WGO, 0.637f * tintw );
 								lua_pop(L, 1);
 							}
@@ -922,9 +923,10 @@ static int UpdateArf(lua_State* L) {
 										lua_pushnumber(L, tintw);
 										lua_rawseti(L, T_WTINT, wgo_used);
 
-										// Scale Setting
+										// Pos & Scale Setting
 										lua_rawgeti(L, T_WGO, wgo_used);
 										GO WGO = dmScript::CheckGOInstance(L, -1);
+										SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.15f : 0.05f) );
 										SetScale( WGO, 0.637f * tintw );
 										lua_pop(L, 1);
 									}
@@ -984,7 +986,7 @@ static int UpdateArf(lua_State* L) {
 				// Specify all tint.w as 1 in the initialization
 				if( dt < -370 ) {
 					SetPosition( hgo, p3(x, y, -(0.05f + dt*0.00001f)) );
-					const float color = 0.1337f + (float)(0.07 * (510+dt) / 140.0);
+					const float color = 0.1337f + (float)(0.0005 * (510+dt) );   // As 0.07/140
 					htint -> setX(color).setY(color).setZ(color);
 					hgo_used++;
 				}
@@ -1194,8 +1196,7 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Process Echoes */
-	// NYI
+	/* Process Echoes */   // NYI
 
 
 	/* Clean Up & Do Returns */
@@ -1203,7 +1204,6 @@ static int UpdateArf(lua_State* L) {
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }
-
 
 
 // Sundries
