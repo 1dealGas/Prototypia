@@ -681,7 +681,7 @@ static int UpdateArf(lua_State* L) {
 
 					// Jump Judging
 					if(mstime < nodes[0].ms) continue;   // Wish For loop
-					const auto nodes_tail = COUNT(nodes) - 1;
+					const uint8_t nodes_tail = COUNT(nodes) - 1;
 					if(mstime >= nodes[nodes_tail].ms) continue;   // Wish For loop
 
 					// Regression
@@ -717,19 +717,19 @@ static int UpdateArf(lua_State* L) {
 							switch(node_c.easetype) {
 								case 1:   /*  x -> ESIN   y -> ECOS  */
 									xfr = ESIN[ (uint16_t)(1000 * ratio) ];
-								yfr = ECOS[ (uint16_t)(1000 * ratio) ];
-								break;
+									yfr = ECOS[ (uint16_t)(1000 * ratio) ];
+									break;
 								case 2:   /*  x -> ECOS   y -> ESIN  */
 									xfr = ECOS[ (uint16_t)(1000 * ratio) ];
-								yfr = ESIN[ (uint16_t)(1000 * ratio) ];
-								break;
+									yfr = ESIN[ (uint16_t)(1000 * ratio) ];
+									break;
 								case 3:   // InQuad
 									xfr = yfr = (ratio * ratio);
-								break;
+									break;
 								case 4:   // OutQuad
 									ratio = 1.0f - ratio;
-								xfr = yfr = (1.0f - ratio * ratio);
-								break;
+									xfr = yfr = (1.0f - ratio * ratio);
+									break;
 								default:;
 							}
 
