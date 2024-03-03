@@ -785,7 +785,7 @@ static int UpdateArf(lua_State* L) {
 
 								// tint.w Setting
 								float tintw = mstime - nodes[0].ms;
-								tintw = (tintw >= 237) ? 1.0f : tintw * 0.0042194092827f;   // As  ms_passed / 237.0f
+								tintw = (tintw >= 151) ? 1.0f : tintw * 0.006622516556291f;   // As  ms_passed / 151.0f
 								lua_pushnumber(L, tintw);
 								lua_rawseti(L, T_WTINT, wgo_used);
 
@@ -793,8 +793,8 @@ static int UpdateArf(lua_State* L) {
 								lua_rawgeti(L, T_WGO, wgo_used);
 								GO WGO = dmScript::CheckGOInstance(L, -1);
 								SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.1f : 0.0f) );
-								SetScale( WGO, 0.637f * tintw );
-								lua_pop(L, 1);
+								tintw = 1.0f - tintw;		SetScale( WGO, 0.637f + tintw * tintw * 0.437f );
+								lua_pop(L, 1);				// As 0.637f + 0.437f - 0.437f * (1 - tintw * tintw)
 							}
 						}
 					}
@@ -916,9 +916,9 @@ static int UpdateArf(lua_State* L) {
 										wgo_used++;
 
 										// tint.w Setting
-										// As (wish_c.mvb - radius) / (wish_c.mvb * 0.237f)
-										float tintw = 4096 * (wish_c.mvb - radius) *
-													  RCP[ (uint16_t)(wish_c.mvb * 970.752f) ];
+										// As (wish_c.mvb - radius) / (wish_c.mvb * 0.151f)
+										float tintw = 6144 * (wish_c.mvb - radius) *
+													  RCP[ (uint16_t)(wish_c.mvb * 927.744f) ];
 										tintw = (tintw > 1.0f) ? 1.0f : tintw;
 										lua_pushnumber(L, tintw);
 										lua_rawseti(L, T_WTINT, wgo_used);
@@ -927,8 +927,8 @@ static int UpdateArf(lua_State* L) {
 										lua_rawgeti(L, T_WGO, wgo_used);
 										GO WGO = dmScript::CheckGOInstance(L, -1);
 										SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.15f : 0.05f) );
-										SetScale( WGO, 0.637f * tintw );
-										lua_pop(L, 1);
+										tintw = 1.0f - tintw;	SetScale( WGO, 0.637f + tintw * tintw * 0.437f );
+										lua_pop(L, 1);			// As 0.637f + 0.437f - 0.437f * (1 - tintw * tintw)
 									}
 								}
 							}
