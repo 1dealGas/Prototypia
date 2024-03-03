@@ -99,10 +99,10 @@ static int InitArf(lua_State* L) {
 
 	/* DeltaNodes in Layer 1 */ {
 		auto d = A -> dts_layer1();
-		uint16_t dsize = d -> size();
+		Arf::d1c = d -> size();
 
-		Arf::d1 = new ArDeltaNode[dsize];
-		for(uint16_t i = 0; i < dsize; i++) {
+		Arf::d1 = new ArDeltaNode[Arf::d1c];
+		for(uint16_t i = 0; i < Arf::d1c; i++) {
 			auto dn = d -> Get(i);
 			auto& dnobj = Arf::d1[i];
 
@@ -114,10 +114,10 @@ static int InitArf(lua_State* L) {
 	
 	/* DeltaNodes in Layer 2 */ {
 		auto d = A -> dts_layer2();
-		uint16_t dsize = d -> size();
+		Arf::d2c = d -> size();
 
-		Arf::d2 = new ArDeltaNode[dsize];
-		for(uint16_t i = 0; i < dsize; i++) {
+		Arf::d2 = new ArDeltaNode[Arf::d2c];
+		for(uint16_t i = 0; i < Arf::d2c; i++) {
 			auto dn = d -> Get(i);
 			auto& dnobj = Arf::d2[i];
 
@@ -129,19 +129,19 @@ static int InitArf(lua_State* L) {
 
 	/* Group Index */ {
 		auto idx = A -> index();
-		uint16_t idx_size = idx -> size();
+		Arf::ic = idx -> size();
 
-		Arf::index = new ArIndex[idx_size];
-		for(uint16_t i = 0; i < idx_size; i++) {
+		Arf::index = new ArIndex[Arf::ic];
+		for(uint16_t i = 0; i < Arf::ic; i++) {
 			auto& idxobj = Arf::index[i];
 
 			/* Wish Index of Current Group */ {
 				auto widxfb = idx -> Get(i) -> widx();
-				uint16_t widx_size = widxfb -> size();
+				idxobj.widx_count = widxfb -> size();
 
-				if(widx_size) {
-					auto widx = new uint16_t[widx_size];
-					for(uint16_t wi = 0; wi < widx_size; wi++) {
+				if(idxobj.widx_count) {
+					auto widx = new uint16_t[idxobj.widx_count];
+					for(uint16_t wi = 0; wi < idxobj.widx_count; wi++) {
 						widx[wi] = widxfb -> Get(wi);
 					}
 					idxobj.widx = widx;
@@ -150,11 +150,11 @@ static int InitArf(lua_State* L) {
 
 			/* Hint Index of Current Group */ {
 				auto hidxfb = idx -> Get(i) -> hidx();
-				uint16_t hidx_size = hidxfb -> size();
+				idxobj.hidx_count = hidxfb -> size();
 
-				if(hidx_size) {
-					auto hidx = new uint16_t[hidx_size];
-					for(uint16_t hi = 0; hi < hidx_size; hi++) {
+				if(idxobj.hidx_count) {
+					auto hidx = new uint16_t[idxobj.hidx_count];
+					for(uint16_t hi = 0; hi < idxobj.hidx_count; hi++) {
 						hidx[hi] = hidxfb -> Get(hi);
 					}
 					idxobj.hidx = hidx;
@@ -183,11 +183,11 @@ static int InitArf(lua_State* L) {
 
 				/* PosNodes */ {
 					auto nodesfb = w -> nodes();
-					uint8_t node_size = nodesfb -> size();
+					wobj.nc = nodesfb -> size();
 
-					if(node_size) {
-						auto nodes = new ArPosNode[node_size];
-						for(uint8_t ni = 0; ni < node_size; ni++) {
+					if(wobj.nc) {
+						auto nodes = new ArPosNode[wobj.nc];
+						for(uint8_t ni = 0; ni < wobj.nc; ni++) {
 
 							auto p = nodesfb -> Get(ni);
 							auto& pobj = nodes[ni];
@@ -280,19 +280,19 @@ static int InitArf(lua_State* L) {
 
 				/* WishChilds */ {
 					auto childsfb = w -> childs();
-					uint16_t child_size = childsfb -> size();
+					wobj.cc = childsfb -> size();
 
-					if(child_size) {
-						auto childs = new ArWishChild[child_size];
-						for(uint16_t ci = 0; ci < child_size; ci++) {
+					if(wobj.cc) {
+						auto childs = new ArWishChild[wobj.cc];
+						for(uint16_t ci = 0; ci < wobj.cc; ci++) {
 							auto c = childsfb -> Get(ci);
 							auto& cobj = childs[ci];
 
 							auto an = c -> anodes();
-							uint8_t an_size = an -> size();
+							cobj.ac = an -> size();
 
-							auto anodes = new ArAngleNode[an_size];
-							for(uint8_t ai = 0; ai < an_size; ai++) {
+							auto anodes = new ArAngleNode[cobj.ac];
+							for(uint8_t ai = 0; ai < cobj.ac; ai++) {
 								auto a = an -> Get(ai);
 								auto& aobj = anodes[ai];
 
@@ -405,10 +405,8 @@ static int JudgeArf(lua_State* L) {
 		const uint16_t location_group = mstime >> 9 ;   // floordiv 512
 		current_group = (location_group > 1) ? (location_group - 1) : 0 ;
 	}
-	uint16_t beyond_group = current_group + 3; {
-		const uint16_t group_count = COUNT(Arf::index);
-		beyond_group = (beyond_group < group_count) ? beyond_group : group_count ;
-	}
+	uint16_t beyond_group = current_group + 3;
+	beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
 
 	// Unpack Touches
 	ab vf[10];
@@ -438,9 +436,11 @@ static int JudgeArf(lua_State* L) {
 	if(any_pressed) {
 		uint32_t min_time = 0;
 		for( ; current_group < beyond_group; current_group++ ) {
-			const auto hint_ids = Arf::index[current_group].hidx;	if(!hint_ids) continue;
-			const uint8_t hint_count = COUNT(hint_ids);
 
+			const uint8_t hint_count = Arf::index[current_group].hidx_count;
+			if(!hint_count) continue;
+
+			const auto hint_ids = Arf::index[current_group].hidx;
 			for( uint8_t i=0; i<hint_count; i++ ) {
 				const auto current_hint_id = hint_ids[i];
 				auto& current_hint = Arf::hint[current_hint_id];
@@ -517,9 +517,10 @@ static int JudgeArf(lua_State* L) {
 		}
 	}
 	else for( ; current_group < beyond_group; current_group++ ) {
-		const auto hint_ids = Arf::index[current_group].hidx;	if(!hint_ids) continue;
-		const uint8_t hint_count = COUNT(hint_ids);
+		const uint8_t hint_count = Arf::index[current_group].hidx_count;
+		if(!hint_count) continue;
 
+		const auto hint_ids = Arf::index[current_group].hidx;
 		for( uint8_t i=0; i<hint_count; i++ ) {
 			const auto current_hint_id = hint_ids[i];
 			auto& current_hint = Arf::hint[current_hint_id];
@@ -615,7 +616,7 @@ static int UpdateArf(lua_State* L) {
 
 		// Tail Judging
 		// Prototypia guarantees that init_ms of the 1st DetlaNode of each layer equals to 0
-		const uint16_t dt_tail = COUNT(Arf::d1) - 1;
+		const uint16_t dt_tail = Arf::d1c - 1;
 		const auto& node_l = Arf::d1[dt_tail];
 		if( mstime >= node_l.init_ms )
 			dt1 = node_l.base + (mstime - node_l.init_ms) * node_l.ratio;
@@ -641,7 +642,7 @@ static int UpdateArf(lua_State* L) {
 	double dt2 = 0.0; {
 
 		// Tail Judging
-		const uint16_t dt_tail = COUNT(Arf::d2) - 1;
+		const uint16_t dt_tail = Arf::d2c - 1;
 		const auto& node_l = Arf::d2[dt_tail];
 		if( mstime >= node_l.init_ms )
 			dt2 = node_l.base + (mstime - node_l.init_ms) * node_l.ratio;
@@ -666,11 +667,11 @@ static int UpdateArf(lua_State* L) {
 
 
 	/* Process Wish(es) */ {
-		const auto wish_ids = Arf::index[location_group].widx;
-		if(wish_ids) {
+		const uint16_t wish_count = Arf::index[location_group].widx_count;
+		if(wish_count) {
 
 			// Wish Iteration
-			const uint16_t wish_count = COUNT(wish_ids);
+			const auto wish_ids = Arf::index[location_group].widx;
 			for( uint16_t wi=0; wi<wish_count; wi++ ) {
 				auto& wish_c = Arf::wish[ wish_ids[wi] ];
 
@@ -681,7 +682,7 @@ static int UpdateArf(lua_State* L) {
 
 					// Jump Judging
 					if(mstime < nodes[0].ms) continue;   // Wish For loop
-					const uint8_t nodes_tail = COUNT(nodes) - 1;
+					const uint8_t nodes_tail = wish_c.nc - 1;
 					if(mstime >= nodes[nodes_tail].ms) continue;   // Wish For loop
 
 					// Regression
@@ -799,13 +800,13 @@ static int UpdateArf(lua_State* L) {
 				}
 
 				/* WishChild Iteration */
-				const auto childs = wish_c.childs;
-				if(childs) {   // current_dt < dt <= current_dt + mvb
+				const uint16_t child_count = wish_c.cc;
+				if(child_count) {   // current_dt < dt <= current_dt + mvb
+					const auto childs = wish_c.childs;
 					const double current_dt = wish_c.ofl2 ? dt2 : dt1;
 
 					// Jump Judging
 					if(childs[0].dt - current_dt > wish_c.mvb) continue;   // Wish For Loop
-					const uint16_t child_count = COUNT(childs);
 					if(current_dt >= childs[ child_count-1 ].dt) continue;   // Wish For Loop
 
 					// Regression
@@ -828,11 +829,11 @@ static int UpdateArf(lua_State* L) {
 						if(radius > wish_c.mvb) break;   // Child For Loop
 
 						/* Angle Iteration */
-						// Prototypia guarantees that each WishChild has at least 1 AngleNode.
 						double angle = 90.0; {
-							const auto anodes = child_c.anodes;
-							const uint8_t anodes_tail = COUNT(anodes) - 1;
+							const int16_t anodes_tail = child_c.ac - 1;
+							if(anodes_tail < 0) continue;   // Child For Loop
 
+							const auto anodes = child_c.anodes;
 							if(mstime >= anodes[anodes_tail].ms) {   // Tail Judging
 								angle = anodes[anodes_tail].degree;
 							}
@@ -942,17 +943,16 @@ static int UpdateArf(lua_State* L) {
 
 		// Prepare the Iteration Scale
 		uint16_t current_group = (location_group > 1) ? (location_group - 1) : 0 ;
-		uint16_t beyond_group = current_group + 3; {
-			const uint16_t group_count = COUNT(Arf::index);
-			beyond_group = (beyond_group < group_count) ? beyond_group : group_count ;
-		}
+		uint16_t beyond_group = current_group + 3;
+		beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
 
 		// Group Iteration
 		for( ; current_group < beyond_group; current_group++ ) {
-			const auto hint_ids = Arf::index[current_group].hidx;	if(!hint_ids) continue;
-			const uint8_t hint_count = COUNT(hint_ids);
+			const uint8_t hint_count = Arf::index[current_group].hidx_count;
+			if(!hint_count) continue;   // Index For Loop
 
 			// Element Iteration
+			const auto hint_ids = Arf::index[current_group].hidx;
 			for(uint8_t i=0; i<hint_count; i++) {
 				const auto hint_cid = hint_ids[i];
 				auto& hint_c = Arf::hint[hint_cid];

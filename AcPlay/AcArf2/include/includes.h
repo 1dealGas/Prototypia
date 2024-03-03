@@ -30,11 +30,3 @@ enum {
 	T_WGO = 2, T_HGO, T_AGO_L, T_AGO_R,
 	T_WTINT, T_HTINT, T_ATINT
 };
-
-
-/* A hack method to get the elem count of a new[] array */
-#define COUNT(x) *( (size_t*)x - 1 )
-
-/* Customized Syntax to State Classes with Non-Trivial Destructors */
-#define Node(x) struct x {~x(){}
-#define End };
