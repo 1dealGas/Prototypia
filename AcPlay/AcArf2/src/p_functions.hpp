@@ -589,7 +589,7 @@ inline void GetSINCOS(const double degree) {
 		}
 	}
 }
-inline auto GetZQuad(const double degree) {
+inline dmVMath::Quat GetZQuad(const double degree) {
 	GetSINCOS( degree * 0.5 );
 	return dmVMath::Quat(0.0f, 0.0f, SIN, COS);
 }
