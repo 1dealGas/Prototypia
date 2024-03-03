@@ -588,7 +588,7 @@ inline void GetSINCOS(const double degree) {
 		}
 	}
 }
-inline dmVMath::Quat GetZQuad(const double degree) {
+inline auto GetZQuad(const double degree) {
 	GetSINCOS( degree * 0.5 );
 	return dmVMath::Quat(0.0f, 0.0f, SIN, COS);
 }
@@ -917,7 +917,7 @@ static int UpdateArf(lua_State* L) {
 										// As (wish_c.mvb - radius) / (wish_c.mvb * 0.237f)
 										float tintw = 8192 * (wish_c.mvb - radius) *
 													  RCP[ (uint16_t)(wish_c.mvb * 1941.504f) ];
-										tintw = (tintw>1.0f) ? 1.0f : tintw;
+										tintw = (tintw > 1.0f) ? 1.0f : tintw;
 										lua_pushnumber(L, tintw);
 										lua_rawseti(L, T_WTINT, wgo_used);
 
