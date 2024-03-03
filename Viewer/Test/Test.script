@@ -1,5 +1,6 @@
 -- Prototypia Viewer Tester --
-local test_dir = "/Test/test.ar"
+local test_dir = "/Test/test2.ar"
+-- if profiler then profiler.enable_ui(true) end
 
 -- Defold APIs
 local hash = hash
@@ -11,7 +12,6 @@ local vmath_vector4 = vmath.vector4
 local msg_post = msg.post
 local go_delete = go.delete
 local go_set = go.set
-local ipairs = ipairs
 local collectgarbage = collectgarbage
 
 -- libArf2
@@ -31,8 +31,7 @@ local enable = hash("enable")
 local tint_w = hash("tint.w")
 local tint = hash("tint")
 
--- Fumen Data
-local Arf2Buf
+-- Runtime Data
 local before
 local wgos, hgos, agos_l, agos_r
 local w_sprites, h_sprites, a_sprites_l, a_sprites_r
@@ -43,120 +42,118 @@ function init(self)
 	Hintfactory = msg_url( Ar, ViewerBase, hash("Hintfactory") )
 	Animfactory = msg_url( Ar, ViewerBase, hash("Animfactory") )
 	
-	Arf2Buf = sys_load_buffer(test_dir)
-	local b, t, w, h = InitArf(Arf2Buf, true)
-	before = b
+	local b, t, w, h = InitArf( sys_load_buffer(test_dir), true )
+	if b then
+		--
+		-- Create Tables
+		--
+		before = b
+		wgos, hgos, agos_l, agos_r = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
+		w_sprites, h_sprites, a_sprites_l, a_sprites_r = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
+		wtint, htint, atint = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0)
+		--
+		-- Fill Tables
+		--
+		for i = 1, w do
+			local W = factory_create(Wishfactory)
+			wgos[i], w_sprites[i] = W, msg_url(Ar, W, Sprite)
+			msg_post(W, disable)
+		end
 
-	-- Create Tables
-	wgos, hgos, agos_l, agos_r = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
-	w_sprites, h_sprites, a_sprites_l, a_sprites_r = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
-	wtint, htint, atint = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0)
+		for i = 1, h do
+			local H = factory_create(Hintfactory)
+			hgos[i], h_sprites[i] = H, msg_url(Ar, H, Sprite)
+			htint[i] = vmath_vector4(0,0,0,1)
+			msg_post(H, disable)
 
-	-- Fill Tables
-	for i = 1, w do
-		local W = factory_create(Wishfactory)
-		wgos[i], w_sprites[i] = W, msg_url(Ar, W, Sprite)
-		msg_post(W, disable)
+			local AL = factory_create(Animfactory)
+			local AR = factory_create(Animfactory)
+			agos_l[i], agos_r[i] = AL, AR
+			a_sprites_l[i], a_sprites_r[i] = msg_url(Ar, AL, Sprite), msg_url(Ar, AR, Sprite)
+			atint[i] = vmath_vector4(0,0,0,1)
+			msg_post(AL, disable)
+			msg_post(AR, disable)
+		end
 	end
 
-	for i = 1, h do
-		local H = factory_create(Hintfactory)
-		hgos[i], h_sprites[i] = H, msg_url(Ar, H, Sprite)
-		htint[i] = vmath_vector4()
-		msg_post(H, disable)
-
-		local AL = factory_create(Animfactory)
-		local AR = factory_create(Animfactory)
-		agos_l[i], agos_r[i] = AL, AR
-		a_sprites_l[i], a_sprites_r[i] = msg_url(Ar, AL, Sprite), msg_url(Ar, AR, Sprite)
-		atint[i] = vmath_vector4()
-		msg_post(AL, disable)
-		msg_post(AR, disable)
-	end
-
+	collectgarbage()
 end
 
 
-local last_wgo_used = 0
-local last_hgo_used = 0
-local last_ago_used = 0
-local test_ms = 0
+local last_wu, last_hu, last_au, test_ms = 0, 0, 0, 0
 function update(self, dt)
 
 	-- C++ Updating
 	test_ms = test_ms + dt*1000
 	if test_ms >= before then go_delete() end
-	local hint_lost, wgo_used, hgo_used, ago_used = UpdateArf(test_ms, wgos, hgos, agos_l, agos_r, wtint, htint, atint)
-	print(hint_lost, wgo_used, hgo_used, ago_used)
+	local hl, wu, hu, au = UpdateArf(test_ms, wgos, hgos, agos_l, agos_r, wtint, htint, atint)
 
-	-- Mutate tint
-	for i = 1, wgo_used do
-		local wsi = w_sprites[i]
-		if wsi then go_set(wsi, tint_w, wtint[i]) end
-	end
-	for i = 1, hgo_used do
-		local hsi = h_sprites[i]
-		if hsi then go_set(hsi, tint, htint[i]) end
-	end
-	for i = 1, ago_used do
-		local alsi = a_sprites_l[i]
-		if alsi then
-			go_set(alsi, tint, atint[i])
+	if hl then
+
+		-- Mutate tint
+		for i = 1, wu do
+			go_set(w_sprites[i], tint_w, wtint[i])
+		end
+
+		for i = 1, hu do
+			go_set(h_sprites[i], tint, htint[i])
+		end
+
+		for i = 1, au do
+			go_set(a_sprites_l[i], tint, atint[i])
 			go_set(a_sprites_r[i], tint, atint[i])
 		end
-	end
 
-	-- Enables & Disables
-	if wgo_used > last_wgo_used then
-		for i = last_wgo_used+1, wgo_used do
-			local wsi = w_sprites[i]
-			if wsi then msg_post(wsi, enable) end
-		end
-	elseif wgo_used < last_wgo_used then
-		for i = wgo_used+1, last_wgo_used do
-			local wsi = w_sprites[i]
-			if wsi then msg_post(wsi, disable) end
-		end
-	end
-	last_wgo_used = wgo_used
-
-	if hgo_used > last_hgo_used then
-		for i = last_hgo_used+1, hgo_used do
-			local hsi = h_sprites[i]
-			if hsi then msg_post(hsi, enable) end
-		end
-	elseif hgo_used < last_hgo_used then
-		for i = hgo_used+1, last_hgo_used do
-			local hsi = h_sprites[i]
-			if hsi then msg_post(hsi, disable) end
-		end
-	end
-	last_hgo_used = hgo_used
-
-	if ago_used > last_ago_used then
-		for i = last_ago_used+1, ago_used do
-			local asli = a_sprites_l[i]
-			if asli then
-				msg_post(asli, enable)
-				msg_post(a_sprites_r[i], enable)
+		-- Enables & Disables
+		if wu > last_wu then
+			for i = last_wu+1, wu do
+				local wsi = w_sprites[i]
+				if wsi then msg_post(wsi, enable) end
+			end
+		elseif wu < last_wu then
+			for i = wu+1, last_wu do
+				local wsi = w_sprites[i]
+				if wsi then msg_post(wsi, disable) end
 			end
 		end
-	elseif ago_used < last_ago_used then
-		for i = ago_used+1, last_ago_used do
-			local asli = a_sprites_l[i]
-			if asli then
-				msg_post(asli, disable)
-				msg_post(a_sprites_r[i], disable)
+		last_wu = wu
+
+		if hu > last_hu then
+			for i = last_hu+1, hu do
+				local hsi = h_sprites[i]
+				if hsi then msg_post(hsi, enable) end
+			end
+		elseif hu < last_hu then
+			for i = hu+1, last_hu do
+				local hsi = h_sprites[i]
+				if hsi then msg_post(hsi, disable) end
 			end
 		end
-	end
-	last_ago_used = ago_used
+		last_hu = hu
 
+		if au > last_au then
+			for i = last_au+1, au do
+				local asli = a_sprites_l[i]
+				if asli then
+					msg_post(asli, enable)
+					msg_post(a_sprites_r[i], enable)
+				end
+			end
+		elseif au < last_au then
+			for i = au+1, last_au do
+				local asli = a_sprites_l[i]
+				if asli then
+					msg_post(asli, disable)
+					msg_post(a_sprites_r[i], disable)
+				end
+			end
+		end
+		last_au = au
+
+	end
 end
 
 function final(self)
-	FinalArf()
-
 	for i = 1, #wgos do
 		go_delete(wgos[i])
 	end
@@ -172,4 +169,6 @@ function final(self)
 	wtint, htint, atint = nil, nil, nil, nil
 
 	collectgarbage()
+	last_wu, last_hu, last_au, test_ms = 0, 0, 0, 0
+	FinalArf()
 end
