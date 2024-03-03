@@ -177,7 +177,7 @@ static int InitArf(lua_State* L) {
 
 				/* Scalars */ {
 					auto winfo = w -> info();
-					wobj.mvb = (winfo & 0x1fff) * 1024.0f;
+					wobj.mvb = (winfo & 0x1fff) * 0.0009765625f;   // As /1024.0f
 					wobj.ofl2 = (bool)((winfo>>13) & 0b1);
 				}
 
@@ -785,7 +785,7 @@ static int UpdateArf(lua_State* L) {
 
 								// tint.w Setting
 								float tintw = mstime - nodes[0].ms;
-								tintw = (tintw > 237) ? 1.0f : tintw * 0.0042194092827f;   // As  ms_passed / 237.0f
+								tintw = (tintw >= 237) ? 1.0f : tintw * 0.0042194092827f;   // As  ms_passed / 237.0f
 								lua_pushnumber(L, tintw);
 								lua_rawseti(L, T_WTINT, wgo_used);
 
@@ -917,8 +917,8 @@ static int UpdateArf(lua_State* L) {
 
 										// tint.w Setting
 										// As (wish_c.mvb - radius) / (wish_c.mvb * 0.237f)
-										float tintw = 8192 * (wish_c.mvb - radius) *
-													  RCP[ (uint16_t)(wish_c.mvb * 1941.504f) ];
+										float tintw = 4096 * (wish_c.mvb - radius) *
+													  RCP[ (uint16_t)(wish_c.mvb * 970.752f) ];
 										tintw = (tintw > 1.0f) ? 1.0f : tintw;
 										lua_pushnumber(L, tintw);
 										lua_rawseti(L, T_WTINT, wgo_used);
