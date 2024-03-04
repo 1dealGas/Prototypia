@@ -15,8 +15,8 @@
 #include <arf2_generated.h>   // std::vector included
 #include <ease_constants.h>
 
-
 // Commons
+using namespace std;
 struct ab { float a,b; };   // 2-float Structure
 enum {
 	// Hint Status Constants
