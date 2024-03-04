@@ -107,7 +107,6 @@ struct Arf {
 	static ArIndex* index;
 	static ArDeltaNode* d1;   // DeltaNodes in Layer 1
 	static ArDeltaNode* d2;   // DeltaNodes in Layer 2
-
 	static ArWishGroup* wish;
 	static ArHint *hint, *echo;
 
@@ -126,3 +125,4 @@ struct Arf {
 ArIndex *Arf::index;			ArDeltaNode *Arf::d1, *Arf::d2;
 ArWishGroup *Arf::wish;			ArHint *Arf::hint, *Arf::echo;
 uint16_t Arf::d1c, Arf::d2c, Arf::ic;
+using namespace std;
