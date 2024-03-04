@@ -1,6 +1,7 @@
 *.script linguist-language=lua
 *.render_script linguist-language=lua
 *.gui_script linguist-language=lua
+Acplay/AcArf2/include/includes.h linguist-language=cpp
 
 *.go linguist-documentation
 Acplay/AcArf2/(deprecated)libarf2.hpp linguist-documentation
