@@ -3,6 +3,7 @@
 *.gui_script linguist-language=Lua
 
 *.script_api linguist-language=YAML
+*.appmanifest linguist-language=YAML
 ext.manifest linguist-language=YAML
 
 *.go linguist-documentation
