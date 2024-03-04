@@ -8,8 +8,8 @@ Acplay/AcArf2/(deprecated)libarf2.hpp linguist-documentation
 Acplay/AcArf2/include/arf2_generated.h linguist-generated
 Acplay/AcArf2/include/ease_constants.h linguist-generated
 
-Acplay/AcArf2/include/flatbuffers/* linguist-vendored
-Viewer/AcDefOS/* linguist-vendored
-Viewer/AcLFS/* linguist-vendored
-Viewer/AcOpenAL/* linguist-vendored
-Viewer/AcDirtyLarry/* linguist-vendored
+Acplay/AcArf2/include/flatbuffers/** linguist-vendored
+Viewer/AcDefOS/** linguist-vendored
+Viewer/AcLFS/** linguist-vendored
+Viewer/AcOpenAL/** linguist-vendored
+Viewer/AcDirtyLarry/** linguist-vendored
