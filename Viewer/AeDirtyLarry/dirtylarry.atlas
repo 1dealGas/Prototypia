@@ -1,41 +1,41 @@
 images {
-  image: "/Visual/DirtyLarry/button_normal.png"
+  image: "/Visual/DirtyLarry/ButtonNormal.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/button_pressed.png"
+  image: "/Visual/DirtyLarry/ButtonPressed.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/checkbox_checked_normal.png"
+  image: "/Visual/DirtyLarry/Checked.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/checkbox_checked_pressed.png"
+  image: "/Visual/DirtyLarry/CheckedPressed.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/checkbox_normal.png"
+  image: "/Visual/DirtyLarry/BoxNormal.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/checkbox_pressed.png"
+  image: "/Visual/DirtyLarry/BoxPressed.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/radio_checked_normal.png"
+  image: "/Visual/DirtyLarry/Selected.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/radio_checked_pressed.png"
+  image: "/Visual/DirtyLarry/SelectedPressed.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/radio_normal.png"
+  image: "/Visual/DirtyLarry/RadioNormal.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/DirtyLarry/radio_pressed.png"
+  image: "/Visual/DirtyLarry/RadioPressed.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 margin: 0
