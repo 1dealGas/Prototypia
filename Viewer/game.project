@@ -17,7 +17,7 @@ title = Prototypia Viewer
 version = 0.1
 publisher = 1dealGas
 developer = 1dealGas
-custom_resources = Test
+custom_resources = LICENSE
 
 [sprite]
 max_count = 1024
@@ -61,6 +61,7 @@ use_accelerometer = 0
 
 [engine]
 run_while_iconified = 1
+fixed_update_frequency = 10
 
 [osx]
 bundle_identifier = prototypia.viewer

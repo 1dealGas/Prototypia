@@ -1,0 +1,258 @@
+-- Prototypia Viewer Logics
+-- Copyright(c) 2024- 1dealGas, under the MIT License.
+
+
+-- Caches
+-- Only functions used in a for loop, or the Update callback will be cached.
+--
+local hash = hash
+local Prototypia, Viewer = hash("Prototypia"), hash("/Viewer")
+local BUTTON_P, BUTTON_SP
+local BUTTON_UP, BUTTON_UPC
+local BUTTON_DOWN, BUTTON_DOWNC
+local GUI_LOAD, GUI_SEEK
+local GUI_PLAY, GUI_OWV
+local titlefmt = "[%d]  Prototypia Viewer  --  %s"
+
+local disable, enable = hash("disable"), hash("enable")
+local tint_w, tint = hash("tint.w"), hash("tint")
+local Sprite = hash("Sprite")
+
+local NewTable = Arf2.NewTable
+local InitArf = Arf2.InitArf
+local UpdateArf = Arf2.UpdateArf
+local FinalArf = Arf2.FinalArf
+
+local go_delete = go.delete
+local collectgarbage = collectgarbage
+local factory_create = factory.create
+local msg_url = msg.url
+local msg_post = msg.post
+
+local vmath_vector4 = vmath.vector4
+local go_set = go.set   -- Set tint / tint.w
+local defos_set_window_title = defos.set_window_title
+local lfs_attributes = lfs.attributes
+local string_format = string.format
+
+
+-- Chart[Fumen] Context
+--
+local context_opened
+local wtint, htint, atint   -- Tables of tint datas
+local wgos, hgos, agos_l, agos_r   -- Tables of Game Objects' URLs
+local w_sprites, h_sprites, al_sprites, ar_sprites   -- Tables of Sprite Components' URLs
+local last_wu, last_hu, last_au = 0, 0, 0   -- Used to send "enable" and "disable" messages
+local wu_max = 0   -- A Chart[Fumen] Param that needs to be acquired at the runtime
+
+local function EndContext()
+	-- Release Game Objects
+	--
+	for i = 1, #wgos do go_delete(wgos[i]) end
+	for i = 1, #hgos do
+		go_delete(hgos[i])
+		go_delete(agos_l[i])
+		go_delete(agos_r[i])
+	end
+
+	-- Reset Variables
+	--
+	wtint, htint, atint = nil, nil, nil
+	wgos, hgos, agos_l, agos_r = nil, nil, nil, nil
+	w_sprites, h_sprites, al_sprites, ar_sprites = nil, nil, nil, nil
+	last_wu, last_hu, last_au = 0, 0, 0
+	wu_max = 0
+
+	-- Clean Up
+	--
+	collectgarbage()
+	context_opened = false
+	FinalArf()
+end
+
+local function NewContext(buf)
+	-- Preparation
+	--
+	if context_opened then EndContext() end
+	local b, t, w, h = InitArf(buf, true)
+
+	-- Context Creation
+	--
+	if b then
+		-- Create Tables
+		--
+		wgos, hgos, agos_l, agos_r = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
+		w_sprites, h_sprites, al_sprites, ar_sprites = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
+		wtint, htint, atint = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0)
+		
+		-- Fill Tables
+		--
+		for i = 1, w do
+			local W = factory_create(CreateWish)
+			wgos[i], w_sprites[i] = W, msg_url(Ar, W, Sprite)
+			msg_post(W, disable)
+		end
+
+		for i = 1, h do
+			local H = factory_create(CreateHint)
+			hgos[i], h_sprites[i] = H, msg_url(Ar, H, Sprite)
+			msg_post(H, disable)
+
+			local AL = factory_create(CreateAnim)
+			agos_l[i], al_sprites[i] = AL, msg_url(Ar, AL, Sprite)
+			msg_post(AL, disable)
+			
+			local AR = factory_create(CreateAnim)
+			agos_r[i], ar_sprites[i] = AR, msg_url(Ar, AR, Sprite)
+			msg_post(AR, disable)
+
+			htint[i] = vmath_vector4(0,0,0,1)
+			atint[i] = vmath_vector4(0,0,0,1)
+		end
+		
+		-- Clean Up
+		--
+		context_opened = true
+		collectgarbage()
+	end
+end
+
+local function UpdateContext(mstime)
+	if context_opened then
+		local hl, wu, hu, au = UpdateArf(mstime, wgos, hgos, agos_l, agos_r, wtint, htint, atint)
+		if hl then
+			-- Mutate tint
+			--
+			for i = 1, wu do go_set(w_sprites[i], tint_w, wtint[i]) end
+			for i = 1, hu do go_set(h_sprites[i], tint, htint[i]) end
+			for i = 1, au do
+				go_set(al_sprites[i], tint, atint[i])
+				go_set(ar_sprites[i], tint, atint[i])
+			end
+
+			-- Enables & Disables
+			--
+			if wu > last_wu then
+				if wu > wu_max then wu_max = wu end
+				for i = last_wu+1, wu do
+					local wsi = w_sprites[i]
+					if wsi then msg_post(wsi, enable) end
+				end
+			elseif wu < last_wu then
+				for i = wu+1, last_wu do
+					local wsi = w_sprites[i]
+					if wsi then msg_post(wsi, disable) end
+				end
+			end
+
+			if hu > last_hu then
+				for i = last_hu+1, hu do
+					local hsi = h_sprites[i]
+					if hsi then msg_post(hsi, enable) end
+				end
+			elseif hu < last_hu then
+				for i = hu+1, last_hu do
+					local hsi = h_sprites[i]
+					if hsi then msg_post(hsi, disable) end
+				end
+			end
+
+			if au > last_au then
+				for i = last_au+1, au do
+					local asli = al_sprites[i]
+					if asli then
+						msg_post(asli, enable)
+						msg_post(ar_sprites[i], enable)
+					end
+				end
+			elseif au < last_au then
+				for i = au+1, last_au do
+					local asli = al_sprites[i]
+					if asli then
+						msg_post(asli, disable)
+						msg_post(ar_sprites[i], disable)
+					end
+				end
+			end
+
+			-- Update Caches
+			--
+			last_wu, last_hu, last_au = wu, hu, au
+		end
+	end
+end
+
+
+-- Environment
+--
+local Audio, FumenPath
+local AudioMsTime, FumenModification = 0
+local Path, OpenWorksVolume = sys.get_save_file("Prototypia Viewer", "")
+local IsDarwin = (sys.get_sys_info().system_name == "Darwin")
+
+if IsDarwin then
+	OpenWorksVolume = function()
+		os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )
+	end
+else
+	OpenWorksVolume = function()
+		os.execute("explorer " .. Path)
+	end
+end
+
+
+-- Script
+--
+function init(self)
+	-- Preparations
+	--
+	CreateWish = msg_url( Prototypia, Viewer, hash("CreateWish") )
+	CreateHint = msg_url( Prototypia, Viewer, hash("CreateHint") )
+	CreateAnim = msg_url( Prototypia, Viewer, hash("CreateAnim") )
+	msg_post(".", "acquire_input_focus")
+	collectgarbage("stop")
+
+	-- Write Licenses
+	--
+	local licensefile = io.open( Path .. "LICENSE", "w" )
+	licensefile:write( sys.load_resource("/LICENSE") )
+	licensefile:close()
+	license = nil
+
+	-- Window Settings
+	--
+	defos.set_window_size(nil, nil, 1200, 720)
+	defos_set_window_title( "Prototypia Viewer  --  " .. Path )
+end
+
+function fixed_update(self, dt)   -- File listening & GC
+	if FumenPath then
+		local mdf = lfs_attributes(FumenPath).modification
+		if mdf > FumenModification then
+			NewContext( sys.load_buffer(FumenPath) )
+			UpdateContext(AudioMsTime)
+			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
+			FumenModification = mdf
+		end
+	end
+	collectgarbage()
+end
+
+function update(self, dt)
+	if Audio then
+		local ms = 0   -- Checked from OpenAL
+		if ms ~= AudioMsTime then
+			UpdateContext(ms)
+			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
+			AudioMsTime = ms
+		end
+	end
+end
+
+-- function on_input(self, action_id, action)
+-- 	-- Scrolling, Keyboard Actions
+-- 	-- Notice that GUI Scripts will consume handled inputs
+-- end
+-- 
+-- function on_message(self, message_id, message)   -- GUI Actions
+-- end
