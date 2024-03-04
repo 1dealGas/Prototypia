@@ -1,7 +1,10 @@
-*.script linguist-language=lua
-*.render_script linguist-language=lua
-*.gui_script linguist-language=lua
-Acplay/AcArf2/include/includes.h linguist-language=cpp
+*.script linguist-language=Lua
+*.render_script linguist-language=Lua
+*.gui_script linguist-language=Lua
+*.script_api linguist-language=YAML
+
+ext.manifest linguist-language=YAML
+Acplay/AcArf2/include/includes.h linguist-language=C++
 
 *.go linguist-documentation
 Acplay/AcArf2/(deprecated)libarf2.hpp linguist-documentation
