@@ -29,8 +29,8 @@ nodes {
     w: 1.0
   }
   size {
-    x: 200.0
-    y: 100.0
+    x: 1752.0
+    y: 37.0
     z: 0.0
     w: 1.0
   }
@@ -45,8 +45,8 @@ nodes {
   text: "[MS] 0 \302\267 0"
   font: "larryfont"
   id: "Message"
-  xanchor: XANCHOR_NONE
-  yanchor: YANCHOR_NONE
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_TOP
   pivot: PIVOT_NW
   outline {
     x: 1.0
@@ -151,10 +151,10 @@ nodes {
   blend_mode: BLEND_MODE_ALPHA
   texture: "button/button_pressed"
   id: "Load/bg"
-  xanchor: XANCHOR_NONE
-  yanchor: YANCHOR_NONE
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
   pivot: PIVOT_W
-  adjust_mode: ADJUST_MODE_FIT
+  adjust_mode: ADJUST_MODE_STRETCH
   parent: "Load"
   layer: "Batched"
   inherit_alpha: true
@@ -170,6 +170,9 @@ nodes {
   alpha: 1.0
   overridden_fields: 1
   overridden_fields: 4
+  overridden_fields: 12
+  overridden_fields: 13
+  overridden_fields: 17
   overridden_fields: 20
   template_node_child: true
   size_mode: SIZE_MODE_MANUAL
@@ -331,7 +334,7 @@ nodes {
   }
   type: TYPE_TEXT
   blend_mode: BLEND_MODE_ALPHA
-  text: "Load"
+  text: ""
   font: "larryfont"
   id: "Load/content"
   xanchor: XANCHOR_NONE
@@ -443,10 +446,10 @@ nodes {
   blend_mode: BLEND_MODE_ALPHA
   texture: "button/button_pressed"
   id: "Seek/bg"
-  xanchor: XANCHOR_NONE
-  yanchor: YANCHOR_NONE
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
   pivot: PIVOT_W
-  adjust_mode: ADJUST_MODE_FIT
+  adjust_mode: ADJUST_MODE_STRETCH
   parent: "Seek"
   layer: "Batched"
   inherit_alpha: true
@@ -462,6 +465,9 @@ nodes {
   alpha: 1.0
   overridden_fields: 1
   overridden_fields: 4
+  overridden_fields: 12
+  overridden_fields: 13
+  overridden_fields: 17
   overridden_fields: 20
   template_node_child: true
   size_mode: SIZE_MODE_MANUAL
@@ -623,7 +629,7 @@ nodes {
   }
   type: TYPE_TEXT
   blend_mode: BLEND_MODE_ALPHA
-  text: "Seek"
+  text: ""
   font: "larryfont"
   id: "Seek/content"
   xanchor: XANCHOR_NONE
@@ -735,10 +741,10 @@ nodes {
   blend_mode: BLEND_MODE_ALPHA
   texture: "button/button_normal"
   id: "Works/larrybutton"
-  xanchor: XANCHOR_NONE
-  yanchor: YANCHOR_NONE
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
   pivot: PIVOT_CENTER
-  adjust_mode: ADJUST_MODE_FIT
+  adjust_mode: ADJUST_MODE_STRETCH
   parent: "Works"
   layer: "Batched"
   inherit_alpha: true
@@ -753,6 +759,9 @@ nodes {
   clipping_inverted: false
   alpha: 1.0
   overridden_fields: 4
+  overridden_fields: 12
+  overridden_fields: 13
+  overridden_fields: 17
   overridden_fields: 20
   template_node_child: true
   size_mode: SIZE_MODE_MANUAL
@@ -906,10 +915,10 @@ nodes {
   blend_mode: BLEND_MODE_ALPHA
   texture: "button/button_normal"
   id: "Play/larrybutton"
-  xanchor: XANCHOR_NONE
-  yanchor: YANCHOR_NONE
+  xanchor: XANCHOR_LEFT
+  yanchor: YANCHOR_BOTTOM
   pivot: PIVOT_CENTER
-  adjust_mode: ADJUST_MODE_FIT
+  adjust_mode: ADJUST_MODE_STRETCH
   parent: "Play"
   layer: "Batched"
   inherit_alpha: true
@@ -924,6 +933,9 @@ nodes {
   clipping_inverted: false
   alpha: 1.0
   overridden_fields: 4
+  overridden_fields: 12
+  overridden_fields: 13
+  overridden_fields: 17
   overridden_fields: 20
   template_node_child: true
   size_mode: SIZE_MODE_MANUAL

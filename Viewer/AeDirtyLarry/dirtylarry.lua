@@ -158,16 +158,25 @@ function dirtylarry.input(self, node, action_id, action, type, empty_text)
 
 	-- switch active input node
 	if hit_test(self, node_bg, action_id, action) then
-			-- change to new entry
-			gui.reset_keyboard()
-			dirtylarry.active_input_marked = ""
-			dirtylarry.active_node = input_node
-			dirtylarry.active_node.active = true
-			gui.animate(node_bg, "color", dirtylarry.colors.active, gui.EASING_OUTCUBIC, 0.2)
-			gui.animate(node_cursor, "size", vmath.vector3(4, 32, 0), gui.EASING_OUTCUBIC, 0.2)
+		-- change to new entry
+		gui.reset_keyboard()
+		dirtylarry.active_input_marked = ""
+		dirtylarry.active_node = input_node
+		dirtylarry.active_node.active = true
+		gui.animate(node_bg, "color", dirtylarry.colors.active, gui.EASING_OUTCUBIC, 0.2)
+		gui.animate(node_cursor, "size", vmath.vector3(4, 32, 0), gui.EASING_OUTCUBIC, 0.2)
 
-			-- show keyboard for mobile devices
-			gui.show_keyboard(type, true)
+		-- show keyboard for mobile devices
+		gui.show_keyboard(type, true)
+
+	----------------
+	-- Modified by 1dealGas:
+	-- Tap outside an input field to deactivate it
+	--
+	elseif (action_id == dirtylarry.action_id_touch) and (action.pressed) then
+		dirtylarry.active_node = nil
+	----------------
+
 	end
 
 	-- handle new input if current input node is active

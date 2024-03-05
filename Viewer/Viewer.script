@@ -1,4 +1,4 @@
--- Prototypia Viewer Logics
+-- Prototypia Viewer Main Logics
 -- Copyright(c) 2024- 1dealGas, under the MIT License.
 
 
@@ -14,8 +14,9 @@ local titlefmt = "[%d]  Prototypia Viewer  --  %s"
 local modification = "modification"
 
 local BUTTON_P, BUTTON_SP = hash("BUTTON_P"), hash("BUTTON_SP")
-local SCROLL_UP, BUTTON_UP, BUTTON_UPC = hash("SCROLL_UP"), hash("BUTTON_UP"), hash("BUTTON_UPC")
-local SCROLL_DOWN, BUTTON_DOWN, BUTTON_DOWNC = hash("SCROLL_DOWN"), hash("BUTTON_DOWN"), hash("BUTTON_DOWNC")
+local SCROLL_UP, BUTTON_UP = hash("SCROLL_UP"), hash("BUTTON_UP")
+local SCROLL_DOWN, BUTTON_DOWN = hash("SCROLL_DOWN"), hash("BUTTON_DOWN")
+local BUTTON_C = hash("BUTTON_C")
 
 local GUPDATE, PAUSE, PLAY = hash("GUPDATE"), hash("PAUSE"), hash("PLAY")
 local GUI_LOAD, GUI_SEEK = hash("GUI_LOAD"), hash("GUI_SEEK")

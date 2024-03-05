@@ -1,4 +1,52 @@
+key_trigger {
+  input: KEY_BACKSPACE
+  action: "backspace"
+}
+key_trigger {
+  input: KEY_P
+  action: "BUTTON_P"
+}
+key_trigger {
+  input: KEY_SPACE
+  action: "BUTTON_SP"
+}
+key_trigger {
+  input: KEY_UP
+  action: "BUTTON_UP"
+}
+key_trigger {
+  input: KEY_DOWN
+  action: "BUTTON_DOWN"
+}
+key_trigger {
+  input: KEY_LCTRL
+  action: "BUTTON_C"
+}
+key_trigger {
+  input: KEY_RCTRL
+  action: "BUTTON_C"
+}
+key_trigger {
+  input: KEY_ENTER
+  action: "enter"
+}
 mouse_trigger {
   input: MOUSE_BUTTON_1
   action: "touch"
+}
+mouse_trigger {
+  input: MOUSE_WHEEL_UP
+  action: "SCROLL_UP"
+}
+mouse_trigger {
+  input: MOUSE_WHEEL_DOWN
+  action: "SCROLL_DOWN"
+}
+text_trigger {
+  input: TEXT
+  action: "text"
+}
+text_trigger {
+  input: MARKED_TEXT
+  action: "marked-text"
 }

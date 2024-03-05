@@ -40,8 +40,8 @@ max_count = 0
 [gui]
 max_particlefx_count = 0
 max_particle_count = 0
-max_animation_count = 4
-max_count = 4
+max_animation_count = 16
+max_count = 1
 
 [label]
 max_count = 0
