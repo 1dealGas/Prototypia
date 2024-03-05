@@ -1025,9 +1025,8 @@ static int UpdateArf(lua_State* L) {
 							ago_used++;
 
 							/* Position */ {
-								const p3 agopos(x, y, -jdt * 0.00001f);
-								SetPosition(agol, agopos);
-								SetPosition(agor, agopos);
+								SetPosition( agol, p3(x, y, -jdt * 0.00001f) );
+								SetPosition( agor, p3(x, y, 0.00001f - jdt * 0.00001f) );
 							}
 
 							/* tint.w */
@@ -1110,9 +1109,8 @@ static int UpdateArf(lua_State* L) {
 							ago_used++;
 
 							/* Position */ {
-								const p3 agopos(x, y, -dt * 0.00001f);
-								SetPosition(agol, agopos);
-								SetPosition(agor, agopos);
+								SetPosition( agol, p3(x, y, -dt * 0.00001f) );
+								SetPosition( agor, p3(x, y, 0.00001f - dt * 0.00001f) );
 							}
 
 							/* tint.w */
@@ -1161,9 +1159,8 @@ static int UpdateArf(lua_State* L) {
 					ago_used++;
 
 					/* Position */ {
-						const p3 agopos(x, y, -jdt * 0.00001f);
-						SetPosition(agol, agopos);
-						SetPosition(agor, agopos);
+						SetPosition( agol, p3(x, y, -jdt * 0.00001f) );
+						SetPosition( agor, p3(x, y, 0.00001f - jdt * 0.00001f) );
 					}
 
 					/* tint.w */ {   // jdt must be larger than 270
