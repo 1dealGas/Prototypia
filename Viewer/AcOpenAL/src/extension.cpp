@@ -60,11 +60,21 @@ static int extension_new_source(lua_State *L) {
 	ALuint source = OpenAL::getInstance()->newSource(&sourceLuaBuffer->m_Buffer);
 	if (source == 0) {
 		lua_pushnil(L);
+		lua_pushnil(L);
 	} else {
 		LuaSource *luaSource = new LuaSource(source);
 		luaSource->push(L);
+
+		// Modified by 1dealGas:
+		// Check the length of the WAV file
+		void* b = 0;
+		uint32_t s = 0;   // Not used
+		dmBuffer::GetBytes(sourceLuaBuffer->m_Buffer, &b, &s);
+
+		uint32_t dnm = ((uint32_t*)b)[7], nmr = ((uint32_t*)b)[10];
+		lua_pushnumber( L, (double)nmr/(double)dnm );
 	}
-	return 1;
+	return 2;
 }
 
 static int extension_remove_source(lua_State *L) {

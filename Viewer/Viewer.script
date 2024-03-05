@@ -2,22 +2,35 @@
 -- Copyright(c) 2024- 1dealGas, under the MIT License.
 
 
--- Caches
--- Only functions used in a for loop, or the Update callback will be cached.
+-- Hash & String Caches
 --
 local hash = hash
-local Prototypia, Viewer = hash("Prototypia"), hash("/Viewer")
-local BUTTON_P, BUTTON_SP
-local BUTTON_UP, BUTTON_UPC
-local BUTTON_DOWN, BUTTON_DOWNC
-local GUI_LOAD, GUI_SEEK
-local GUI_PLAY, GUI_OWV
-local titlefmt = "[%d]  Prototypia Viewer  --  %s"
-
 local disable, enable = hash("disable"), hash("enable")
 local tint_w, tint = hash("tint.w"), hash("tint")
 local Sprite = hash("Sprite")
 
+local msfmt = "[MS] %d · %d"
+local titlefmt = "[%d]  Prototypia Viewer  --  %s"
+local modification = "modification"
+
+local BUTTON_P, BUTTON_SP = hash("BUTTON_P"), hash("BUTTON_SP")
+local SCROLL_UP, BUTTON_UP, BUTTON_UPC = hash("SCROLL_UP"), hash("BUTTON_UP"), hash("BUTTON_UPC")
+local SCROLL_DOWN, BUTTON_DOWN, BUTTON_DOWNC = hash("SCROLL_DOWN"), hash("BUTTON_DOWN"), hash("BUTTON_DOWNC")
+
+local GUPDATE, PAUSE, PLAY = hash("GUPDATE"), hash("PAUSE"), hash("PLAY")
+local GUI_LOAD, GUI_SEEK = hash("GUI_LOAD"), hash("GUI_SEEK")
+local GUI_PLAY, GUI_OWV = hash("GUI_PLAY"), hash("GUI_OWV")
+
+
+-- Component Caches
+--
+local CreateWish, CreateHint, CreateAnim
+local ViewerGUI
+
+
+-- Function Caches
+-- Only functions used in a for loop, or the Update callback will be cached.
+--
 local NewTable = Arf2.NewTable
 local InitArf = Arf2.InitArf
 local UpdateArf = Arf2.UpdateArf
@@ -34,6 +47,21 @@ local go_set = go.set   -- Set tint / tint.w
 local defos_set_window_title = defos.set_window_title
 local lfs_attributes = lfs.attributes
 local string_format = string.format
+
+
+-- Environment
+--
+local Path, OpenWorksVolume = sys.get_save_file("Prototypia Viewer", "")
+local IsDarwin = (sys.get_sys_info().system_name == "Darwin")
+if IsDarwin then
+	OpenWorksVolume = function()
+		os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )
+	end
+else
+	OpenWorksVolume = function()
+		os.execute("explorer " .. Path)
+	end
+end
 
 
 -- Chart[Fumen] Context
@@ -183,34 +211,96 @@ local function UpdateContext(mstime)
 end
 
 
--- Environment
+-- Status & Function Tables
+-- Audio source must be "Single 16-bit PCM" format
 --
-local Audio, FumenPath
-local AudioMsTime, FumenModification = 0
-local Path, OpenWorksVolume = sys.get_save_file("Prototypia Viewer", "")
-local IsDarwin = (sys.get_sys_info().system_name == "Darwin")
+local FumenModification = 0   -- Reset it to 0 when loading a new Chart[Fumen]
+local Audio, AudioLen, FumenPath   -- Nullify them when exception happens
 
-if IsDarwin then
-	OpenWorksVolume = function()
-		os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )
+local BUTTON_P, BUTTON_SP = hash("BUTTON_P"), hash("BUTTON_SP")
+local BUTTON_UP, BUTTON_UPC = hash("BUTTON_UP"), hash("BUTTON_UPC")
+local BUTTON_DOWN, BUTTON_DOWNC = hash("BUTTON_DOWN"), hash("BUTTON_DOWNC")
+
+local input_functions = {
+	[BUTTON_P] = function(self, action)
+	end,
+
+	[BUTTON_SP] = function(self, action)
+	end,
+
+	[SCROLL_UP] = function(self, action)
+	end,
+	
+	[BUTTON_UP] = function(self, action)
+	end,
+
+	[BUTTON_UPC] = function(self, action)
+	end,
+	
+	[SCROLL_DOWN] = function(self, action)
+	end,
+	
+	[BUTTON_DOWN] = function(self, action)
+	end,
+
+	[BUTTON_DOWNC] = function(self, action)
 	end
-else
-	OpenWorksVolume = function()
-		os.execute("explorer " .. Path)
-	end
-end
+}
+
+local msg_functions = {
+	[GUI_LOAD] = function(self, message, sender)   -- message -> {basename_str}
+		-- Load Audio
+		-- The Viewer could decode an *.ogg file into a WAV resource. Windows Only.
+		--
+
+		-- Load Context
+		--
+
+		-- Load File Listening & Update GUI
+		--
+	end,
+
+	[GUI_SEEK] = function(self, message, sender)   -- message -> {mstime_str}
+		if Audio then
+			local t = pcall(tonumber, message[0])
+			if t then
+				t = ( t < (AudioLen-10) ) and t or (AudioLen-10)
+				t = ( t > 0 ) and t or 0
+				Audio.time = t/1000   -- mstime -> time_in_sec
+			else
+				msg_post( ViewerGUI, GUPDATE, {"[!] Please input a valid mstime."} )
+			end
+		else
+			msg_post( ViewerGUI, GUPDATE, {"[!] Before seeking somewhere, you need to load a chart[fumen]."} )
+		end
+	end,
+
+	[GUI_PLAY] = function(self, message, sender)
+		
+	end,
+
+	[GUI_OWV] = OpenWorksVolume
+}
 
 
--- Script
+-- Script Callbacks
 --
 function init(self)
-	-- Preparations
+	-- Initial Settings
 	--
-	CreateWish = msg_url( Prototypia, Viewer, hash("CreateWish") )
-	CreateHint = msg_url( Prototypia, Viewer, hash("CreateHint") )
-	CreateAnim = msg_url( Prototypia, Viewer, hash("CreateAnim") )
+	defos.set_window_size(nil, nil, 1200, 720)
+	defos_set_window_title( "Prototypia Viewer  --  " .. Path )
 	msg_post(".", "acquire_input_focus")
+	openal.set_distance_model("none")
 	collectgarbage("stop")
+
+	-- URL Preparations
+	--
+	local p, v = hash("Prototypia"), hash("/Viewer")
+	CreateWish = msg_url( p, v, hash("CreateWish") )
+	CreateHint = msg_url( p, v, hash("CreateHint") )
+	CreateAnim = msg_url( p, v, hash("CreateAnim") )
+	ViewerGUI = msg_url( p, v, hash("UI") )
 
 	-- Write Licenses
 	--
@@ -218,17 +308,12 @@ function init(self)
 	licensefile:write( sys.load_resource("/LICENSE") )
 	licensefile:close()
 	license = nil
-
-	-- Window Settings
-	--
-	defos.set_window_size(nil, nil, 1200, 720)
-	defos_set_window_title( "Prototypia Viewer  --  " .. Path )
 end
 
 function fixed_update(self, dt)   -- File listening & GC
 	if FumenPath then
-		local mdf = lfs_attributes(FumenPath).modification
-		if mdf > FumenModification then
+		local mdf = lfs_attributes(FumenPath, modification)
+		if mdf ~= FumenModification then
 			NewContext( sys.load_buffer(FumenPath) )
 			UpdateContext(AudioMsTime)
 			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
@@ -238,21 +323,32 @@ function fixed_update(self, dt)   -- File listening & GC
 	collectgarbage()
 end
 
+local last_ms = 0   -- No need to clear this manually
 function update(self, dt)
 	if Audio then
-		local ms = 0   -- Checked from OpenAL
-		if ms ~= AudioMsTime then
+		local ms = Audio.time * 1000   -- There will be an offset value added
+		ms = (ms>0) and ms or 0
+		if ms ~= last_ms then
 			UpdateContext(ms)
+			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, ms, AudioLen)} )
 			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
-			AudioMsTime = ms
+			last_ms = ms
 		end
 	end
 end
 
--- function on_input(self, action_id, action)
--- 	-- Scrolling, Keyboard Actions
--- 	-- Notice that GUI Scripts will consume handled inputs
--- end
--- 
--- function on_message(self, message_id, message)   -- GUI Actions
--- end
+function on_input(self, action_id, action)
+	if action_id and input_functions[action_id] then
+		input_functions[action_id](self, action)
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if msg_functions[message_id] then
+		msg_functions[message_id](self, message, sender)
+	end
+end
+
+
+-- Audio Test
+-- audio_test, at = openal.new_source( sys.load_buffer( sys.get_save_file("Prototypia Viewer", "test.wav") ) )
