@@ -13,7 +13,7 @@ local gui_set_text = gui.set_text
 local Message, PlayPause, MainScript
 local text, enter = hash("text"), hash("enter")
 
-local GUPDATE, PAUSE, PLAY = hash("GUPDATE"), hash("PAUSE"), hash("PLAY")
+local GUPDATE, SHOW_PAUSE, SHOW_PLAY = hash("GUPDATE"), hash("SHOW_PAUSE"), hash("SHOW_PLAY")
 local GUI_LOAD, GUI_SEEK = hash("GUI_LOAD"), hash("GUI_SEEK")
 local GUI_PLAY, GUI_OWV = hash("GUI_PLAY"), hash("GUI_OWV")
 
@@ -26,14 +26,19 @@ local function P() msg_post(MainScript, GUI_PLAY) end
 
 -- Script Callbacks
 --
+local self_url
+local function aif_later()
+	msg_post(self_url, "acquire_input_focus")
+end
 function init(self)
 	Message = gui.get_node("Message")
 	PlayPause = gui.get_node("Play/larrylabel")
 	MainScript = msg.url("Prototypia:/Viewer#Logics")
-	msg_post(".", "acquire_input_focus")
+	timer.delay(0.1, false, aif_later)
+	self_url = msg.url(".")
 end
 
-local enter_target, load_input, seek_input = nil
+local load_input, seek_input
 function on_input(self, action_id, action)
 	-- Dirty Larry Callbacks
 	--
@@ -42,26 +47,12 @@ function on_input(self, action_id, action)
 	dl:button("Works", action_id, action, W)
 	dl:button("Play", action_id, action, P)
 
-	-- Set the "Enter" Target
-	--
-	if action_id == text then
-		if load_input ~= li then
-			load_input = li
-			enter_target = GUI_LOAD
-		elseif seek_input ~= si then
-			seek_input = si
-			enter_target = GUI_SEEK
-		else
-			enter_target = nil
-		end
-	end
-
 	-- Actions when the "Enter" Key Pressed
 	--
 	if action_id == enter and action.pressed and dl.active_node then
-		if (enter_target == GUI_LOAD) and (li ~= "") then
+		if li ~= "" then
 			msg_post(MainScript, GUI_LOAD, {li})
-		elseif (enter_target == GUI_SEEK) and (si ~= "") then
+		elseif si ~= "" then
 			msg_post(MainScript, GUI_SEEK, {si})
 		end
 	end
@@ -72,9 +63,9 @@ function on_message(self, message_id, message, sender)
 	--
 	if message_id == GUPDATE then
 		gui_set_text(Message, message[1])
-	elseif message_id == PLAY then
+	elseif message_id == SHOW_PLAY then
 		gui_set_text(PlayPause, "Play")
-	elseif message_id == PAUSE then
+	elseif message_id == SHOW_PAUSE then
 		gui_set_text(PlayPause, "Pause")
 	end
 end

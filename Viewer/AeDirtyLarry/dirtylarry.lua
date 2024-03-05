@@ -171,10 +171,11 @@ function dirtylarry.input(self, node, action_id, action, type, empty_text)
 
 	----------------
 	-- Modified by 1dealGas:
-	-- Tap outside an input field to deactivate it
+	-- Tap outside an input field to deactivate & clear it
 	--
 	elseif (action_id == dirtylarry.action_id_touch) and (action.pressed) then
 		dirtylarry.active_node = nil
+		input_node.data = ""
 	----------------
 
 	end

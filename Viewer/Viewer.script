@@ -1,11 +1,21 @@
 -- Prototypia Viewer Main Logics
 -- Copyright(c) 2024- 1dealGas, under the MIT License.
 
+--[[
+Our Architecture:
+	Viewer
+		-- Status
+			-- Audio
+			-- Chart[Fumen] Context
+			-- File Listening Params
+		-- GUI
+]]--
+
 
 -- Hash & String Caches
 --
 local hash = hash
-local disable, enable = hash("disable"), hash("enable")
+local disable, enable, touch = hash("disable"), hash("enable"), hash("touch")
 local tint_w, tint = hash("tint.w"), hash("tint")
 local Sprite = hash("Sprite")
 
@@ -18,43 +28,32 @@ local SCROLL_UP, BUTTON_UP = hash("SCROLL_UP"), hash("BUTTON_UP")
 local SCROLL_DOWN, BUTTON_DOWN = hash("SCROLL_DOWN"), hash("BUTTON_DOWN")
 local BUTTON_C = hash("BUTTON_C")
 
-local GUPDATE, PAUSE, PLAY = hash("GUPDATE"), hash("PAUSE"), hash("PLAY")
-local GUI_LOAD, GUI_SEEK = hash("GUI_LOAD"), hash("GUI_SEEK")
-local GUI_PLAY, GUI_OWV = hash("GUI_PLAY"), hash("GUI_OWV")
-
-
--- Component Caches
---
-local CreateWish, CreateHint, CreateAnim
-local ViewerGUI
+local GUPDATE, SHOW_PAUSE, SHOW_PLAY = hash("GUPDATE"), hash("SHOW_PAUSE"), hash("SHOW_PLAY")
+local GUI_LOAD, GUI_SEEK, GUI_PLAY, GUI_OWV = hash("GUI_LOAD"), hash("GUI_SEEK"), hash("GUI_PLAY"), hash("GUI_OWV")
 
 
 -- Function Caches
 -- Only functions used in a for loop, or the Update callback will be cached.
 --
-local NewTable = Arf2.NewTable
 local InitArf = Arf2.InitArf
 local UpdateArf = Arf2.UpdateArf
 local FinalArf = Arf2.FinalArf
 
-local go_delete = go.delete
-local collectgarbage = collectgarbage
-local factory_create = factory.create
 local msg_url = msg.url
 local msg_post = msg.post
-
-local vmath_vector4 = vmath.vector4
-local go_set = go.set   -- Set tint / tint.w
+local collectgarbage = collectgarbage
 local defos_set_window_title = defos.set_window_title
 local lfs_attributes = lfs.attributes
 local string_format = string.format
+local go_set = go.set   -- Set tint / tint.w
+
 
 
 -- Environment
 --
+local CreateWish, CreateHint, CreateAnim, ViewerGUI
 local Path, OpenWorksVolume = sys.get_save_file("Prototypia Viewer", "")
-local IsDarwin = (sys.get_sys_info().system_name == "Darwin")
-if IsDarwin then
+if sys.get_sys_info().system_name == "Darwin" then
 	OpenWorksVolume = function()
 		os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )
 	end
@@ -77,6 +76,7 @@ local wu_max = 0   -- A Chart[Fumen] Param that needs to be acquired at the runt
 local function EndContext()
 	-- Release Game Objects
 	--
+	local go_delete = go.delete
 	for i = 1, #wgos do go_delete(wgos[i]) end
 	for i = 1, #hgos do
 		go_delete(hgos[i])
@@ -100,14 +100,17 @@ local function EndContext()
 end
 
 local function NewContext(buf)
-	-- Preparation
-	--
-	if context_opened then EndContext() end
 	local b, t, w, h = InitArf(buf, true)
 
 	-- Context Creation
 	--
 	if b then
+		-- Cache Functions Here to avoid upvalues exceed
+		--
+		local NewTable = Arf2.NewTable
+		local factory_create = factory.create
+		local vmath_vector4 = vmath.vector4
+		
 		-- Create Tables
 		--
 		wgos, hgos, agos_l, agos_r = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
@@ -143,6 +146,9 @@ local function NewContext(buf)
 		--
 		context_opened = true
 		collectgarbage()
+		return true
+	else
+		return false
 	end
 end
 
@@ -212,80 +218,14 @@ local function UpdateContext(mstime)
 end
 
 
--- Status & Function Tables
+
+-- Status & Script Callbacks
 -- Audio source must be "Single 16-bit PCM" format
+-- AudioLen is a ms value
 --
 local FumenModification = 0   -- Reset it to 0 when loading a new Chart[Fumen]
 local Audio, AudioLen, FumenPath   -- Nullify them when exception happens
 
-local BUTTON_P, BUTTON_SP = hash("BUTTON_P"), hash("BUTTON_SP")
-local BUTTON_UP, BUTTON_UPC = hash("BUTTON_UP"), hash("BUTTON_UPC")
-local BUTTON_DOWN, BUTTON_DOWNC = hash("BUTTON_DOWN"), hash("BUTTON_DOWNC")
-
-local input_functions = {
-	[BUTTON_P] = function(self, action)
-	end,
-
-	[BUTTON_SP] = function(self, action)
-	end,
-
-	[SCROLL_UP] = function(self, action)
-	end,
-	
-	[BUTTON_UP] = function(self, action)
-	end,
-
-	[BUTTON_UPC] = function(self, action)
-	end,
-	
-	[SCROLL_DOWN] = function(self, action)
-	end,
-	
-	[BUTTON_DOWN] = function(self, action)
-	end,
-
-	[BUTTON_DOWNC] = function(self, action)
-	end
-}
-
-local msg_functions = {
-	[GUI_LOAD] = function(self, message, sender)   -- message -> {basename_str}
-		-- Load Audio
-		-- The Viewer could decode an *.ogg file into a WAV resource. Windows Only.
-		--
-
-		-- Load Context
-		--
-
-		-- Load File Listening & Update GUI
-		--
-	end,
-
-	[GUI_SEEK] = function(self, message, sender)   -- message -> {mstime_str}
-		if Audio then
-			local t = pcall(tonumber, message[0])
-			if t then
-				t = ( t < (AudioLen-10) ) and t or (AudioLen-10)
-				t = ( t > 0 ) and t or 0
-				Audio.time = t/1000   -- mstime -> time_in_sec
-			else
-				msg_post( ViewerGUI, GUPDATE, {"[!] Please input a valid mstime."} )
-			end
-		else
-			msg_post( ViewerGUI, GUPDATE, {"[!] Before seeking somewhere, you need to load a chart[fumen]."} )
-		end
-	end,
-
-	[GUI_PLAY] = function(self, message, sender)
-		
-	end,
-
-	[GUI_OWV] = OpenWorksVolume
-}
-
-
--- Script Callbacks
---
 function init(self)
 	-- Initial Settings
 	--
@@ -311,24 +251,13 @@ function init(self)
 	license = nil
 end
 
-function fixed_update(self, dt)   -- File listening & GC
-	if FumenPath then
-		local mdf = lfs_attributes(FumenPath, modification)
-		if mdf ~= FumenModification then
-			NewContext( sys.load_buffer(FumenPath) )
-			UpdateContext(AudioMsTime)
-			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
-			FumenModification = mdf
-		end
-	end
-	collectgarbage()
-end
-
 local last_ms = 0   -- No need to clear this manually
 function update(self, dt)
-	if Audio then
+	if Audio and context_opened then
 		local ms = Audio.time * 1000   -- There will be an offset value added
-		ms = (ms>0) and ms or 0
+		ms = ( ms > 0 ) and ms or 0
+		ms = ( ms < (AudioLen-10) ) and ms or AudioLen-10
+
 		if ms ~= last_ms then
 			UpdateContext(ms)
 			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, ms, AudioLen)} )
@@ -338,18 +267,350 @@ function update(self, dt)
 	end
 end
 
+function fixed_update(self, dt)   -- File listening & GC
+	if FumenPath then
+		local mdf = lfs_attributes(FumenPath, modification)
+		if mdf then   -- mdf == nil when the *.ar file is deleted
+			if mdf ~= FumenModification then
+				local _, buf = pcall(sys.load_buffer, FumenPath)
+				if buf then
+					if context_opened then EndContext() else FinalArf() end
+					local _, ok = pcall(NewContext, buf)
+					if ok then
+						UpdateContext(last_ms)
+						defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
+						FumenModification = mdf
+					else
+						msg_post( ViewerGUI, GUPDATE, {"[!] Fatal error happened when syncing the chart[fumen]"} )
+						if context_opened then EndContext() else FinalArf() end
+						openal.remove_source(Audio)
+						Audio, AudioLen = nil, 0
+						FumenModification = 0
+						FumenPath = nil
+					end
+				else
+					msg_post( ViewerGUI, GUPDATE, {"[*] File syncing failed"} )
+					FumenModification = mdf
+				end
+			end
+		end
+	end
+
+	if Audio and Audio.state ~= "playing" then
+		msg_post(ViewerGUI, SHOW_PLAY)
+	end
+
+	collectgarbage()
+end
+
+local msg_functions = {
+	[GUI_LOAD] = function(self, message)   -- message -> {basename_str}
+		-- Free the Previous Stuff
+		--
+		if Audio then
+			openal.remove_source(Audio)
+			Audio = nil
+		end
+
+		FumenPath = nil
+		AudioLen, FumenModification = 0, 0
+		if context_opened then EndContext() else FinalArf() end
+		
+		-- Load Audio & Trial Play
+		--
+		local wav_path = sys.get_save_file("Prototypia Viewer", message[1] .. ".wav")
+		local attr = lfs_attributes(wav_path)
+		if attr and attr.size > 4 then
+			local _, audiobuf = pcall(sys.load_buffer, wav_path)
+			if audiobuf then
+				local _, ab, al = pcall(openal.new_source, audiobuf)
+				if ab then
+					--
+					-- Trial Playing
+					--
+					local testpos = (al>1) and al-1 or al
+					ab.time = testpos
+					ab:play()
+					ab:pause()
+					if ab.state == "initial" or ab.time == 0 then
+						msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Single 16-bit PCM\" format to load it", message[1])} )
+						openal.remove_source(ab)
+					else
+						ab:rewind()
+						Audio, AudioLen = ab, al*1000
+					end
+				else
+					msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Single 16-bit PCM\" format to load it", message[1])} )
+				end
+			else
+				msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.wav\"", message[1])} )
+			end
+		elseif decodeogg then
+			--
+			-- (Windows Only) The Viewer could decode an *.ogg file into a WAV resource.
+			--
+			local ogg_path = sys.get_save_file("Prototypia Viewer", message[1] .. ".ogg")
+			local ogg_attr = lfs_attributes(ogg_path)
+			if ogg_attr then
+				local _, audiobuf = pcall(sys.load_buffer, ogg_path)
+				if audiobuf then
+					local decoded = pcall(decodeogg.decodeogg, audiobuf)
+					if decoded then
+						local _, ab, al = pcall(openal.new_source, audiobuf)
+						if ab then
+							--
+							-- Trial Playing
+							--
+							local testpos = (al>1) and al-1 or al
+							ab.time = testpos
+							ab:play()
+							ab:pause()
+							if ab.state == "initial" or ab.time == 0 then
+								msg_post( ViewerGUI, GUPDATE, {string_format("[!] Trial Playing of \"%s.ogg\" failed", message[1])} )
+								openal.remove_source(ab)
+							else
+								ab:rewind()
+								Audio, AudioLen = ab, al*1000
+							end
+						else
+							msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to decode \"%s.ogg\"", message[1])} )
+						end
+					else
+						msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to decode \"%s.ogg\"", message[1])} )
+					end
+				else
+					msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.ogg\"", message[1])} )
+				end
+			else
+				msg_post( ViewerGUI, GUPDATE, {string_format("[!] Both of file \"%s.wav\" and \"%s.ogg\" don't exist", message[1], message[1])} )
+			end
+		else
+			msg_post( ViewerGUI, GUPDATE, {string_format("[!] File \"%s.wav\" doesn't exist, or smaller than 4KB", message[1])} )
+		end
+
+		-- Load Context
+		--
+		if Audio then
+			local context_path = sys.get_save_file("Prototypia Viewer", message[1] .. ".ar")
+			local context_attr = lfs_attributes(context_path)
+			if context_attr then
+				local _, fmbuf = pcall(sys.load_buffer, context_path)
+				if fmbuf then
+					local _, ok = pcall(NewContext, fmbuf)
+					if ok then
+						--
+						-- File Listening Set Here
+						--
+						FumenPath = context_path
+						FumenModification = context_attr.modification
+					else
+						msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to parse \"%s.ar\"", message[1])} )
+						if context_opened then EndContext() else FinalArf() end
+						openal.remove_source(Audio)
+						Audio, AudioLen = nil, 0
+					end
+				else
+					msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.ar\"", message[1])} )
+					openal.remove_source(Audio)
+					Audio, AudioLen = nil, 0
+				end
+			else
+				msg_post( ViewerGUI, GUPDATE, {string_format("[!] File \"%s.ar\" doesn't exist", message[1])} )
+				openal.remove_source(Audio)
+				Audio, AudioLen = nil, 0
+			end
+		end
+
+		-- Initial Update
+		--
+		if context_opened then
+			UpdateContext(0)
+			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, 0, AudioLen)} )
+			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
+			last_ms = 0
+		else
+			defos_set_window_title( "Prototypia Viewer  --  " .. Path )
+		end
+
+		collectgarbage()
+	end,
+
+	[GUI_SEEK] = function(self, message)   -- message -> {mstime_str}
+		if Audio and Audio.state ~= "playing" then
+			local _, t = pcall(tonumber, message[1])
+			if t then
+				t = ( t < (AudioLen-10) ) and t or (AudioLen-10)
+				t = ( t > 0 ) and t or 0
+				Audio:play()
+				Audio.time = t/1000   -- mstime -> time_in_sec
+				Audio:pause()
+			else
+				msg_post( ViewerGUI, GUPDATE, {"[*] Mstime input invalid"} )
+			end
+		else
+			msg_post( ViewerGUI, GUPDATE, {"[*] Before seeking somewhere, you need to load a chart[fumen]"} )
+		end
+	end,
+
+	[GUI_PLAY] = function()
+		if Audio then
+			if Audio.state == "playing" then
+				Audio:pause()
+				msg_post(ViewerGUI, SHOW_PLAY)
+			else
+				Audio:play()
+				if Audio.state ~= "playing" then
+					msg_post(ViewerGUI, SHOW_PLAY)
+				else
+					msg_post(ViewerGUI, SHOW_PAUSE)
+				end
+			end
+		else
+			msg_post( ViewerGUI, GUPDATE, {"[*] Before playing, you need to load a chart[fumen]"} )
+		end
+	end,
+
+	[GUI_OWV] = OpenWorksVolume
+}
+function on_message(self, message_id, message)
+	if msg_functions[message_id] then
+		msg_functions[message_id](self, message)
+	end
+end
+
+
+local sp_init = nil
+local ctrl_pressed = false   -- No need to clear this manually
+local input_functions = {
+	[BUTTON_P] = function(self, action)
+		if ctrl_pressed and action.pressed then
+			if Audio then
+				if Audio.state == "playing" then
+					Audio:pause()
+					msg_post(ViewerGUI, SHOW_PLAY)
+				else
+					Audio:play()
+					if Audio.state ~= "playing" then
+						msg_post(ViewerGUI, SHOW_PLAY)
+					else
+						msg_post(ViewerGUI, SHOW_PAUSE)
+					end
+				end
+			end
+		end
+	end,
+
+	[BUTTON_SP] = function(self, action)
+		if action.released then
+			if Audio and sp_init then
+				Audio:play()
+				msg_post(ViewerGUI, SHOW_PLAY)
+				Audio.time = sp_init
+				Audio:pause()
+			end
+			sp_init = nil
+		elseif ctrl_pressed and action.pressed then
+			if Audio and Audio.state ~= "playing" then
+				sp_init = Audio.time
+				Audio:play()
+				if Audio.state ~= "playing" then
+					sp_init = nil
+					msg_post(ViewerGUI, SHOW_PLAY)
+				else
+					msg_post(ViewerGUI, SHOW_PAUSE)
+				end
+			end
+		end
+	end,
+
+	[SCROLL_UP] = function(self, action)
+		if action.value == 1 then
+			if Audio and Audio.state ~= "playing" then
+				-- Time test
+				--
+				local t = ctrl_pressed and (Audio.time - 0.37) or (Audio.time - 0.037)
+				t = ( t > 0 ) and t or 0
+				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+
+				-- Time reset
+				--
+				Audio:play()
+				Audio.time = t
+				Audio:pause()
+			end
+		end
+	end,
+
+	[BUTTON_UP] = function(self, action)
+		if action.pressed or action.repeated then
+			if Audio and Audio.state ~= "playing" then
+				-- Time test
+				--
+				local t = ctrl_pressed and (Audio.time - 0.37) or (Audio.time - 0.037)
+				t = ( t > 0 ) and t or 0
+				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+
+				-- Time reset
+				--
+				Audio:play()
+				Audio.time = t
+				Audio:pause()
+			end
+		end
+	end,
+
+	[SCROLL_DOWN] = function(self, action)
+		if action.value == 1 then
+			if Audio and Audio.state ~= "playing" then
+				-- Time test
+				--
+				local t = ctrl_pressed and (Audio.time + 0.37) or (Audio.time + 0.037)
+				t = ( t > 0 ) and t or 0
+				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+
+				-- Time reset
+				--
+				Audio:play()
+				Audio.time = t
+				Audio:pause()
+			end
+		end
+	end,
+
+	[BUTTON_DOWN] = function(self, action)
+		if action.pressed or action.repeated then
+			if Audio and Audio.state ~= "playing" then
+				-- Time test
+				--
+				local t = ctrl_pressed and (Audio.time + 0.37) or (Audio.time + 0.037)
+				t = ( t > 0 ) and t or 0
+				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+
+				-- Time reset
+				--
+				Audio:play()
+				Audio.time = t
+				Audio:pause()
+			end
+		end
+	end,
+
+	[BUTTON_C] = function(self, action)
+		if action.released then ctrl_pressed = false
+		elseif action.pressed then ctrl_pressed = true
+		end
+	end
+}
 function on_input(self, action_id, action)
 	if action_id and input_functions[action_id] then
 		input_functions[action_id](self, action)
+		-- if action_id == SCROLL_UP then print(8, action.value) end
+		-- if action_id == SCROLL_DOWN then print(9, action.value) end
+	elseif action_id == touch and action.released then
+		if context_opened then
+			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, last_ms, AudioLen)} )
+		else
+			msg_post( ViewerGUI, GUPDATE, {"[MS] 0 · 0"} )
+		end
 	end
 end
-
-function on_message(self, message_id, message, sender)
-	if msg_functions[message_id] then
-		msg_functions[message_id](self, message, sender)
-	end
-end
-
-
--- Audio Test
--- audio_test, at = openal.new_source( sys.load_buffer( sys.get_save_file("Prototypia Viewer", "test.wav") ) )
