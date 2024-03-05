@@ -26,16 +26,11 @@ local function P() msg_post(MainScript, GUI_PLAY) end
 
 -- Script Callbacks
 --
-local self_url
-local function aif_later()
-	msg_post(self_url, "acquire_input_focus")
-end
 function init(self)
 	Message = gui.get_node("Message")
 	PlayPause = gui.get_node("Play/larrylabel")
 	MainScript = msg.url("Prototypia:/Viewer#Logics")
-	timer.delay(0.1, false, aif_later)
-	self_url = msg.url(".")
+	msg_post(".", "acquire_input_focus")
 end
 
 local load_input, seek_input

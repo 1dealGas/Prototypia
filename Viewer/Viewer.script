@@ -2,13 +2,14 @@
 -- Copyright(c) 2024- 1dealGas, under the MIT License.
 
 --[[
-Our Architecture:
+Our Workflow:
 	Viewer
 		-- Status
 			-- Audio
 			-- Chart[Fumen] Context
 			-- File Listening Params
 		-- GUI
+	Python Part
 ]]--
 
 
@@ -302,6 +303,7 @@ function fixed_update(self, dt)   -- File listening & GC
 
 	collectgarbage()
 end
+
 
 local msg_functions = {
 	[GUI_LOAD] = function(self, message)   -- message -> {basename_str}
@@ -604,8 +606,6 @@ local input_functions = {
 function on_input(self, action_id, action)
 	if action_id and input_functions[action_id] then
 		input_functions[action_id](self, action)
-		-- if action_id == SCROLL_UP then print(8, action.value) end
-		-- if action_id == SCROLL_DOWN then print(9, action.value) end
 	elseif action_id == touch and action.released then
 		if context_opened then
 			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, last_ms, AudioLen)} )
