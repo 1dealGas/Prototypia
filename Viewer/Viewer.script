@@ -51,7 +51,7 @@ local go_set = go.set   -- Set tint / tint.w
 -- Environment
 --
 local CreateWish, CreateHint, CreateAnim, ViewerGUI
-local Path, OpenWorksVolume = sys.get_save_file("Prototypia Viewer", "")
+local Path, OpenWorksVolume = sys.get_save_file("Prototypia Works", "")
 if sys.get_sys_info().system_name == "Darwin" then
 	OpenWorksVolume = function()
 		os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )
@@ -317,7 +317,7 @@ local msg_functions = {
 		
 		-- Load Audio & Trial Play
 		--
-		local wav_path = sys.get_save_file("Prototypia Viewer", message[1] .. ".wav")
+		local wav_path = sys.get_save_file("Prototypia Works", message[1] .. ".wav")
 		local attr = lfs_attributes(wav_path)
 		if attr and attr.size > 4 then
 			local _, audiobuf = pcall(sys.load_buffer, wav_path)
@@ -345,7 +345,7 @@ local msg_functions = {
 			--
 			-- (Windows Only) The Viewer could decode an *.ogg file into a WAV resource.
 			--
-			local ogg_path = sys.get_save_file("Prototypia Viewer", message[1] .. ".ogg")
+			local ogg_path = sys.get_save_file("Prototypia Works", message[1] .. ".ogg")
 			local ogg_attr = lfs_attributes(ogg_path)
 			if ogg_attr then
 				local _, audiobuf = pcall(sys.load_buffer, ogg_path)
@@ -387,7 +387,7 @@ local msg_functions = {
 		-- Load Context
 		--
 		if Audio then
-			local context_path = sys.get_save_file("Prototypia Viewer", message[1] .. ".ar")
+			local context_path = sys.get_save_file("Prototypia Works", message[1] .. ".ar")
 			local context_attr = lfs_attributes(context_path)
 			if context_attr then
 				local _, fmbuf = pcall(sys.load_buffer, context_path)
