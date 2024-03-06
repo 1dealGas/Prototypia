@@ -21,7 +21,7 @@ local tint_w, tint = hash("tint.w"), hash("tint")
 local Sprite = hash("Sprite")
 
 local msfmt = "[MS] %d · %d"
-local titlefmt = "[%d]  Prototypia Viewer  --  %s"
+local titlefmt = "[%d]  Prototypia Viewer  --  %s  --  %d Hints"
 local modification = "modification"
 
 local BUTTON_P, BUTTON_SP = hash("BUTTON_P"), hash("BUTTON_SP")
@@ -72,6 +72,7 @@ local wtint, htint, atint   -- Tables of tint datas
 local wgos, hgos, agos_l, agos_r   -- Tables of Game Objects' URLs
 local w_sprites, h_sprites, al_sprites, ar_sprites   -- Tables of Sprite Components' URLs
 local last_wu, last_hu, last_au = 0, 0, 0   -- Used to send "enable" and "disable" messages
+local hint_count = 0
 local wu_max = 0   -- A Chart[Fumen] Param that needs to be acquired at the runtime
 
 local function EndContext()
@@ -91,6 +92,7 @@ local function EndContext()
 	wgos, hgos, agos_l, agos_r = nil, nil, nil, nil
 	w_sprites, h_sprites, al_sprites, ar_sprites = nil, nil, nil, nil
 	last_wu, last_hu, last_au = 0, 0, 0
+	hint_count = 0
 	wu_max = 0
 
 	-- Clean Up
@@ -145,6 +147,7 @@ local function NewContext(buf)
 		
 		-- Clean Up
 		--
+		hint_count = t
 		context_opened = true
 		collectgarbage()
 		return true
@@ -262,7 +265,7 @@ function update(self, dt)
 		if ms ~= last_ms then
 			UpdateContext(ms)
 			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, ms, AudioLen)} )
-			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
+			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath, hint_count) )
 			last_ms = ms
 		end
 	end
@@ -279,7 +282,7 @@ function fixed_update(self, dt)   -- File listening & GC
 					local _, ok = pcall(NewContext, buf)
 					if ok then
 						UpdateContext(last_ms)
-						defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
+						defos_set_window_title( string_format(titlefmt, wu_max, FumenPath, hint_count) )
 						FumenModification = mdf
 					else
 						msg_post( ViewerGUI, GUPDATE, {"[!] Fatal error happened when syncing the chart[fumen]"} )
@@ -297,10 +300,7 @@ function fixed_update(self, dt)   -- File listening & GC
 		end
 	end
 
-	if Audio and Audio.state ~= "playing" then
-		msg_post(ViewerGUI, SHOW_PLAY)
-	end
-
+	if Audio and Audio.state ~= "playing" then msg_post(ViewerGUI, SHOW_PLAY) end
 	collectgarbage()
 end
 
@@ -428,7 +428,7 @@ local msg_functions = {
 		if context_opened then
 			UpdateContext(0)
 			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, 0, AudioLen)} )
-			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath) )
+			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath, hint_count) )
 			last_ms = 0
 		else
 			defos_set_window_title( "Prototypia Viewer  --  " .. Path )
