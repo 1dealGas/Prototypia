@@ -32,7 +32,6 @@ local BUTTON_C = hash("BUTTON_C")
 local GUPDATE, SHOW_PAUSE, SHOW_PLAY = hash("GUPDATE"), hash("SHOW_PAUSE"), hash("SHOW_PLAY")
 local GUI_LOAD, GUI_SEEK, GUI_PLAY, GUI_OWV = hash("GUI_LOAD"), hash("GUI_SEEK"), hash("GUI_PLAY"), hash("GUI_OWV")
 
-
 -- Function Caches
 -- Only functions used in a for loop, or the Update callback will be cached.
 --
@@ -47,7 +46,6 @@ local defos_set_window_title = defos.set_window_title
 local lfs_attributes = lfs.attributes
 local string_format = string.format
 local go_set = go.set   -- Set tint / tint.w
-
 
 
 -- Environment
@@ -222,9 +220,8 @@ local function UpdateContext(mstime)
 end
 
 
-
 -- Status & Script Callbacks
--- Audio source must be "Single 16-bit PCM" format
+-- Audio source must be "Signed 16-bit PCM" format
 -- AudioLen is a ms value
 --
 local FumenModification = 0   -- Reset it to 0 when loading a new Chart[Fumen]
@@ -327,22 +324,19 @@ local msg_functions = {
 			if audiobuf then
 				local _, ab, al = pcall(openal.new_source, audiobuf)
 				if ab then
-					--
 					-- Trial Playing
 					--
-					local testpos = (al>1) and al-1 or al
-					ab.time = testpos
 					ab:play()
 					ab:pause()
-					if ab.state == "initial" or ab.time == 0 then
-						msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Single 16-bit PCM\" format to load it", message[1])} )
+					if ab.state == "initial" then
+						msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Signed 16-bit PCM\" format to load it", message[1])} )
 						openal.remove_source(ab)
 					else
 						ab:rewind()
 						Audio, AudioLen = ab, al*1000
 					end
 				else
-					msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Single 16-bit PCM\" format to load it", message[1])} )
+					msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Signed 16-bit PCM\" format to load it", message[1])} )
 				end
 			else
 				msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.wav\"", message[1])} )
@@ -443,9 +437,7 @@ local msg_functions = {
 			if t then
 				t = ( t < (AudioLen-10) ) and t or (AudioLen-10)
 				t = ( t > 0 ) and t or 0
-				Audio:play()
 				Audio.time = t/1000   -- mstime -> time_in_sec
-				Audio:pause()
 			else
 				msg_post( ViewerGUI, GUPDATE, {"[*] Mstime input invalid"} )
 			end
@@ -536,9 +528,7 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio:play()
 				Audio.time = t
-				Audio:pause()
 			end
 		end
 	end,
@@ -554,9 +544,7 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio:play()
 				Audio.time = t
-				Audio:pause()
 			end
 		end
 	end,
@@ -572,9 +560,7 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio:play()
 				Audio.time = t
-				Audio:pause()
 			end
 		end
 	end,
@@ -590,9 +576,7 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio:play()
 				Audio.time = t
-				Audio:pause()
 			end
 		end
 	end,
