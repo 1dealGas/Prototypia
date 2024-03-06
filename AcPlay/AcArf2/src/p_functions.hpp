@@ -630,7 +630,7 @@ static int UpdateArf(lua_State* L) {
 				const auto& node_n = Arf::d1[dt_p1 + 1];
 				if( mstime < node_n.init_ms ) {   // Actually  if( mstime >= node_n.init_ms ) continue;
 					const auto& node_c = Arf::d1[dt_p1];
-					if( node_c.ratio > node_n.ratio )
+					if( node_c.base > node_n.base )
 						dt1 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
 					else
 						dt1 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
@@ -656,7 +656,7 @@ static int UpdateArf(lua_State* L) {
 				const auto& node_n = Arf::d2[dt_p2 + 1];
 				if( mstime < node_n.init_ms ) {   // Actually  if( mstime >= node_n.init_ms ) continue;
 					const auto& node_c = Arf::d2[dt_p2];
-					if( node_c.ratio > node_n.ratio )
+					if( node_c.base > node_n.base )
 						dt2 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
 					else
 						dt2 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
