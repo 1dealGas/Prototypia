@@ -1,10 +1,6 @@
 name: "AcPlay"
 
 platforms:
-    x86_64-osx:
-        context:
-            flags: ["-std=c++11", "-Ofast"]
-
     x86-win32:
         context:
             flags: ["-std=c++14", "-Ofast"]
@@ -12,6 +8,14 @@ platforms:
     x86_64-win32:
         context:
             flags: ["-std=c++14", "-Ofast"]
+
+    x86_64-osx:
+        context:
+            flags: ["-std=c++11", "-Ofast"]
+
+    arm64-osx:
+        context:
+            flags: ["-std=c++11", "-Ofast"]
 
     armv7-android:
         context:
