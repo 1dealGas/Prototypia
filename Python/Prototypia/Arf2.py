@@ -1643,7 +1643,7 @@ def Arf2Compile() -> None:
 	## If the *.ar file exists, backup it
 	path:str = os.path.join(dir, fnm + ".ar")
 	if os.path.exists(path):
-		_ctime = time.ctime( os.path.getatime(path) )
+		_ctime = time.ctime( os.path.getatime(path) ).replace(":", "·")
 		new_path:str = os.path.join(dir, fnm + " --" + _ctime + "-- .ar")
 		shutil.copy(path, new_path)
 		print("\n----------------")
