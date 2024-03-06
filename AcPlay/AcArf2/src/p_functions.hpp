@@ -634,6 +634,7 @@ static int UpdateArf(lua_State* L) {
 						dt1 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
 					else
 						dt1 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
+					break;
 				}
 			}
 		}
@@ -660,6 +661,7 @@ static int UpdateArf(lua_State* L) {
 						dt2 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
 					else
 						dt2 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
+					break;
 				}
 			}
 		}
@@ -1193,7 +1195,8 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Process Echoes */   // NYI
+	/* Process Echoes */
+	// NYI
 
 
 	/* Clean Up & Do Returns */
