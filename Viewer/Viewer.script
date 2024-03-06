@@ -452,11 +452,11 @@ local msg_functions = {
 				Audio:pause()
 				msg_post(ViewerGUI, SHOW_PLAY)
 			else
+				local at = Audio.time
 				Audio:play()
-				if Audio.state ~= "playing" then
-					msg_post(ViewerGUI, SHOW_PLAY)
-				else
-					msg_post(ViewerGUI, SHOW_PAUSE)
+				Audio.time = at
+				if Audio.state ~= "playing" then msg_post(ViewerGUI, SHOW_PLAY)
+				else msg_post(ViewerGUI, SHOW_PAUSE)
 				end
 			end
 		else
