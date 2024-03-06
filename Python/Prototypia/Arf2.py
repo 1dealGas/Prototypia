@@ -98,6 +98,24 @@ def OPSorterForAngleNodes(a:Tuple[float,int,int], b:Tuple[float,int,int]) -> int
 	elif id(a) == id(b): return 0
 	else: raise OverlapProhibition("Adding multiple AngleNodes with the same Bartime to a single WishChild is prohibited.")
 
+# v0.5: Deprecate the OPSorter for PosNodes.
+@functools.cmp_to_key
+def TPSorter(a:tuple[Any, int], b:tuple[Any, int]) -> int:
+	if a[0].bartime > b[0].bartime: return 1
+	elif a[0].bartime < b[0].bartime: return -1
+	elif a[1] > b[1]: return 1
+	elif a[1] < b[1]: return -1
+	else: return 0
+def SortPosNodes(l:list) -> None:
+	_tl = []
+	_idx = 0
+	for n in l:
+		_tl.append( (n, _idx) )
+		_idx += 1
+	_tl.sort(key = TPSorter)
+	for i in range(len(l)):
+		l[i] = _tl[i][0]
+
 
 # Arf2 Class Defs
 class Arf2Prototype:
@@ -398,7 +416,7 @@ class WishGroup:
 
 		n = PosNode(bartime, x, y, easetype, curve_init, curve_end)
 		self.__nodes.append(n)
-		self.__nodes.sort(key = OPSorter)
+		SortPosNodes(self.__nodes)   # self.__nodes.sort(key = OPSorter)
 		return self
 
 	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:Union[int, None] = None) -> Self:
@@ -490,9 +508,8 @@ class WishGroup:
 		h = Hint(bartime, self)
 		Arf2Prototype.last_hint = h
 		Arf2Prototype.hint.append(h)   # Hints in the Arf2Protorype class will be sorted in the compling process.
-
 		self.__mhints.append(h)
-		self.__mhints.sort(key = OPSorter)
+		# self.__mhints.sort(key = OPSorter)   # Overlapped Hints will be removed automatically in the compilation
 
 		return self
 
@@ -1402,12 +1419,8 @@ def Arf2Compile() -> None:
 	Usage of Flatbuffers:
 	(0) Serialized Stream:
 		builder = flatbuffers.Builder(0)
-		# Create Elements ······
-
-		RootType.Start(builder)   # Actually Table Action
-		# Create the Root Table ······
-		roottype_end = RootType.End(builder)   # Actually Table Action
-
+		# Create Elements······, then the Root Table
+		roottype_end = RootType.End(builder)
 		builder.Finish(roottype_end)
 		result:bytearray = builder.Output()
 
@@ -1645,7 +1658,6 @@ def Arf2Compile() -> None:
 		print("Arf2 Generation Completed.")
 		print("Filename: " + os.path.basename(path) )
 		print("----------------\n")
-
 
 
 # Automating the Compiler Function
