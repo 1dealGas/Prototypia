@@ -72,7 +72,6 @@ app_icon = /System/Viewer.icns
 max_input_stack_entries = 2
 
 [graphics]
-max_draw_calls = 64
 verify_graphics_calls = 0
 
 [physics]
