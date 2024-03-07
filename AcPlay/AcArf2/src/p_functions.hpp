@@ -623,7 +623,7 @@ static int UpdateArf(lua_State* L) {
 
 		// Iterating When Tail Judging Fails
 		else {
-			if( mstime < last_ms ) {   // Regression
+			if(mstime < last_ms) {   // Regression
 				while( (dt_p1 > 0) && mstime < Arf::d1[dt_p1].init_ms ) dt_p1--;
 			}
 
@@ -649,7 +649,6 @@ static int UpdateArf(lua_State* L) {
 	double dt2 = 0.0; {
 
 		// Tail Judging
-		// Prototypia guarantees that init_ms of the 1st DetlaNode of each layer equals to 0
 		const uint16_t dt_tail = Arf::d2c - 1;
 		const auto& node_l = Arf::d2[dt_tail];
 		if( mstime >= node_l.init_ms )
@@ -657,7 +656,7 @@ static int UpdateArf(lua_State* L) {
 
 		// Iterating When Tail Judging Fails
 		else {
-			if( mstime < last_ms ) {   // Regression
+			if(mstime < last_ms) {   // Regression
 				while( (dt_p2 > 0) && mstime < Arf::d2[dt_p2].init_ms ) dt_p2--;
 			}
 
@@ -1208,7 +1207,8 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Process Echoes */   // NYI
+	/* Process Echoes */
+	// NYI
 
 
 	/* Clean Up & Do Returns */
