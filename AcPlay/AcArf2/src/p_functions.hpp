@@ -623,19 +623,25 @@ static int UpdateArf(lua_State* L) {
 
 		// Iterating When Tail Judging Fails
 		else {
-			if( mstime < last_ms )   // Regression
+			if( mstime < last_ms ) {   // Regression
 				while( (dt_p1 > 0) && mstime < Arf::d1[dt_p1].init_ms ) dt_p1--;
+			}
 
-			for( ; dt_p1 < dt_tail; dt_p1++ ) {
+			while(dt_p1 < dt_tail) {
+				const auto& node_c = Arf::d1[dt_p1];
 				const auto& node_n = Arf::d1[dt_p1 + 1];
-				if( mstime < node_n.init_ms ) {   // Actually  if( mstime >= node_n.init_ms ) continue;
-					const auto& node_c = Arf::d1[dt_p1];
+				if( mstime >= node_n.init_ms ) {
+					dt_p1++;	continue;   // DTime While Loop
+				}
+
+				/* Value Acquisition */ {
 					if( node_c.base > node_n.base )
 						dt1 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
 					else
 						dt1 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
-					break;
 				}
+
+				break;   // DTime While Loop
 			}
 		}
 	}
@@ -643,6 +649,7 @@ static int UpdateArf(lua_State* L) {
 	double dt2 = 0.0; {
 
 		// Tail Judging
+		// Prototypia guarantees that init_ms of the 1st DetlaNode of each layer equals to 0
 		const uint16_t dt_tail = Arf::d2c - 1;
 		const auto& node_l = Arf::d2[dt_tail];
 		if( mstime >= node_l.init_ms )
@@ -650,19 +657,25 @@ static int UpdateArf(lua_State* L) {
 
 		// Iterating When Tail Judging Fails
 		else {
-			if( mstime < last_ms )   // Regression
+			if( mstime < last_ms ) {   // Regression
 				while( (dt_p2 > 0) && mstime < Arf::d2[dt_p2].init_ms ) dt_p2--;
+			}
 
-			for( ; dt_p2 < dt_tail; dt_p2++ ) {
+			while(dt_p2 < dt_tail) {
+				const auto& node_c = Arf::d2[dt_p2];
 				const auto& node_n = Arf::d2[dt_p2 + 1];
-				if( mstime < node_n.init_ms ) {   // Actually  if( mstime >= node_n.init_ms ) continue;
-					const auto& node_c = Arf::d2[dt_p2];
+				if( mstime >= node_n.init_ms ) {
+					dt_p2++;	continue;   // DTime While Loop
+				}
+
+				/* Value Acquisition */ {
 					if( node_c.base > node_n.base )
 						dt2 = node_c.base - (mstime - node_c.init_ms) * node_c.ratio;
 					else
 						dt2 = node_c.base + (mstime - node_c.init_ms) * node_c.ratio;
-					break;
 				}
+
+				break;   // DTime While Loop
 			}
 		}
 	}
@@ -1195,8 +1208,7 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Process Echoes */
-	// NYI
+	/* Process Echoes */   // NYI
 
 
 	/* Clean Up & Do Returns */
