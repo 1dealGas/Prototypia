@@ -502,9 +502,10 @@ local input_functions = {
 			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
-				local t = ctrl_pressed and (Audio.time - 0.37) or (Audio.time - 0.037)
+				local t = GetTime(Audio)
+				t = ctrl_pressed and (t - 370) or (t - 37)
 				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
 
 				-- Time reset
 				--
@@ -518,9 +519,10 @@ local input_functions = {
 			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
-				local t = ctrl_pressed and (Audio.time - 0.37) or (Audio.time - 0.037)
+				local t = GetTime(Audio)
+				t = ctrl_pressed and (t - 370) or (t - 37)
 				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
 
 				-- Time reset
 				--
@@ -534,9 +536,10 @@ local input_functions = {
 			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
-				local t = ctrl_pressed and (Audio.time + 0.37) or (Audio.time + 0.037)
+				local t = GetTime(Audio)
+				t = ctrl_pressed and (t + 370) or (t + 37)
 				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
 
 				-- Time reset
 				--
@@ -550,9 +553,10 @@ local input_functions = {
 			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
-				local t = ctrl_pressed and (Audio.time + 0.37) or (Audio.time + 0.037)
+				local t = GetTime(Audio)
+				t = ctrl_pressed and (t + 370) or (t + 37)
 				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 0.01) ) and t or (AudioLen - 0.01)
+				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
 
 				-- Time reset
 				--
