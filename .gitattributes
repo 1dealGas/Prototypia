@@ -17,8 +17,7 @@ Python/Prototypia/WishChild.py linguist-generated
 Python/Prototypia/WishGroup.py linguist-generated
 
 AcPlay/AcArf2/include/flatbuffers/** linguist-vendored
-Viewer/AcDecodeOgg/** linguist-vendored
+Viewer/AcAudio/** linguist-vendored
 Viewer/AcDefOS/** linguist-vendored
 Viewer/AcLFS/** linguist-vendored
-Viewer/AcOpenAL/** linguist-vendored
 Viewer/AeDirtyLarry/** linguist-vendored
