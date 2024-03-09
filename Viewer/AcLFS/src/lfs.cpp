@@ -965,7 +965,7 @@ static const struct luaL_Reg fslib[] = {
 }*/
 
 
-static void LuaInit(lua_State* L) {
+static void LFSLuaInit(lua_State* L) {
     int top = lua_gettop(L);
 
     dir_create_meta (L);
@@ -983,7 +983,7 @@ dmExtension::Result AppInitializeLFSExtension(dmExtension::AppParams* params) {
 }
 
 dmExtension::Result InitializeLFSExtension(dmExtension::Params* params) {
-    LuaInit(params->m_L);
+    LFSLuaInit(params->m_L);
     dmLogInfo("Registered %s Extension\n", MODULE_NAME);
     return dmExtension::RESULT_OK;
 }
