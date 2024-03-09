@@ -127,9 +127,9 @@ static int AmCreateUnit(lua_State* L) {
 		lua_pushlightuserdata(L, S);   // Unit Handle or Msg
 
 		// Audio Length in Ms
-		uint64_t pcmlen = 0;   // The PCM length getter needs to return a ma_result value
-		ma_resource_manager_data_source_get_length_in_pcm_frames(RH, &pcmlen);
-		lua_pushnumber( L, (double)pcmlen / (double)ma_engine_get_sample_rate(&PlayerEngine) * 1000.0 );
+		float len = 0;   // The length getter needs to return a ma_result value
+		ma_sound_get_length_in_seconds(S, &len);
+		lua_pushnumber( L, (uint64_t)(len * 1000.0) );
 
 		// Unit Emplacing
 		PlayerUnits[S] = {S, false};
