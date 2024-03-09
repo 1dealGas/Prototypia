@@ -82,6 +82,15 @@
     - name: OK
       type: boolean
 
+  - name: CheckPlaying
+    type: function
+    parameters:
+    - name: unit_handle
+      type: table
+    returns:
+    - name: status
+      type: boolean
+
   - name: GetTime
     type: function
     parameters:

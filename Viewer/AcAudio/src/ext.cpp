@@ -199,6 +199,19 @@ static int AmStopUnit(lua_State* L) {
 
 	return 1;
 }
+static int AmCheckPlaying(lua_State* L) {
+	const auto UH = (ma_sound*)lua_touserdata(L, 1);   // Unit Handle
+
+	if( PlayerUnits.count(UH) ) {
+		const bool p = ma_sound_is_playing(UH);
+		PlayerUnits[UH].playing = p;
+		lua_pushboolean(L, p);
+	}
+	else
+		lua_pushnil(L);   // Status
+
+	return 1;
+}
 static int AmGetTime(lua_State* L) {
 	const auto UH = (ma_sound*)lua_touserdata(L, 1);   // Unit Handle
 
@@ -332,6 +345,7 @@ constexpr luaL_reg AmFuncs[] = {
 	{"CreateUnit", AmCreateUnit}, {"ReleaseUnit", AmReleaseUnit},
 	{"PlayUnit", AmPlayUnit}, {"StopUnit", AmStopUnit},
 	{"GetTime", AmGetTime}, {"SetTime", AmSetTime},
+	{"CheckPlaying", AmCheckPlaying},
 	{0, 0}
 };
 
@@ -428,5 +442,7 @@ inline dmExtension::Result AmFinal(dmExtension::Params* p) {
 	return dmExtension::RESULT_OK;   // No further cleranup since it's the finalizer
 }
 
-inline dmExtension::Result AmAPPOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
+inline dmExtension::Result AmAPPOK(dmExtension::AppParams* params) {
+	return dmExtension::RESULT_OK;
+}
 DM_DECLARE_EXTENSION(AcAudio, "AcAudio", AmAPPOK, AmAPPOK, AmInit, nullptr, AmOnEvent, AmFinal)
