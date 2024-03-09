@@ -232,11 +232,12 @@ static int AmSetTime(lua_State* L) {   // Supports both setting when playing & s
 		ma_sound_get_length_in_seconds(U, &len);
 		len *= 1000.0f;
 
-		// Set the time
+		// Set the time. We need a pseudo-playing to sync the timestamp.
 		ma_sound_stop(U);
 		ms = (ms > 0) ? ms : 0;
 		ms = (ms < len-2.0) ? ms : len-2.0;
 		ma_sound_seek_to_pcm_frame( U, (uint64_t)(ms * ma_engine_get_sample_rate(&PlayerEngine) / 1000.0) );
+		ma_sound_start(U);		ma_sound_stop(U);   // Pseudo-Playing
 
 		// Return & Continue(if Playing)
 		lua_pushnumber( L, ma_sound_get_time_in_milliseconds(U) );   // Actual ms or nil
@@ -338,8 +339,7 @@ static int AmPlayPreview(lua_State* L) {
 }
 
 
-/* Binding Stuff */
-constexpr luaL_reg AmFuncs[] = {
+/* Binding Stuff */ constexpr luaL_reg AmFuncs[] = {
 	{"PlayPreview", AmPlayPreview}, {"StopPreview", AmStopPreview},
 	{"CreateResource", AmCreateResource}, {"ReleaseResource", AmReleaseResource},
 	{"CreateUnit", AmCreateUnit}, {"ReleaseUnit", AmReleaseUnit},
