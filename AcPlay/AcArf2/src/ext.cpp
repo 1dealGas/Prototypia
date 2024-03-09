@@ -18,7 +18,7 @@ static const luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Fu
 };
 
 
-inline dmExtension::Result LuaInit(dmExtension::Params* p) {
+inline dmExtension::Result Arf2LuaInit(dmExtension::Params* p) {
 	lua_State* L = p->m_L;
 
 	// Register Modules
@@ -29,12 +29,12 @@ inline dmExtension::Result LuaInit(dmExtension::Params* p) {
     return dmExtension::RESULT_OK;
 }
 
-inline dmExtension::Result OK(dmExtension::Params* params) {
+inline dmExtension::Result Arf2OK(dmExtension::Params* params) {
     return dmExtension::RESULT_OK;
 }
 
-inline dmExtension::Result APPOK(dmExtension::AppParams* params) {
+inline dmExtension::Result Arf2APPOK(dmExtension::AppParams* params) {
     return dmExtension::RESULT_OK;
 }
 
-DM_DECLARE_EXTENSION(AcPlay, "AcPlay", APPOK, APPOK, LuaInit, nullptr, nullptr, OK)
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", Arf2APPOK, Arf2APPOK, Arf2LuaInit, nullptr, nullptr, Arf2OK)
