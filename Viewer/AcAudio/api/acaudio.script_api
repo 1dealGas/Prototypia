@@ -78,6 +78,8 @@
     parameters:
     - name: unit_handle
       type: table
+    - name: rewind_to_start
+      type: boolean
     returns:
     - name: OK
       type: boolean
