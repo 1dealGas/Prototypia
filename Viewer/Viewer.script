@@ -174,27 +174,38 @@ local function UpdateContext(mstime)
 			-- Enables & Disables
 			--
 			if wu > last_wu then
-				if wu > wu_max then wu_max = wu end
+				if wu > wu_max then
+					wu_max = wu
+				end
+				
 				for i = last_wu+1, wu do
 					local wsi = w_sprites[i]
-					if wsi then msg_post(wsi, enable) end
+					if wsi then
+						msg_post(wsi, enable)
+					end
 				end
 			elseif wu < last_wu then
 				for i = wu+1, last_wu do
 					local wsi = w_sprites[i]
-					if wsi then msg_post(wsi, disable) end
+					if wsi then
+						msg_post(wsi, disable)
+					end
 				end
 			end
 
 			if hu > last_hu then
 				for i = last_hu+1, hu do
 					local hsi = h_sprites[i]
-					if hsi then msg_post(hsi, enable) end
+					if hsi then
+						msg_post(hsi, enable)
+					end
 				end
 			elseif hu < last_hu then
 				for i = hu+1, last_hu do
 					local hsi = h_sprites[i]
-					if hsi then msg_post(hsi, disable) end
+					if hsi then
+						msg_post(hsi, disable)
+					end
 				end
 			end
 
@@ -256,8 +267,6 @@ local last_ms = 0   -- No need to clear this manually
 function update(self, dt)
 	if Audio and context_opened then
 		local ms = GetTime(Audio)   -- There will be an offset value added
-		ms = ( ms > 0 ) and ms or 0
-
 		if ms ~= last_ms then
 			UpdateContext(ms)
 			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, ms, AudioLen)} )
@@ -274,17 +283,29 @@ function fixed_update(self, dt)   -- File listening & GC
 			if mdf ~= FumenModification then
 				local _, buf = pcall(sys.load_buffer, FumenPath)
 				if buf then
-					if context_opened then EndContext() else FinalArf() end
+					
+					if context_opened then
+						EndContext()
+					else
+						FinalArf()
+					end
+					
 					local _, ok = pcall(NewContext, buf)
 					if ok then
 						UpdateContext(last_ms)
 						defos_set_window_title( string_format(titlefmt, wu_max, FumenPath, hint_count) )
 						FumenModification = mdf
 					else
-						msg_post( ViewerGUI, GUPDATE, {"[!] Fatal error happened when syncing the chart[fumen]"} )
-						if context_opened then EndContext() else FinalArf() end
+						
+						if context_opened then
+							EndContext()
+						else
+							FinalArf()
+						end
+						
 						AcAudio.ReleaseUnit(Audio)
 						AcAudio.ReleaseResource(AudioRes)
+						msg_post( ViewerGUI, GUPDATE, {"[!] Fatal error happened when syncing the chart[fumen]"} )
 						AudioRes, Audio, AudioLen = nil, nil, 0
 						FumenModification = 0
 						FumenPath = nil
@@ -297,7 +318,9 @@ function fixed_update(self, dt)   -- File listening & GC
 		end
 	end
 
-	if Audio and ( not CheckPlaying(Audio) ) then msg_post(ViewerGUI, SHOW_PLAY) end
+	if Audio and ( not CheckPlaying(Audio) ) then
+		msg_post(ViewerGUI, SHOW_PLAY)
+	end
 	collectgarbage()
 end
 
@@ -314,7 +337,11 @@ local msg_functions = {
 
 		FumenPath = nil
 		AudioLen, FumenModification = 0, 0
-		if context_opened then EndContext() else FinalArf() end
+		if context_opened then
+			EndContext()
+		else
+			FinalArf()
+		end
 		
 		-- Load Audio
 		--
@@ -381,7 +408,11 @@ local msg_functions = {
 						FumenModification = context_attr.modification
 					else
 						msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to parse \"%s.ar\"", message[1])} )
-						if context_opened then EndContext() else FinalArf() end
+						if context_opened then
+							EndContext()
+						else
+							FinalArf()
+						end
 						AcAudio.ReleaseUnit(Audio)
 						AcAudio.ReleaseResource(AudioRes)
 						AudioRes, Audio, AudioLen = nil, nil, 0
@@ -418,8 +449,6 @@ local msg_functions = {
 		if Audio and ( not CheckPlaying(Audio) ) then
 			local _, t = pcall(tonumber, message[1])
 			if t then
-				t = ( t < (AudioLen-10) ) and t or (AudioLen-10)
-				t = ( t > 0 ) and t or 0
 				SetTime(Audio, t)
 			else
 				msg_post( ViewerGUI, GUPDATE, {"[*] Mstime input invalid"} )
@@ -436,8 +465,10 @@ local msg_functions = {
 				msg_post(ViewerGUI, SHOW_PLAY)
 			else
 				PlayUnit(Audio, false)   -- Non-looping Play
-				if CheckPlaying(Audio) then msg_post(ViewerGUI, SHOW_PAUSE)
-				else msg_post(ViewerGUI, SHOW_PLAY)
+				if CheckPlaying(Audio) then
+					msg_post(ViewerGUI, SHOW_PAUSE)
+				else
+					msg_post(ViewerGUI, SHOW_PLAY)
 				end
 			end
 		else
@@ -454,8 +485,7 @@ function on_message(self, message_id, message)
 end
 
 
-local sp_init = nil
-local ctrl_pressed = false   -- No need to clear this manually
+local sp_init, ctrl_pressed = nil, false   -- No need to clear this manually
 local input_functions = {
 	[BUTTON_P] = function(self, action)
 		if ctrl_pressed and action.pressed then
@@ -500,15 +530,8 @@ local input_functions = {
 	[SCROLL_UP] = function(self, action)
 		if action.value == 1 then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				-- Time test
-				--
 				local t = GetTime(Audio)
 				t = ctrl_pressed and (t - 370) or (t - 37)
-				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
-
-				-- Time reset
-				--
 				SetTime(Audio, t)
 			end
 		end
@@ -517,15 +540,8 @@ local input_functions = {
 	[BUTTON_UP] = function(self, action)
 		if action.pressed or action.repeated then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				-- Time test
-				--
 				local t = GetTime(Audio)
 				t = ctrl_pressed and (t - 370) or (t - 37)
-				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
-
-				-- Time reset
-				--
 				SetTime(Audio, t)
 			end
 		end
@@ -534,15 +550,8 @@ local input_functions = {
 	[SCROLL_DOWN] = function(self, action)
 		if action.value == 1 then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				-- Time test
-				--
 				local t = GetTime(Audio)
 				t = ctrl_pressed and (t + 370) or (t + 37)
-				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
-
-				-- Time reset
-				--
 				SetTime(Audio, t)
 			end
 		end
@@ -551,23 +560,18 @@ local input_functions = {
 	[BUTTON_DOWN] = function(self, action)
 		if action.pressed or action.repeated then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				-- Time test
-				--
 				local t = GetTime(Audio)
 				t = ctrl_pressed and (t + 370) or (t + 37)
-				t = ( t > 0 ) and t or 0
-				t = ( t < (AudioLen - 10) ) and t or (AudioLen - 10)
-
-				-- Time reset
-				--
 				SetTime(Audio, t)
 			end
 		end
 	end,
 
 	[BUTTON_C] = function(self, action)
-		if action.released then ctrl_pressed = false
-		elseif action.pressed then ctrl_pressed = true
+		if action.released then
+			ctrl_pressed = false
+		elseif action.pressed then
+			ctrl_pressed = true
 		end
 	end
 }
