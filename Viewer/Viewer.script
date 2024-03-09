@@ -407,7 +407,6 @@ local msg_functions = {
 						FumenPath = context_path
 						FumenModification = context_attr.modification
 					else
-						msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to parse \"%s.ar\"", message[1])} )
 						if context_opened then
 							EndContext()
 						else
@@ -416,18 +415,19 @@ local msg_functions = {
 						AcAudio.ReleaseUnit(Audio)
 						AcAudio.ReleaseResource(AudioRes)
 						AudioRes, Audio, AudioLen = nil, nil, 0
+						msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to parse \"%s.ar\"", message[1])} )
 					end
 				else
-					msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.ar\"", message[1])} )
 					AcAudio.ReleaseUnit(Audio)
 					AcAudio.ReleaseResource(AudioRes)
 					AudioRes, Audio, AudioLen = nil, nil, 0
+					msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.ar\"", message[1])} )
 				end
 			else
-				msg_post( ViewerGUI, GUPDATE, {string_format("[!] File \"%s.ar\" doesn't exist", message[1])} )
 				AcAudio.ReleaseUnit(Audio)
 				AcAudio.ReleaseResource(AudioRes)
 				AudioRes, Audio, AudioLen = nil, nil, 0
+				msg_post( ViewerGUI, GUPDATE, {string_format("[!] File \"%s.ar\" doesn't exist", message[1])} )
 			end
 		end
 
