@@ -3,24 +3,24 @@ name: "AcAudio"
 platforms:
     x86-win32:
         context:
-            flags: ["-std=c++14", "-Ofast", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++14", "-Ofast", "-ffunction-sections", "-fdata-sections", "-flto"]
             linkFlags: ["-flto"]
 
     x86_64-win32:
         context:
-            flags: ["-std=c++14", "-Ofast", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++14", "-Ofast", "-ffunction-sections", "-fdata-sections", "-flto"]
             linkFlags: ["-flto"]
 
     x86_64-osx:
         context:
             frameworks: ["CoreFoundation", "CoreAudio", "AudioUnit"]
-            flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections", "-flto"]
             linkFlags: ["-flto", "-ObjC"]
             libs: ["m", "pthread"]
 
     arm64-osx:
         context:
             frameworks: ["CoreFoundation", "CoreAudio", "AudioUnit"]
-            flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections", "-flto"]
             linkFlags: ["-flto", "-ObjC"]
             libs: ["m", "pthread"]
