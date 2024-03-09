@@ -611,7 +611,7 @@ void defos_emit_event(DefosEvent event)
 
 // Lua module initialization
 
-static const luaL_reg Module_methods[] =
+static const luaL_reg Defos_Module_Methods[] =
     {
         {"disable_maximize_button", disable_maximize_button},
         {"disable_minimize_button", disable_minimize_button},
@@ -664,10 +664,10 @@ static const luaL_reg Module_methods[] =
         {"get_parameters", get_arguments}, // For backwards compatibility
         {0, 0}};
 
-static void LuaInit(lua_State *L)
+static void DefosLuaInit(lua_State *L)
 {
     int top = lua_gettop(L);
-    luaL_register(L, MODULE_NAME, Module_methods);
+    luaL_register(L, MODULE_NAME, Defos_Module_Methods);
 
     lua_pushnumber(L, DEFOS_CURSOR_ARROW);
     lua_setfield(L, -2, "CURSOR_ARROW");
@@ -721,7 +721,7 @@ dmExtension::Result InitializeDefos(dmExtension::Params *params)
         }
     }
     
-    LuaInit(params->m_L);
+    DefosLuaInit(params->m_L);
     return dmExtension::RESULT_OK;
 }
 
