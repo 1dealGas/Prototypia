@@ -104,11 +104,12 @@
 
   - name: SetTime
     type: function
+    desc: This API is an ASYNC one, and only makes sense when the unit is NOT playing.
     parameters:
     - name: unit_handle
       type: table
     - name: mstime
       type: number
     returns:
-    - name: actual_ms_or_nil
-      type: number
+    - name: OK
+      type: boolean

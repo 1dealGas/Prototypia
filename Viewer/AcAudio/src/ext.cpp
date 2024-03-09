@@ -222,30 +222,25 @@ static int AmGetTime(lua_State* L) {
 
 	return 1;
 }
-static int AmSetTime(lua_State* L) {   // Supports both setting when playing & setting when stopped(paused)
+static int AmSetTime(lua_State* L) {
+	/* Keep in mind that this is an ASYNC API. */
 	const auto U = (ma_sound*)lua_touserdata(L, 1);   // Unit Handle
 	auto ms = (int64_t)luaL_checknumber(L, 2);   // mstime
 
-	if( PlayerUnits.count(U) ) {
+	if( PlayerUnits.count(U) && (!PlayerUnits[U].playing) ) {
 		// Get the sound length
 		float len = 0;
 		ma_sound_get_length_in_seconds(U, &len);
 		len *= 1000.0f;
 
-		// Set the time. We need a pseudo-playing to sync the timestamp.
-		ma_sound_stop(U);
+		// Set the time
 		ms = (ms > 0) ? ms : 0;
 		ms = (ms < len-2.0) ? ms : len-2.0;
 		ma_sound_seek_to_pcm_frame( U, (uint64_t)(ms * ma_engine_get_sample_rate(&PlayerEngine) / 1000.0) );
-		ma_sound_start(U);		ma_sound_stop(U);   // Pseudo-Playing
-
-		// Return & Continue(if Playing)
-		lua_pushnumber( L, ma_sound_get_time_in_milliseconds(U) );   // Actual ms or nil
-		if( PlayerUnits[U].playing )
-			ma_sound_start(U);
+		lua_pushboolean(L, true);   // OK
 	}
 	else
-		lua_pushnil(L);   // Actual ms or nil
+		lua_pushboolean(L, false);   // OK
 
 	return 1;
 }
@@ -445,4 +440,5 @@ inline dmExtension::Result AmFinal(dmExtension::Params* p) {
 inline dmExtension::Result AmAPPOK(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
+
 DM_DECLARE_EXTENSION(AcAudio, "AcAudio", AmAPPOK, AmAPPOK, AmInit, nullptr, AmOnEvent, AmFinal)
