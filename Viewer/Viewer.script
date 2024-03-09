@@ -1,16 +1,14 @@
 -- Prototypia Viewer Main Logics
 -- Copyright(c) 2024- 1dealGas, under the MIT License.
 
---[[
-Our Workflow:
-	Viewer
-		-- Status
-			-- Audio
-			-- Chart[Fumen] Context
-			-- File Listening Params
-		-- GUI
-	Python Part
-]]--
+-- Our Workflow:
+--    Viewer
+--       · Status
+--          ·· Audio
+--          ·· Chart[Fumen] Context
+--          ·· File Listening Params
+--       · GUI
+--    Python Part
 
 
 -- Hash & String Caches
@@ -38,6 +36,12 @@ local GUI_LOAD, GUI_SEEK, GUI_PLAY, GUI_OWV = hash("GUI_LOAD"), hash("GUI_SEEK")
 local InitArf = Arf2.InitArf
 local UpdateArf = Arf2.UpdateArf
 local FinalArf = Arf2.FinalArf
+
+local PlayUnit = AcAudio.PlayUnit
+local CheckPlaying = AcAudio.CheckPlaying
+local StopUnit = AcAudio.StopUnit
+local GetTime = AcAudio.GetTime
+local SetTime = AcAudio.SetTime
 
 local msg_url = msg.url
 local msg_post = msg.post
@@ -221,19 +225,15 @@ end
 
 
 -- Status & Script Callbacks
--- Audio source must be "Signed 16-bit PCM" format
--- AudioLen is a ms value
 --
 local FumenModification = 0   -- Reset it to 0 when loading a new Chart[Fumen]
-local Audio, AudioLen, FumenPath   -- Nullify them when exception happens
-
+local AudioRes, Audio, AudioLen, FumenPath   -- Nullify them when exception happens
 function init(self)
 	-- Initial Settings
 	--
 	defos.set_window_size(nil, nil, 1200, 720)
 	defos_set_window_title( "Prototypia Viewer  --  " .. Path )
 	msg_post(".", "acquire_input_focus")
-	openal.set_distance_model("none")
 	collectgarbage("stop")
 
 	-- URL Preparations
@@ -255,9 +255,8 @@ end
 local last_ms = 0   -- No need to clear this manually
 function update(self, dt)
 	if Audio and context_opened then
-		local ms = Audio.time * 1000   -- There will be an offset value added
+		local ms = GetTime(Audio)   -- There will be an offset value added
 		ms = ( ms > 0 ) and ms or 0
-		ms = ( ms < (AudioLen-10) ) and ms or AudioLen-10
 
 		if ms ~= last_ms then
 			UpdateContext(ms)
@@ -284,8 +283,9 @@ function fixed_update(self, dt)   -- File listening & GC
 					else
 						msg_post( ViewerGUI, GUPDATE, {"[!] Fatal error happened when syncing the chart[fumen]"} )
 						if context_opened then EndContext() else FinalArf() end
-						openal.remove_source(Audio)
-						Audio, AudioLen = nil, 0
+						AcAudio.ReleaseUnit(Audio)
+						AcAudio.ReleaseResource(AudioRes)
+						AudioRes, Audio, AudioLen = nil, nil, 0
 						FumenModification = 0
 						FumenPath = nil
 					end
@@ -297,7 +297,7 @@ function fixed_update(self, dt)   -- File listening & GC
 		end
 	end
 
-	if Audio and Audio.state ~= "playing" then msg_post(ViewerGUI, SHOW_PLAY) end
+	if Audio and ( not CheckPlaying(Audio) ) then msg_post(ViewerGUI, SHOW_PLAY) end
 	collectgarbage()
 end
 
@@ -307,81 +307,61 @@ local msg_functions = {
 		-- Free the Previous Stuff
 		--
 		if Audio then
-			openal.remove_source(Audio)
-			Audio = nil
+			AcAudio.ReleaseUnit(Audio)
+			AcAudio.ReleaseResource(AudioRes)
+			AudioRes, Audio = nil, nil
 		end
 
 		FumenPath = nil
 		AudioLen, FumenModification = 0, 0
 		if context_opened then EndContext() else FinalArf() end
 		
-		-- Load Audio & Trial Play
+		-- Load Audio
 		--
 		local wav_path = sys.get_save_file("Prototypia Works", message[1] .. ".wav")
-		local attr = lfs_attributes(wav_path)
-		if attr and attr.size > 4 then
+		local wav_attr = lfs_attributes(wav_path)
+		if wav_attr then
 			local _, audiobuf = pcall(sys.load_buffer, wav_path)
 			if audiobuf then
-				local _, ab, al = pcall(openal.new_source, audiobuf)
-				if ab then
-					-- Trial Playing
-					--
-					ab:play()
-					ab:pause()
-					if ab.state == "initial" then
-						msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Signed 16-bit PCM\" format to load it", message[1])} )
-						openal.remove_source(ab)
+				local res_ok, res_ret = AcAudio.CreateResource(audiobuf)
+				if res_ok then
+					local unit_ok, unit, len = AcAudio.CreateUnit(res_ret)
+					if unit_ok then
+						AudioRes, Audio, AudioLen = res_ret, unit, len
 					else
-						ab:rewind()
-						Audio, AudioLen = ab, al*1000
+						AcAudio.ReleaseResource(res_ret)
+						msg_post(ViewerGUI, GUPDATE, {res_ret.." (wav)"})
 					end
 				else
-					msg_post( ViewerGUI, GUPDATE, {string_format("[!] You need to convert \"%s.wav\" into \"Signed 16-bit PCM\" format to load it", message[1])} )
+					msg_post(ViewerGUI, GUPDATE, {res_ret.." (wav)"})
 				end
 			else
 				msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.wav\"", message[1])} )
 			end
-		elseif decodeogg then
-			--
-			-- (Windows Only) The Viewer could decode an *.ogg file into a WAV resource.
-			--
-			local ogg_path = sys.get_save_file("Prototypia Works", message[1] .. ".ogg")
-			local ogg_attr = lfs_attributes(ogg_path)
-			if ogg_attr then
-				local _, audiobuf = pcall(sys.load_buffer, ogg_path)
+		else
+			local mp3_path = sys.get_save_file("Prototypia Works", message[1] .. ".mp3")
+			local mp3_attr = lfs_attributes(mp3_path)
+			if mp3_attr then
+				local _, audiobuf = pcall(sys.load_buffer, mp3_path)
 				if audiobuf then
-					local decoded = pcall(decodeogg.decodeogg, audiobuf)
-					if decoded then
-						local _, ab, al = pcall(openal.new_source, audiobuf)
-						if ab then
-							--
-							-- Trial Playing
-							--
-							local testpos = (al>1) and al-1 or al
-							ab.time = testpos
-							ab:play()
-							ab:pause()
-							if ab.state == "initial" or ab.time == 0 then
-								msg_post( ViewerGUI, GUPDATE, {string_format("[!] Trial Playing of \"%s.ogg\" failed", message[1])} )
-								openal.remove_source(ab)
-							else
-								ab:rewind()
-								Audio, AudioLen = ab, al*1000
-							end
+					local res_ok, res_ret = AcAudio.CreateResource(audiobuf)
+					if res_ok then
+						local unit_ok, unit, len = AcAudio.CreateUnit(res_ret)
+						if unit_ok then
+							AudioRes, Audio, AudioLen = res_ret, unit, len
 						else
-							msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to decode \"%s.ogg\"", message[1])} )
+							AcAudio.ReleaseResource(res_ret)
+							msg_post(ViewerGUI, GUPDATE, {res_ret.." (mp3)"})
 						end
 					else
-						msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to decode \"%s.ogg\"", message[1])} )
+						msg_post(ViewerGUI, GUPDATE, {res_ret.." (mp3)"})
 					end
 				else
-					msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.ogg\"", message[1])} )
+					msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.mp3\"", message[1])} )
 				end
 			else
-				msg_post( ViewerGUI, GUPDATE, {string_format("[!] Both of file \"%s.wav\" and \"%s.ogg\" don't exist", message[1], message[1])} )
+				msg_post( ViewerGUI, GUPDATE, {string_format("[!] Both of file \"%s.wav\" and \"%s.mp3\" don't exist", message[1], message[1])} )
 			end
-		else
-			msg_post( ViewerGUI, GUPDATE, {string_format("[!] File \"%s.wav\" doesn't exist, or smaller than 4KB", message[1])} )
 		end
 
 		-- Load Context
@@ -402,18 +382,21 @@ local msg_functions = {
 					else
 						msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to parse \"%s.ar\"", message[1])} )
 						if context_opened then EndContext() else FinalArf() end
-						openal.remove_source(Audio)
-						Audio, AudioLen = nil, 0
+						AcAudio.ReleaseUnit(Audio)
+						AcAudio.ReleaseResource(AudioRes)
+						AudioRes, Audio, AudioLen = nil, nil, 0
 					end
 				else
 					msg_post( ViewerGUI, GUPDATE, {string_format("[!] Failed to load \"%s.ar\"", message[1])} )
-					openal.remove_source(Audio)
-					Audio, AudioLen = nil, 0
+					AcAudio.ReleaseUnit(Audio)
+					AcAudio.ReleaseResource(AudioRes)
+					AudioRes, Audio, AudioLen = nil, nil, 0
 				end
 			else
 				msg_post( ViewerGUI, GUPDATE, {string_format("[!] File \"%s.ar\" doesn't exist", message[1])} )
-				openal.remove_source(Audio)
-				Audio, AudioLen = nil, 0
+				AcAudio.ReleaseUnit(Audio)
+				AcAudio.ReleaseResource(AudioRes)
+				AudioRes, Audio, AudioLen = nil, nil, 0
 			end
 		end
 
@@ -432,12 +415,12 @@ local msg_functions = {
 	end,
 
 	[GUI_SEEK] = function(self, message)   -- message -> {mstime_str}
-		if Audio and Audio.state ~= "playing" then
+		if Audio and ( not CheckPlaying(Audio) ) then
 			local _, t = pcall(tonumber, message[1])
 			if t then
 				t = ( t < (AudioLen-10) ) and t or (AudioLen-10)
 				t = ( t > 0 ) and t or 0
-				Audio.time = t/1000   -- mstime -> time_in_sec
+				SetTime(Audio, t)
 			else
 				msg_post( ViewerGUI, GUPDATE, {"[*] Mstime input invalid"} )
 			end
@@ -448,15 +431,13 @@ local msg_functions = {
 
 	[GUI_PLAY] = function()
 		if Audio then
-			if Audio.state == "playing" then
-				Audio:pause()
+			if CheckPlaying(Audio) then
+				StopUnit(Audio, false)   -- Pause
 				msg_post(ViewerGUI, SHOW_PLAY)
 			else
-				local at = Audio.time
-				Audio:play()
-				Audio.time = at
-				if Audio.state ~= "playing" then msg_post(ViewerGUI, SHOW_PLAY)
-				else msg_post(ViewerGUI, SHOW_PAUSE)
+				PlayUnit(Audio, false)   -- Non-looping Play
+				if CheckPlaying(Audio) then msg_post(ViewerGUI, SHOW_PAUSE)
+				else msg_post(ViewerGUI, SHOW_PLAY)
 				end
 			end
 		else
@@ -479,15 +460,15 @@ local input_functions = {
 	[BUTTON_P] = function(self, action)
 		if ctrl_pressed and action.pressed then
 			if Audio then
-				if Audio.state == "playing" then
-					Audio:pause()
+				if CheckPlaying(Audio) then
+					StopUnit(Audio, false)
 					msg_post(ViewerGUI, SHOW_PLAY)
 				else
-					Audio:play()
-					if Audio.state ~= "playing" then
-						msg_post(ViewerGUI, SHOW_PLAY)
-					else
+					PlayUnit(Audio, false)
+					if CheckPlaying(Audio) then
 						msg_post(ViewerGUI, SHOW_PAUSE)
+					else
+						msg_post(ViewerGUI, SHOW_PLAY)
 					end
 				end
 			end
@@ -497,17 +478,16 @@ local input_functions = {
 	[BUTTON_SP] = function(self, action)
 		if action.released then
 			if Audio and sp_init then
-				Audio:play()
+				StopUnit(Audio, false)
+				SetTime(Audio, sp_init)
 				msg_post(ViewerGUI, SHOW_PLAY)
-				Audio.time = sp_init
-				Audio:pause()
 			end
 			sp_init = nil
 		elseif ctrl_pressed and action.pressed then
-			if Audio and Audio.state ~= "playing" then
-				sp_init = Audio.time
-				Audio:play()
-				if Audio.state ~= "playing" then
+			if Audio and ( not CheckPlaying(Audio) ) then
+				sp_init = GetTime(Audio)
+				PlayUnit(Audio, false)
+				if not CheckPlaying(Audio) then
 					sp_init = nil
 					msg_post(ViewerGUI, SHOW_PLAY)
 				else
@@ -519,7 +499,7 @@ local input_functions = {
 
 	[SCROLL_UP] = function(self, action)
 		if action.value == 1 then
-			if Audio and Audio.state ~= "playing" then
+			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
 				local t = ctrl_pressed and (Audio.time - 0.37) or (Audio.time - 0.037)
@@ -528,14 +508,14 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio.time = t
+				SetTime(Audio, t)
 			end
 		end
 	end,
 
 	[BUTTON_UP] = function(self, action)
 		if action.pressed or action.repeated then
-			if Audio and Audio.state ~= "playing" then
+			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
 				local t = ctrl_pressed and (Audio.time - 0.37) or (Audio.time - 0.037)
@@ -544,14 +524,14 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio.time = t
+				SetTime(Audio, t)
 			end
 		end
 	end,
 
 	[SCROLL_DOWN] = function(self, action)
 		if action.value == 1 then
-			if Audio and Audio.state ~= "playing" then
+			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
 				local t = ctrl_pressed and (Audio.time + 0.37) or (Audio.time + 0.037)
@@ -560,14 +540,14 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio.time = t
+				SetTime(Audio, t)
 			end
 		end
 	end,
 
 	[BUTTON_DOWN] = function(self, action)
 		if action.pressed or action.repeated then
-			if Audio and Audio.state ~= "playing" then
+			if Audio and ( not CheckPlaying(Audio) ) then
 				-- Time test
 				--
 				local t = ctrl_pressed and (Audio.time + 0.37) or (Audio.time + 0.037)
@@ -576,7 +556,7 @@ local input_functions = {
 
 				-- Time reset
 				--
-				Audio.time = t
+				SetTime(Audio, t)
 			end
 		end
 	end,
