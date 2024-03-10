@@ -37,11 +37,8 @@ local InitArf = Arf2.InitArf
 local UpdateArf = Arf2.UpdateArf
 local FinalArf = Arf2.FinalArf
 
-local PlayUnit = AcAudio.PlayUnit
 local CheckPlaying = AcAudio.CheckPlaying
-local StopUnit = AcAudio.StopUnit
 local GetTime = AcAudio.GetTime
-local SetTime = AcAudio.SetTime
 
 local msg_url = msg.url
 local msg_post = msg.post
@@ -69,13 +66,14 @@ end
 
 -- Chart[Fumen] Context
 --
-local context_opened
+local context_opened, context_ms = false, 0   -- Instead of mstime from audio
+local hint_count = 0
+local wu_max = 0   -- A Chart[Fumen] Param that needs to be acquired at the runtime
+
 local wtint, htint, atint   -- Tables of tint datas
 local wgos, hgos, agos_l, agos_r   -- Tables of Game Objects' URLs
 local w_sprites, h_sprites, al_sprites, ar_sprites   -- Tables of Sprite Components' URLs
 local last_wu, last_hu, last_au = 0, 0, 0   -- Used to send "enable" and "disable" messages
-local hint_count = 0
-local wu_max = 0   -- A Chart[Fumen] Param that needs to be acquired at the runtime
 
 local function EndContext()
 	-- Release Game Objects
@@ -94,12 +92,11 @@ local function EndContext()
 	wgos, hgos, agos_l, agos_r = nil, nil, nil, nil
 	w_sprites, h_sprites, al_sprites, ar_sprites = nil, nil, nil, nil
 	last_wu, last_hu, last_au = 0, 0, 0
-	hint_count = 0
-	wu_max = 0
 
 	-- Clean Up
 	--
 	collectgarbage()
+	context_ms, hint_count, wu_max = 0, 0, 0
 	context_opened = false
 	FinalArf()
 end
@@ -266,12 +263,19 @@ end
 local last_ms = 0   -- No need to clear this manually
 function update(self, dt)
 	if Audio and context_opened then
-		local ms = GetTime(Audio)   -- There will be an offset value added
-		if ms ~= last_ms then
-			UpdateContext(ms)
-			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, ms, AudioLen)} )
+		-- Sync Context Time if Audio is Playing
+		--
+		if CheckPlaying(Audio) then
+			context_ms = GetTime(Audio)   -- There will be an offset value added
+		end
+
+		-- Update Context
+		--
+		if context_ms ~= last_ms then
+			UpdateContext(context_ms)
+			msg_post( ViewerGUI, GUPDATE, {string_format(msfmt, context_ms, AudioLen)} )
 			defos_set_window_title( string_format(titlefmt, wu_max, FumenPath, hint_count) )
-			last_ms = ms
+			last_ms = context_ms
 		end
 	end
 end
@@ -324,6 +328,20 @@ function fixed_update(self, dt)   -- File listening & GC
 	collectgarbage()
 end
 
+------------  Update: Play Later  ------------
+local WAIT_SEC = 0.1
+local pWaiting, pHandle = false
+local function play_later()
+	AcAudio.PlayUnit(Audio, false)   -- Non-looping Play
+	if CheckPlaying(Audio) then
+		msg_post(ViewerGUI, SHOW_PAUSE)
+	else
+		msg_post(ViewerGUI, SHOW_PLAY)
+	end
+	pWaiting = false
+	pHandle = nil
+end
+----------------------------------------------
 
 local msg_functions = {
 	[GUI_LOAD] = function(self, message)   -- message -> {basename_str}
@@ -440,6 +458,8 @@ local msg_functions = {
 			last_ms = 0
 		else
 			defos_set_window_title( "Prototypia Viewer  --  " .. Path )
+			context_ms = 0
+			last_ms = 0
 		end
 
 		collectgarbage()
@@ -447,9 +467,10 @@ local msg_functions = {
 
 	[GUI_SEEK] = function(self, message)   -- message -> {mstime_str}
 		if Audio and ( not CheckPlaying(Audio) ) then
-			local _, t = pcall(tonumber, message[1])
-			if t then
-				SetTime(Audio, t)
+			local ok, t = pcall(tonumber, message[1])
+			if ok then
+				t = (t>0) and t or 0
+				context_ms = (t<AudioLen-10) and t or AudioLen-10
 			else
 				msg_post( ViewerGUI, GUPDATE, {"[*] Mstime input invalid"} )
 			end
@@ -461,15 +482,12 @@ local msg_functions = {
 	[GUI_PLAY] = function()
 		if Audio then
 			if CheckPlaying(Audio) then
-				StopUnit(Audio, false)   -- Pause
+				AcAudio.StopUnit(Audio, false)   -- Pause
 				msg_post(ViewerGUI, SHOW_PLAY)
-			else
-				PlayUnit(Audio, false)   -- Non-looping Play
-				if CheckPlaying(Audio) then
-					msg_post(ViewerGUI, SHOW_PAUSE)
-				else
-					msg_post(ViewerGUI, SHOW_PLAY)
-				end
+			elseif not pb_waiting then
+				AcAudio.SetTime(Audio, context_ms)
+				pHandle = timer.delay(WAIT_SEC, false, play_later)
+				pWaiting = true
 			end
 		else
 			msg_post( ViewerGUI, GUPDATE, {"[*] Before playing, you need to load a chart[fumen]"} )
@@ -491,38 +509,46 @@ local input_functions = {
 		if ctrl_pressed and action.pressed then
 			if Audio then
 				if CheckPlaying(Audio) then
-					StopUnit(Audio, false)
+					AcAudio.StopUnit(Audio, false)   -- Pause
 					msg_post(ViewerGUI, SHOW_PLAY)
-				else
-					PlayUnit(Audio, false)
-					if CheckPlaying(Audio) then
-						msg_post(ViewerGUI, SHOW_PAUSE)
-					else
-						msg_post(ViewerGUI, SHOW_PLAY)
-					end
+				elseif not pb_waiting then
+					AcAudio.SetTime(Audio, context_ms)
+					timer.delay(WAIT_SEC, false, play_later)
+					pWaiting = true
 				end
+			else
+				msg_post( ViewerGUI, GUPDATE, {"[*] Before playing, you need to load a chart[fumen]"} )
 			end
 		end
 	end,
 
-	[BUTTON_SP] = function(self, action)
+	[BUTTON_SP] = function(self, action)   -- Unstable
 		if action.released then
 			if Audio and sp_init then
-				StopUnit(Audio, false)
-				SetTime(Audio, sp_init)
+				-- Audio Reset
+				--
+				AcAudio.StopUnit(Audio, false)
+				AcAudio.SetTime(Audio, sp_init)
+
+				-- Handle Reset
+				--
+				if pHandle then
+					timer.cancel(pHandle)
+					pWaiting, pHandle = false, nil
+				end
+
+				-- Other Reset
+				--
 				msg_post(ViewerGUI, SHOW_PLAY)
+				context_ms = sp_init
 			end
 			sp_init = nil
 		elseif ctrl_pressed and action.pressed then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				sp_init = GetTime(Audio)
-				PlayUnit(Audio, false)
-				if not CheckPlaying(Audio) then
-					sp_init = nil
-					msg_post(ViewerGUI, SHOW_PLAY)
-				else
-					msg_post(ViewerGUI, SHOW_PAUSE)
-				end
+				sp_init = context_ms
+				AcAudio.SetTime(Audio, context_ms)
+				timer.delay(WAIT_SEC, false, play_later)
+				pWaiting = true
 			end
 		end
 	end,
@@ -530,9 +556,10 @@ local input_functions = {
 	[SCROLL_UP] = function(self, action)
 		if action.value == 1 then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = GetTime(Audio)
+				local t = context_ms
 				t = ctrl_pressed and (t - 370) or (t - 37)
-				SetTime(Audio, t)
+				t = (t>0) and t or 0
+				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
 		end
 	end,
@@ -540,9 +567,10 @@ local input_functions = {
 	[BUTTON_UP] = function(self, action)
 		if action.pressed or action.repeated then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = GetTime(Audio)
+				local t = context_ms
 				t = ctrl_pressed and (t - 370) or (t - 37)
-				SetTime(Audio, t)
+				t = (t>0) and t or 0
+				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
 		end
 	end,
@@ -550,9 +578,10 @@ local input_functions = {
 	[SCROLL_DOWN] = function(self, action)
 		if action.value == 1 then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = GetTime(Audio)
+				local t = context_ms
 				t = ctrl_pressed and (t + 370) or (t + 37)
-				SetTime(Audio, t)
+				t = (t>0) and t or 0
+				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
 		end
 	end,
@@ -560,9 +589,10 @@ local input_functions = {
 	[BUTTON_DOWN] = function(self, action)
 		if action.pressed or action.repeated then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = GetTime(Audio)
+				local t = context_ms
 				t = ctrl_pressed and (t + 370) or (t + 37)
-				SetTime(Audio, t)
+				t = (t>0) and t or 0
+				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
 		end
 	end,
