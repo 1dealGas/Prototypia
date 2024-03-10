@@ -28,11 +28,11 @@ key_trigger {
 }
 key_trigger {
   input: KEY_LALT
-  action: "BUTTON_C"
+  action: "BUTTON_A"
 }
 key_trigger {
   input: KEY_RALT
-  action: "BUTTON_C"
+  action: "BUTTON_A"
 }
 key_trigger {
   input: KEY_ENTER

@@ -25,7 +25,7 @@ local modification = "modification"
 local BUTTON_P, BUTTON_SP = hash("BUTTON_P"), hash("BUTTON_SP")
 local SCROLL_UP, BUTTON_UP = hash("SCROLL_UP"), hash("BUTTON_UP")
 local SCROLL_DOWN, BUTTON_DOWN = hash("SCROLL_DOWN"), hash("BUTTON_DOWN")
-local BUTTON_C = hash("BUTTON_C")
+local BUTTON_C, BUTTON_A = hash("BUTTON_C"), hash("BUTTON_A")
 
 local GUPDATE, SHOW_PAUSE, SHOW_PLAY = hash("GUPDATE"), hash("SHOW_PAUSE"), hash("SHOW_PLAY")
 local GUI_LOAD, GUI_SEEK, GUI_PLAY, GUI_OWV = hash("GUI_LOAD"), hash("GUI_SEEK"), hash("GUI_PLAY"), hash("GUI_OWV")
@@ -54,13 +54,9 @@ local go_set = go.set   -- Set tint / tint.w
 local CreateWish, CreateHint, CreateAnim, ViewerGUI
 local Path, OpenWorksVolume = sys.get_save_file("Prototypia Works", "")
 if sys.get_sys_info().system_name == "Darwin" then
-	OpenWorksVolume = function()
-		os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )
-	end
+	OpenWorksVolume = function() os.execute( "open " .. string.gsub(Path, "%s", "\\ ") ) end
 else
-	OpenWorksVolume = function()
-		os.execute("explorer " .. Path)
-	end
+	OpenWorksVolume = function() os.execute("explorer " .. Path) end
 end
 
 
@@ -503,10 +499,10 @@ function on_message(self, message_id, message)
 end
 
 
-local sp_init, ctrl_pressed = nil, false   -- No need to clear this manually
+local sp_init, ctrl_pressed, alt_pressed = nil, false, false   -- No need to clear this manually
 local input_functions = {
 	[BUTTON_P] = function(self, action)
-		if ctrl_pressed and action.pressed then
+		if (ctrl_pressed or alt_pressed) and action.pressed then
 			if Audio then
 				if CheckPlaying(Audio) then
 					AcAudio.StopUnit(Audio, false)   -- Pause
@@ -543,7 +539,7 @@ local input_functions = {
 				context_ms = sp_init
 			end
 			sp_init = nil
-		elseif ctrl_pressed and action.pressed then
+		elseif (ctrl_pressed or alt_pressed) and action.pressed then
 			if Audio and ( not CheckPlaying(Audio) ) then
 				sp_init = context_ms
 				AcAudio.SetTime(Audio, context_ms)
@@ -556,8 +552,7 @@ local input_functions = {
 	[SCROLL_UP] = function(self, action)
 		if action.value == 1 then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = context_ms
-				t = ctrl_pressed and (t - 370) or (t - 37)
+				local t = (ctrl_pressed or alt_pressed) and (context_ms - 370) or (context_ms - 37)
 				t = (t>0) and t or 0
 				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
@@ -567,8 +562,7 @@ local input_functions = {
 	[BUTTON_UP] = function(self, action)
 		if action.pressed or action.repeated then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = context_ms
-				t = ctrl_pressed and (t - 370) or (t - 37)
+				local t = (ctrl_pressed or alt_pressed) and (context_ms - 370) or (context_ms - 37)
 				t = (t>0) and t or 0
 				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
@@ -578,8 +572,7 @@ local input_functions = {
 	[SCROLL_DOWN] = function(self, action)
 		if action.value == 1 then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = context_ms
-				t = ctrl_pressed and (t + 370) or (t + 37)
+				local t = (ctrl_pressed or alt_pressed) and (context_ms + 370) or (context_ms + 37)
 				t = (t>0) and t or 0
 				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
@@ -589,8 +582,7 @@ local input_functions = {
 	[BUTTON_DOWN] = function(self, action)
 		if action.pressed or action.repeated then
 			if Audio and ( not CheckPlaying(Audio) ) then
-				local t = context_ms
-				t = ctrl_pressed and (t + 370) or (t + 37)
+				local t = (ctrl_pressed or alt_pressed) and (context_ms + 370) or (context_ms + 37)
 				t = (t>0) and t or 0
 				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
 			end
@@ -602,6 +594,14 @@ local input_functions = {
 			ctrl_pressed = false
 		elseif action.pressed then
 			ctrl_pressed = true
+		end
+	end,
+
+	[BUTTON_A] = function(self, action)
+		if action.released then
+			alt_pressed = false
+		elseif action.pressed then
+			alt_pressed = true
 		end
 	end
 }
