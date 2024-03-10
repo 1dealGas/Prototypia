@@ -172,15 +172,15 @@ static int AmPlayUnit(lua_State* L) {
 		// Start
 		if( ma_sound_start(UH) == MA_SUCCESS ) {
 			PlayerUnits[UH].playing = true;
-			lua_pushnumber( L, ma_sound_get_time_in_milliseconds(UH) );   // Actual ms or nil
+			lua_pushboolean(L, true);   // OK
 		}
 		else {
 			PlayerUnits[UH].playing = false;
-			lua_pushnil(L);   // Actual ms or nil
+			lua_pushboolean(L, false);   // OK
 		}
 	}
 	else
-		lua_pushnil(L);   // Actual ms or nil
+		lua_pushboolean(L, false);   // OK
 
 	return 1;
 }
@@ -188,11 +188,14 @@ static int AmStopUnit(lua_State* L) {
 	const auto UH = (ma_sound*)lua_touserdata(L, 1);   // Unit Handle
 
 	if( PlayerUnits.count(UH) ) {
-		ma_sound_stop(UH);
-		if( lua_toboolean(L, 2) )   // Rewind to Start
-			ma_sound_set_start_time_in_pcm_frames(UH, 0);
-		PlayerUnits[UH].playing = false;
-		lua_pushboolean(L, true);   // OK
+		if( ma_sound_stop(UH) == MA_SUCCESS) {
+			if( lua_toboolean(L, 2) )   // Rewind to Start
+				ma_sound_set_start_time_in_pcm_frames(UH, 0);
+			PlayerUnits[UH].playing = false;
+			lua_pushboolean(L, true);   // OK
+		}
+		else
+			lua_pushboolean(L, false);   // OK
 	}
 	else
 		lua_pushboolean(L, false);   // OK
@@ -205,7 +208,7 @@ static int AmCheckPlaying(lua_State* L) {
 	if( PlayerUnits.count(UH) ) {
 		const bool p = ma_sound_is_playing(UH);
 		PlayerUnits[UH].playing = p;
-		lua_pushboolean(L, p);
+		lua_pushboolean(L, p);   // Status
 	}
 	else
 		lua_pushnil(L);   // Status
@@ -230,14 +233,15 @@ static int AmSetTime(lua_State* L) {
 	if( PlayerUnits.count(U) && (!PlayerUnits[U].playing) ) {
 		// Get the sound length
 		float len = 0;
-		ma_sound_get_length_in_seconds(U, &len);
-		len *= 1000.0f;
+		ma_sound_get_length_in_seconds(U, &len);		len *= 1000.0f;
 
 		// Set the time
 		ms = (ms > 0) ? ms : 0;
 		ms = (ms < len-2.0) ? ms : len-2.0;
-		ma_sound_seek_to_pcm_frame( U, (uint64_t)(ms * ma_engine_get_sample_rate(&PlayerEngine) / 1000.0) );
-		lua_pushboolean(L, true);   // OK
+		const auto result = ma_sound_seek_to_pcm_frame(U,
+			(uint64_t)(ms * ma_engine_get_sample_rate(&PlayerEngine) / 1000.0)
+		);
+		lua_pushboolean(L, result == MA_SUCCESS);   // OK
 	}
 	else
 		lua_pushboolean(L, false);   // OK

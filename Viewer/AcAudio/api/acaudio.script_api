@@ -70,8 +70,8 @@
     - name: is_looping
       type: boolean
     returns:
-    - name: actual_ms_or_nil
-      type: number
+    - name: OK
+      type: boolean
 
   - name: StopUnit
     type: function
