@@ -325,7 +325,7 @@ function fixed_update(self, dt)   -- File listening & GC
 end
 
 ------------  Update: Play Later  ------------
-local WAIT_SEC = 0.1
+local WAIT_SEC = 0.05
 local pWaiting, pHandle = false
 local function play_later()
 	AcAudio.PlayUnit(Audio, false)   -- Non-looping Play
