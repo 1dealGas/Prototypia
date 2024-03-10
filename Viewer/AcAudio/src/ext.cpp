@@ -37,22 +37,20 @@
 
 
 /* Lua API Implementations */
-struct AmUnit {   // "Am": Aerials miniaudio binding module
-	ma_sound* sound_handle;
-	bool playing;   // Log the playing-or-not statuses of miniaudio sounds for suspending usage
-};
+// "Am": Aerials miniaudio binding module
 
 // The "Preview" Engine (fast to load, and slow to play)
 ma_engine PreviewEngine;
 ma_resource_manager* PreviewRM;
 ma_resource_manager_data_source* PreviewResource;   // delete & Set nullptr
-AmUnit PreviewUnit;   // sound_handle: delete & Set nullptr
+ma_sound* PreviewSound;   // sound_handle: delete & Set nullptr
+bool PreviewPlaying;
 
 // The "Player" Engine (slow to load, and fast to play)
 ma_engine PlayerEngine;
 ma_resource_manager player_rm, *PlayerRM;
-std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   // Handle, CopiedBuffer
-std::unordered_map<ma_sound*, AmUnit> PlayerUnits;   // Handle, {Handle, IsPlaying}
+std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   // HResource -> CopiedBuffer
+std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 // Resource Level
 static int AmCreateResource(lua_State* L) {
@@ -131,7 +129,7 @@ static int AmCreateUnit(lua_State* L) {
 		lua_pushnumber( L, (uint64_t)(len * 1000.0) );
 
 		// Unit Emplacing
-		PlayerUnits[S] = {S, false};
+		PlayerUnits[S] = false;
 		return 3;
 	}
 	else {
@@ -146,7 +144,7 @@ static int AmReleaseUnit(lua_State* L) {
 
 	if( PlayerUnits.count(S) ) {
 		// Stop & Uninitialize
-		if( PlayerUnits[S].playing )
+		if( PlayerUnits[S] )
 			ma_sound_stop(S);
 		ma_sound_uninit(S);
 
@@ -170,11 +168,11 @@ static int AmPlayUnit(lua_State* L) {
 
 		// Start
 		if( ma_sound_start(UH) == MA_SUCCESS ) {
-			PlayerUnits[UH].playing = true;
+			PlayerUnits[UH] = true;
 			lua_pushboolean(L, true);   // OK
 		}
 		else {
-			PlayerUnits[UH].playing = false;
+			PlayerUnits[UH] = false;
 			lua_pushboolean(L, false);   // OK
 		}
 	}
@@ -190,7 +188,7 @@ static int AmStopUnit(lua_State* L) {
 		if( ma_sound_stop(UH) == MA_SUCCESS) {
 			if( lua_toboolean(L, 2) )   // Rewind to Start
 				ma_sound_seek_to_pcm_frame(UH, 0);
-			PlayerUnits[UH].playing = false;
+			PlayerUnits[UH] = false;
 			lua_pushboolean(L, true);   // OK
 		}
 		else
@@ -206,7 +204,7 @@ static int AmCheckPlaying(lua_State* L) {
 
 	if( PlayerUnits.count(UH) ) {
 		const bool p = ma_sound_is_playing(UH);
-		PlayerUnits[UH].playing = p;
+		PlayerUnits[UH] = p;
 		lua_pushboolean(L, p);   // Status
 	}
 	else
@@ -229,7 +227,7 @@ static int AmSetTime(lua_State* L) {
 	const auto U = (ma_sound*)lua_touserdata(L, 1);   // Unit Handle
 	auto ms = (int64_t)luaL_checknumber(L, 2);   // mstime
 
-	if( PlayerUnits.count(U) && (!PlayerUnits[U].playing) ) {
+	if( PlayerUnits.count(U) && (!PlayerUnits[U]) ) {
 		// Get the sound length
 		float len = 0;
 		ma_sound_get_length_in_seconds(U, &len);		len *= 1000.0f;
@@ -250,13 +248,13 @@ static int AmSetTime(lua_State* L) {
 
 // Preview Functions
 static int AmStopPreview(lua_State* L) {   // Should be always safe
-	if(PreviewUnit.sound_handle) {
-		ma_sound_stop(PreviewUnit.sound_handle);
-		ma_sound_uninit(PreviewUnit.sound_handle);
-		delete PreviewUnit.sound_handle;
+	if(PreviewSound) {
+		ma_sound_stop(PreviewSound);
+		ma_sound_uninit(PreviewSound);
+		delete PreviewSound;
 
-		PreviewUnit.sound_handle = nullptr;
-		PreviewUnit.playing = false;
+		PreviewSound = nullptr;
+		PreviewPlaying = false;
 
 		ma_resource_manager_data_source_uninit(PreviewResource);
 		delete PreviewResource;
@@ -285,29 +283,29 @@ static int AmPlayPreview(lua_State* L) {
 
 	// Load Unit & Play
 	if(res_result == MA_SUCCESS) {
-		PreviewUnit.sound_handle = new ma_sound;
+		PreviewSound = new ma_sound;
 		const auto unit_result = ma_sound_init_from_data_source(
 			&PreviewEngine, PreviewResource,
 			MA_SOUND_FLAG_NO_PITCH | MA_SOUND_FLAG_NO_SPATIALIZATION,
-			nullptr, PreviewUnit.sound_handle
+			nullptr, PreviewSound
 		);
 		if(unit_result == MA_SUCCESS) {
 			// Set Looping
-			ma_sound_set_looping( PreviewUnit.sound_handle, is_looping );
+			ma_sound_set_looping( PreviewSound, is_looping );
 
 			// Start
-			if( ma_sound_start(PreviewUnit.sound_handle) == MA_SUCCESS ) {
+			if( ma_sound_start(PreviewSound) == MA_SUCCESS ) {
 				lua_pushboolean(L, true);   // OK
-				PreviewUnit.playing = true;
+				PreviewPlaying = true;
 			}
 			else {
 				// Clean Up 1
-				ma_sound_stop(PreviewUnit.sound_handle);
-				ma_sound_uninit(PreviewUnit.sound_handle);
+				ma_sound_stop(PreviewSound);
+				ma_sound_uninit(PreviewSound);
 
-				delete PreviewUnit.sound_handle;
-				PreviewUnit.sound_handle = nullptr;
-				PreviewUnit.playing = false;
+				delete PreviewSound;
+				PreviewSound = nullptr;
+				PreviewPlaying = false;
 
 				// Clean Up 2
 				lua_pushboolean(L, false);   // OK
@@ -317,9 +315,9 @@ static int AmPlayPreview(lua_State* L) {
 		}
 		else {
 			// Clean Up 1
-			delete PreviewUnit.sound_handle;
-			PreviewUnit.sound_handle = nullptr;
-			PreviewUnit.playing = false;
+			delete PreviewSound;
+			PreviewSound = nullptr;
+			PreviewPlaying = false;
 
 			// Clean Up 2
 			lua_pushboolean(L, false);   // OK
@@ -383,33 +381,33 @@ inline dmExtension::Result AmInit(dmExtension::Params* p) {
 }
 
 inline void AmOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
-	switch(e->m_Event) {   // PreviewUnit.sound_handle won't be nullptr when playing
+	switch(e->m_Event) {   // PreviewSound won't be nullptr when playing
 		case dmExtension::EVENT_ID_ACTIVATEAPP: {
-			if( (PreviewUnit.playing) && !ma_sound_is_playing(PreviewUnit.sound_handle) )
-				ma_sound_start(PreviewUnit.sound_handle);
+			if( (PreviewPlaying) && !ma_sound_is_playing(PreviewSound) )
+				ma_sound_start(PreviewSound);
 			if( !PlayerUnits.empty() )
 				for(auto it = PlayerUnits.cbegin(); it != PlayerUnits.cend(); ++it) {
-					auto& u = it->second;
-					if( (u.playing) && !ma_sound_is_playing(u.sound_handle) )
-						ma_sound_start(u.sound_handle);
+					auto& UH = it->first;
+					if( (it->second) && !ma_sound_is_playing(UH) )
+						ma_sound_start(UH);
 				}
 		}
 		break;
 
 		case dmExtension::EVENT_ID_DEACTIVATEAPP: {   // Sounds won't rewind when "stopping"
-			if(PreviewUnit.playing)
-				if( ma_sound_is_playing(PreviewUnit.sound_handle) )
-					ma_sound_stop(PreviewUnit.sound_handle);
+			if(PreviewPlaying)
+				if( ma_sound_is_playing(PreviewSound) )
+					ma_sound_stop(PreviewSound);
 				else
-					PreviewUnit.playing = false;
+					PreviewPlaying = false;
 			if( !PlayerUnits.empty() )
 				for(auto it = PlayerUnits.begin(); it != PlayerUnits.end(); ++it) {
-					auto& u = it->second;   // Abandoned the const iterator
-					if(u.playing)
-						if( ma_sound_is_playing(u.sound_handle) )
-							ma_sound_stop(u.sound_handle);
+					auto& UH = it->first;   // Abandoned the const iterator
+					if(it->second)
+						if( ma_sound_is_playing(UH) )
+							ma_sound_stop(UH);
 						else
-							u.playing = false;
+							it->second = false;
 				}
 		}
 
@@ -419,9 +417,9 @@ inline void AmOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 
 inline dmExtension::Result AmFinal(dmExtension::Params* p) {
 	// Close Exisiting Units(miniaudio sounds)
-	if(PreviewUnit.sound_handle) {
-		ma_sound_stop(PreviewUnit.sound_handle);
-		ma_sound_uninit(PreviewUnit.sound_handle);
+	if(PreviewSound) {
+		ma_sound_stop(PreviewSound);
+		ma_sound_uninit(PreviewSound);
 	}
 	if( !PlayerUnits.empty() )   // No free() calls since it's the finalizer
 		for(auto it = PlayerUnits.cbegin(); it != PlayerUnits.cend(); ++it) {
@@ -437,12 +435,10 @@ inline dmExtension::Result AmFinal(dmExtension::Params* p) {
 			ma_resource_manager_data_source_uninit(it->first);
 
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
-	ma_engine_uninit(&PreviewEngine);			ma_engine_uninit(&PlayerEngine);
+	ma_engine_uninit(&PreviewEngine);
+	ma_engine_uninit(&PlayerEngine);
 	return dmExtension::RESULT_OK;   // No further cleranup since it's the finalizer
 }
 
-inline dmExtension::Result AmAPPOK(dmExtension::AppParams* params) {
-	return dmExtension::RESULT_OK;
-}
-
+inline dmExtension::Result AmAPPOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
 DM_DECLARE_EXTENSION(AcAudio, "AcAudio", AmAPPOK, AmAPPOK, AmInit, nullptr, AmOnEvent, AmFinal)
