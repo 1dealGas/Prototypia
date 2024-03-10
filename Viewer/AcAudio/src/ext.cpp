@@ -15,7 +15,6 @@
 
 #ifdef DM_PLATFORM_ANDROID
 	#define MA_ENABLE_AAUDIO
-	#define MA_ENABLE_OPENSL
 #endif
 
 #ifdef DM_PLATFORM_IOS
@@ -190,7 +189,7 @@ static int AmStopUnit(lua_State* L) {
 	if( PlayerUnits.count(UH) ) {
 		if( ma_sound_stop(UH) == MA_SUCCESS) {
 			if( lua_toboolean(L, 2) )   // Rewind to Start
-				ma_sound_set_start_time_in_pcm_frames(UH, 0);
+				ma_sound_seek_to_pcm_frame(UH, 0);
 			PlayerUnits[UH].playing = false;
 			lua_pushboolean(L, true);   // OK
 		}
@@ -338,7 +337,8 @@ static int AmPlayPreview(lua_State* L) {
 }
 
 
-/* Binding Stuff */ constexpr luaL_reg AmFuncs[] = {
+/* Binding Stuff */
+constexpr luaL_reg AmFuncs[] = {
 	{"PlayPreview", AmPlayPreview}, {"StopPreview", AmStopPreview},
 	{"CreateResource", AmCreateResource}, {"ReleaseResource", AmReleaseResource},
 	{"CreateUnit", AmCreateUnit}, {"ReleaseUnit", AmReleaseUnit},
