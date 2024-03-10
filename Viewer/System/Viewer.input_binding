@@ -27,7 +27,19 @@ key_trigger {
   action: "BUTTON_C"
 }
 key_trigger {
+  input: KEY_LALT
+  action: "BUTTON_C"
+}
+key_trigger {
+  input: KEY_RALT
+  action: "BUTTON_C"
+}
+key_trigger {
   input: KEY_ENTER
+  action: "enter"
+}
+key_trigger {
+  input: KEY_KP_ENTER
   action: "enter"
 }
 mouse_trigger {
