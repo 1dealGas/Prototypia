@@ -15,12 +15,10 @@ platforms:
         context:
             frameworks: ["CoreFoundation", "CoreAudio", "AudioUnit"]
             flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections"]
-            linkFlags: ["-flto", "-ObjC"]
-            libs: ["m", "pthread"]
+            linkFlags: ["-flto"]
 
     arm64-osx:
         context:
             frameworks: ["CoreFoundation", "CoreAudio", "AudioUnit"]
             flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections"]
-            linkFlags: ["-flto", "-ObjC"]
-            libs: ["m", "pthread"]
+            linkFlags: ["-flto"]
