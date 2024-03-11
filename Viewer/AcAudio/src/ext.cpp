@@ -1,34 +1,8 @@
 /* Aerials Audio System */
 #pragma once
-#define MINIAUDIO_IMPLEMENTATION
-
-/* Trimming the miniaudio Library */
-#define MA_NO_FLAC
-#define MA_NO_ENCODING
-#define MA_NO_GENERATION
-#define MA_ENABLE_ONLY_SPECIFIC_BACKENDS
-#define MA_API inline
-
-#ifdef DM_PLATFORM_WINDOWS
-	#define MA_ENABLE_WASAPI
-#endif
-
-#ifdef DM_PLATFORM_ANDROID
-	#define MA_ENABLE_AAUDIO
-#endif
-
-#ifdef DM_PLATFORM_IOS
-	#define MA_ENABLE_COREAUDIO
-	#define MA_NO_RUNTIME_LINKING   // Avoid iOS Runtime Linking
-#endif
-
-#ifdef DM_PLATFORM_OSX
-	#define MA_ENABLE_COREAUDIO
-	#define MA_NO_RUNTIME_LINKING   // Avoid macOS Runtime Linking
-#endif
 
 /* Includes */
-#include <miniaudio.h>
+#include <miniaudio.h>   // Trimmings are moved to ext.manifest now
 #include <dmsdk/sdk.h>
 #include <dmsdk/dlib/buffer.h>
 #include <dmsdk/script/script.h>
