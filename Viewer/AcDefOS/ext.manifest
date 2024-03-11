@@ -3,29 +3,29 @@ name: "defos"
 platforms:
     x86-win32:
         context:
-            flags: ["-std=c++14", "-Ofast", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++14", "-Ofast", "-flto", "-fdata-sections"]
             linkFlags: ["-flto"]
 
     x86_64-win32:
         context:
-            flags: ["-std=c++14", "-Ofast", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++14", "-Ofast", "-flto", "-fdata-sections"]
             linkFlags: ["-flto"]
 
     x86_64-osx:
         context:
             frameworks: ["AppKit"]
-            flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++11", "-O3", "-flto", "-fdata-sections"]
             linkFlags: ["-flto"]
 
     arm64-osx:
         context:
             frameworks: ["AppKit"]
-            flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++11", "-O3", "-flto", "-fdata-sections"]
             linkFlags: ["-flto"]
 
     x86_64-linux:
         context:      
             frameworks: ["X11", "Xrender"]
-            flags: ["-std=c++11", "-O3", "-ffunction-sections", "-fdata-sections"]
+            flags: ["-std=c++11", "-O3", "-flto", "-fdata-sections"]
             linkFlags: ["-flto"]
             libs: ["Xrender", "Xfixes"]
