@@ -14,7 +14,7 @@ input_method = HiddenInputField
 
 [project]
 title = Prototypia Viewer
-version = 0.2.2
+version = 0.2.3
 publisher = 1dealGas
 developer = 1dealGas
 custom_resources = LICENSE
@@ -60,7 +60,7 @@ game_binding = /System/Viewer.input_bindingc
 use_accelerometer = 0
 
 [engine]
-run_while_iconified = 1
+run_while_iconified = 0
 fixed_update_frequency = 10
 
 [osx]
