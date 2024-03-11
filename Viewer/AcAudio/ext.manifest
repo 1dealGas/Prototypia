@@ -17,10 +17,10 @@ platforms:
         context:
             flags: ["-std=c++11", "-Ofast", "-ffunction-sections", "-fdata-sections"]
             linkFlags: ["-flto"]
-            defines: ["MINIAUDIO_IMPLEMENTATION", "MA_NO_FLAC", "MA_NO_ENCODING", "MA_NO_GENERATION", "MA_ENABLE_ONLY_SPECIFIC_BACKENDS", "MA_ENABLE_COREAUDIO", "MA_NO_RUNTIME_LINKING"]
+            defines: ["MINIAUDIO_IMPLEMENTATION", "MA_NO_FLAC", "MA_NO_ENCODING", "MA_NO_GENERATION", "MA_ENABLE_ONLY_SPECIFIC_BACKENDS", "MA_ENABLE_COREAUDIO"]
 
     arm64-osx:
         context:
             flags: ["-std=c++11", "-Ofast", "-ffunction-sections", "-fdata-sections"]
             linkFlags: ["-flto"]
-            defines: ["MINIAUDIO_IMPLEMENTATION", "MA_NO_FLAC", "MA_NO_ENCODING", "MA_NO_GENERATION", "MA_ENABLE_ONLY_SPECIFIC_BACKENDS", "MA_ENABLE_COREAUDIO", "MA_NO_RUNTIME_LINKING"]
+            defines: ["MINIAUDIO_IMPLEMENTATION", "MA_NO_FLAC", "MA_NO_ENCODING", "MA_NO_GENERATION", "MA_ENABLE_ONLY_SPECIFIC_BACKENDS", "MA_ENABLE_COREAUDIO"]
