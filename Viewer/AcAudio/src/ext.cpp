@@ -356,6 +356,7 @@ inline dmExtension::Result AmInit(dmExtension::Params* p) {
 
 inline void AmOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 	switch(e->m_Event) {   // PreviewSound won't be nullptr when playing
+		case dmExtension::EVENT_ID_ICONIFYAPP:
 		case dmExtension::EVENT_ID_ACTIVATEAPP: {
 			if( (PreviewPlaying) && !ma_sound_is_playing(PreviewSound) )
 				ma_sound_start(PreviewSound);
@@ -368,6 +369,7 @@ inline void AmOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 		}
 		break;
 
+		case dmExtension::EVENT_ID_DEICONIFYAPP:
 		case dmExtension::EVENT_ID_DEACTIVATEAPP: {   // Sounds won't rewind when "stopping"
 			if(PreviewPlaying)
 				if( ma_sound_is_playing(PreviewSound) )
@@ -411,7 +413,9 @@ inline dmExtension::Result AmFinal(dmExtension::Params* p) {
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
 	ma_engine_uninit(&PreviewEngine);
 	ma_engine_uninit(&PlayerEngine);
-	return dmExtension::RESULT_OK;   // No further cleranup since it's the finalizer
+
+	// No further cleranup since it's the finalizer
+	return dmExtension::RESULT_OK;
 }
 
 inline dmExtension::Result AmAPPOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
