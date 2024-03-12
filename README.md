@@ -17,6 +17,7 @@ Constructed with Numerous Prototypes.</b><br />
    pip3 install Prototypia
 
    # for PyPy Users
+   pypy3 -m pip install typing
    pypy3 -m pip install Prototypia
    ```
 
