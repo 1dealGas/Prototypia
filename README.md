@@ -8,15 +8,23 @@ Constructed with Numerous Prototypes.</b><br />
 
 ## Environment Configuration
 
-1. Install `Python` (3.12.0 or Newer)
+1. **Install `Python`** (`PyPy` is also OK)
 
-2. Install the `Prototypia` Package from PyPI
+2. **Install the `Prototypia` Package from PyPI**
    
    ```shell
+   # for Python(CPython) Users
    pip3 install Prototypia
+
+   # for PyPy Users
+   pypy3 -m pip install Prototypia
    ```
 
-3. Download `Prototypia Viewer` from Releases.  **(Not Available Yet)**  
+3. **Download `Prototypia Viewer` from Releases.**
+
+   We strongly recommend you to choose a draft chart[fumen] maker you prefer,
+
+   for example `MikuMikuWorld`.
 
 ## Compose Aerials Chart[Fumen] with the Prototypia Workflow
 
