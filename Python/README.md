@@ -8,6 +8,8 @@ Also available on [**PyPI**](https://pypi.org/project/Prototypia/) .
 
 1. Install a `Python` implementation, for example `CPython` or `PyPy` ;
 
+   *Install `typing` manually if you use `PyPy`.*
+
 2. Install the Package via `pip3` :
    
    ```shell
