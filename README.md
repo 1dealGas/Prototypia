@@ -21,7 +21,7 @@ Constructed with Numerous Prototypes.</b><br />
    pypy3 -m pip install Prototypia
    ```
 
-3. **Download `Prototypia Viewer` from Releases.**
+3. **Download `Prototypia Viewer` from `Releases`**
 
    We strongly recommend you to choose a draft chart[fumen] maker you prefer,
 
