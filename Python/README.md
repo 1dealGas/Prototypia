@@ -13,7 +13,12 @@ Also available on [**PyPI**](https://pypi.org/project/Prototypia/) .
 2. Install the Package via `pip3` :
    
    ```shell
+   # for Python(CPython) Users
    pip3 install Prototypia
+
+   # for PyPy Users
+   pypy3 -m pip install typing
+   pypy3 -m pip install Prototypia
    ```
 
 3. Import the Package **at the top of your chart[fumen] prototype file** like this :
