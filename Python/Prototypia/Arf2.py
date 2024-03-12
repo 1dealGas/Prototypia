@@ -237,7 +237,7 @@ class WishGroup:
 			"useless" : self.__useless
 		}
 
-	def __truediv__(self, func) -> Self:
+	def __truediv__(self, func):
 		'''
 		With PseudoDecorator, you may add custom chaining methods for WishGroup instances
 		outside the WishGroup class like this:
@@ -372,7 +372,7 @@ class WishGroup:
 
 
 	# Compositional Methods for WishGroup instances
-	def n(self, bar:float, nmr:int = 0, dnm:int = 1, x:float = 0, y:float = 0, easetype:int = 0, curve_init:float = 0, curve_end:float = 1) -> Self:
+	def n(self, bar:float, nmr:int = 0, dnm:int = 1, x:float = 0, y:float = 0, easetype:int = 0, curve_init:float = 0, curve_end:float = 1):
 		'''
 		Add a PosNode to the calling WishGroup.
 		PosNodes will be sorted automatically.
@@ -419,7 +419,7 @@ class WishGroup:
 		SortPosNodes(self.__nodes)   # self.__nodes.sort(key = OPSorter)
 		return self
 
-	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:Union[int, None] = None) -> Self:
+	def c(self, bar:float, nmr:int = 0, dnm:int = 1, angle:Union[int, None] = None):
 		'''
 		Add a WishChild to the calling WishGroup.
 		WishChilds will be sorted automatically.
@@ -449,7 +449,7 @@ class WishGroup:
 		self.__childs.sort( key = OPSorter )
 		return self
 
-	def a(self, bar:float, nmr:int = 0, dnm:int = 1, degree:int = 90, easetype:int = 0) -> Self:
+	def a(self, bar:float, nmr:int = 0, dnm:int = 1, degree:int = 90, easetype:int = 0):
 		'''
 		Add an AngleNode to the last-created WishChild of calling WishGroup.
 		AngleNodes will be sorted automatically.
@@ -489,7 +489,7 @@ class WishGroup:
 
 
 	# Tool Methods for WishGroup instances
-	def manual_hint(self, bar:float, nmr:int=0, dnm:int=1) -> Self:
+	def manual_hint(self, bar:float, nmr:int=0, dnm:int=1):
 		'''
 		Manually create a Hint referring to the calling WishGroup.
 
@@ -513,7 +513,7 @@ class WishGroup:
 
 		return self
 
-	def set_of_layer2(self, of_layer2:bool) -> Self:
+	def set_of_layer2(self, of_layer2:bool):
 		'''
 		Set which layer the WishGroup belongs to.
 
@@ -526,7 +526,7 @@ class WishGroup:
 		self.__of_layer2 = bool(of_layer2)
 		return self
 
-	def set_useless(self, useless:bool) -> Self:
+	def set_useless(self, useless:bool):
 		'''
 		Wishes tagged as "useless" will be ignored in the compiling process,
 		Hints referring to which will be ignored as well.
@@ -541,7 +541,7 @@ class WishGroup:
 		self.__useless = bool(useless)
 		return self
 
-	def try_interpolate(self, bar:float, nmr:int = 0, dnm:int = 1, apply_to_anglenodes:bool = False) -> Self:
+	def try_interpolate(self, bar:float, nmr:int = 0, dnm:int = 1, apply_to_anglenodes:bool = False):
 		'''
 		Try to add a PosNode based on the interpolation result,
 		accoring to the Bartime input and the current PosNode list.
@@ -619,7 +619,7 @@ class WishGroup:
 				current_node.curve_end = actual_ratio
 				return self.n(bartime,0,1, ip_x, ip_y, current_node.easetype, actual_ratio, former_ce)
 
-	def mirror_lr(self, mirror_angle:bool = True) -> Self:
+	def mirror_lr(self, mirror_angle:bool = True):
 		'''
 		Turn the Wish mirrord along the Y-Axis.
 
@@ -647,7 +647,7 @@ class WishGroup:
 						a[i] = (b,d,e)
 		return self
 
-	def mirror_ud(self, mirror_angle:bool = True) -> Self:
+	def mirror_ud(self, mirror_angle:bool = True):
 		'''
 		Turn the Wish mirrord along the X-Axis.
 
@@ -670,7 +670,7 @@ class WishGroup:
 					e = a[i][2]
 					a[i] = (b,d,e)
 
-	def move(self, delta_bar:float, delta_nmr:int = 0, delta_dnm:int = 1, dx:float = 0, dy:float = 0, trim_by_interpolating:bool = True) -> Self:
+	def move(self, delta_bar:float, delta_nmr:int = 0, delta_dnm:int = 1, dx:float = 0, dy:float = 0, trim_by_interpolating:bool = True):
 		'''
 		Move the calling WishGroup, and its WishChilds, AngleNodes, related Hints,
 		with several delta arguments specified.
@@ -779,7 +779,7 @@ class WishGroup:
 
 		return self
 
-	def input(self, *args:Tuple[float]) -> Self:
+	def input(self, *args:Tuple[float]):
 		'''
 		A Shorthand to add multiple WishChild to the calling WishGroup.
 		Each argument refers to an accurate Bartime, and all angle data of
@@ -804,7 +804,7 @@ class WishGroup:
 				self.c( float(t),0,1 )
 		return self
 
-	def input_drm(self, text:str, *, type:Union[int,None] = None, left:Union[float,None] = None, mid:Union[float,None] = None, width:Union[float,None] = None, init:Union[float,None] = None, end:Union[float,None] = None) -> Self:
+	def input_drm(self, text:str, *, type:Union[int,None] = None, left:Union[float,None] = None, mid:Union[float,None] = None, width:Union[float,None] = None, init:Union[float,None] = None, end:Union[float,None] = None):
 		'''
 		Parse Bartimes from a chart[fumen] text created by DRMaker, and use
 		these Bartimes to create WishChild(s) on the calling WishGroup.

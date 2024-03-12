@@ -620,7 +620,7 @@ class AngleSet:
 			self.ans.append( (__bartime_ahead, __degree, __et) )
 		self.ans.sort( key=lambda aon: aon[0], reverse=True )
 
-	def move(self, delta_bar:float = 0, delta_nmr:int = 0, delta_dnm:int = 1, delta_degree:int = 0, trim_by_interpolating:bool = True) -> Self:
+	def move(self, delta_bar:float = 0, delta_nmr:int = 0, delta_dnm:int = 1, delta_degree:int = 0, trim_by_interpolating:bool = True):
 		'''
 		Move the AngleSet with several delta arguments specified.
 
