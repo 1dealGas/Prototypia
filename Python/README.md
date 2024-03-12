@@ -6,7 +6,7 @@ Also available on [**PyPI**](https://pypi.org/project/Prototypia/) .
 
 ## Common Usage
 
-1. Update `Python` on your platform to **3.12 or upper** ;
+1. Install a `Python` implementation, for example `CPython` or `PyPy` ;
 
 2. Install the Package via `pip3` :
    
