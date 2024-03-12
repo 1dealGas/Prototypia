@@ -957,10 +957,11 @@ def UpdateMerged(m:list[MergedTimeNode]) -> list[MergedTimeNode]:
 		mtnode.dt_ms = dtms
 
 	# Trim Nodes with dt_ms < 0
-	if has_underzero:
+	len__m_d = len(m_d)
+	if has_underzero and len__m_d > 1:
 		m_d.reverse()
 		index_1st = None
-		for i in range( len(m_d) - 1 ):
+		for i in range( len__m_d - 1 ):
 			__former = m_d[i]
 			__latter = m_d[i+1]
 			if __latter.dt_ms < 0:
@@ -1006,8 +1007,8 @@ def WishGroupSorter(a:WishGroup, b:WishGroup) -> int:
 	b_nodes:list[PosNode] = b()["nodes"]
 	a_1st:PosNode = a_nodes[1]
 	b_1st:PosNode = b_nodes[1]
-	if a_1st._ms < b_1st.ms: return -1
-	elif a_1st._ms > b_1st.ms: return 1
+	if a_1st._ms < b_1st._ms: return -1
+	elif a_1st._ms > b_1st._ms: return 1
 	else:
 		a_ydist = abs(0.5 - a_1st.y)
 		b_ydist = abs(0.5 - b_1st.y)
@@ -1216,9 +1217,10 @@ def Arf2Compile() -> None:
 
 		# Trim II: WishChilds that _dt < 0
 		# WishChilds sorted here
-		childs_COP.sort(key = lambda c:c._dt, reverse = True )
-		while childs_COP[-1]._dt < 0: childs_COP.pop()
-		childs_COP.reverse()
+		if len(childs_COP) > 0:
+			childs_COP.sort(key = lambda c:c._dt, reverse = True )
+			while childs_COP[-1]._dt < 0: childs_COP.pop()
+			childs_COP.reverse()
 
 		# Trim III: AngleNodes that ms < 0
 		# AngleNodes sorted here
@@ -1250,9 +1252,10 @@ def Arf2Compile() -> None:
 						a_t3.append( (0, int(deg_0 + ratio * deg_delta), et) )
 						break
 
-			a_t3.sort( key = lambda a: a[0] , reverse = True)
-			while a_t3[-1][0] < 0: a_t3.pop()
-			a_t3.reverse()
+			if len(a_t3) > 0:
+				a_t3.sort( key = lambda a: a[0] , reverse = True)
+				while a_t3[-1][0] < 0: a_t3.pop()
+				a_t3.reverse()
 
 		# Trim IV: PosNodes that ms < 0
 		# PosNodes sorted here
