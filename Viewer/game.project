@@ -14,10 +14,10 @@ input_method = HiddenInputField
 
 [project]
 title = Prototypia Viewer
-version = 0.2.3
+version = 0.2.4
 publisher = 1dealGas
 developer = 1dealGas
-custom_resources = LICENSE
+custom_resources = LICENSE.viewer
 
 [sprite]
 max_count = 1024
