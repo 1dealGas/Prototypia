@@ -602,7 +602,7 @@ static int UpdateArf(lua_State* L) {
 	// Z Distribution: Wish{0,0.05,0.1,0.15}  Hint(-0.06,0)
 	auto mstime = (uint32_t)luaL_checknumber(L, 1); {
 		if(mstime < 2)											mstime = 2;
-		else if( (mstime == last_ms) || mstime >= before )		return 0;
+		else if( mstime >= before )		return 0;
 	}
 	const uint16_t location_group = mstime >> 9 ;   // floordiv 512
 
