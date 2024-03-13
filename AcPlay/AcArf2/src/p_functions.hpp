@@ -700,9 +700,8 @@ static int UpdateArf(lua_State* L) {
 					if(mstime >= nodes[nodes_tail].ms) continue;   // Wish For loop
 
 					// Regression
-					if(mstime < last_ms) {
-						while( (wish_c.np > 0) && mstime < nodes[ wish_c.np ].ms ) wish_c.np--;
-					}
+					while( (wish_c.np > 0) && mstime < nodes[ wish_c.np ].ms )
+						wish_c.np--;
 
 					// Pos Acquisition
 					while(wish_c.np < nodes_tail) {   // [)
@@ -826,7 +825,8 @@ static int UpdateArf(lua_State* L) {
 
 					// Regression
 					// Child Progress: index_of_1st_child_disappeared, or -1
-					while( (wish_c.cp > -1) && current_dt < childs[ wish_c.cp ].dt ) wish_c.cp--;
+					while( (wish_c.cp > -1) && current_dt < childs[ wish_c.cp ].dt )
+						wish_c.cp--;
 
 					// Process Childs
 					// We use an internal iterator, and sync the iteration progress to wish_c.cp
@@ -857,9 +857,9 @@ static int UpdateArf(lua_State* L) {
 							}
 							else {   // Iteration when Needed
 
-								if(mstime < last_ms) {   // Regression
-									while( (child_c.ap > 0) && mstime < anodes[ child_c.ap ].ms ) child_c.ap--;
-								}
+								// Regression
+								while( (child_c.ap > 0) && mstime < anodes[ child_c.ap ].ms )
+									child_c.ap--;
 
 								while(child_c.ap < anodes_tail) {   // Angle Acquisition
 
@@ -1169,8 +1169,7 @@ static int UpdateArf(lua_State* L) {
 					default:;
 				}
 				else if( jdt<=370 && (hint_c.status==HINT_JUDGED || hint_c.status==HINT_JUDGED_LIT) ) {
-					// We only render the Anim here.
-					ago_used++;
+					ago_used++;   // We only render the Anim here.
 
 					/* Position */ {
 						SetPosition( agol, p3(x, y, -jdt * 0.00001f) );
@@ -1207,8 +1206,7 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Process Echoes */
-	// NYI
+	/* Process Echoes (NYI) */
 
 
 	/* Clean Up & Do Returns */
