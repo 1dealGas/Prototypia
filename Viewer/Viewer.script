@@ -296,6 +296,7 @@ function fixed_update(self, dt)   -- File listening & GC
 						UpdateContext(last_ms)
 						defos_set_window_title( string_format(titlefmt, wu_max, FumenPath, hint_count) )
 						FumenModification = mdf
+						context_ms = last_ms   -- context_ms will be set to 0 when calling EndContext()
 					else
 						
 						if context_opened then
@@ -493,11 +494,13 @@ local msg_functions = {
 
 	[GUI_OWV] = OpenWorksVolume
 }
+
 function on_message(self, message_id, message)
 	if msg_functions[message_id] then
 		msg_functions[message_id](self, message)
 	end
 end
+
 
 local sp_init, ctrl_pressed, alt_pressed = nil, false, false   -- No need to clear this manually
 local input_functions = {
@@ -521,22 +524,16 @@ local input_functions = {
 	[BUTTON_SP] = function(self, action)   -- Unstable
 		if action.released then
 			if Audio and sp_init then
-				-- Audio Reset
-				--
-				AcAudio.StopUnit(Audio, false)
+				AcAudio.StopUnit(Audio, false)        -- Audio Reset
 				AcAudio.SetTime(Audio, sp_init)
-
-				-- Handle Reset
-				--
-				if pHandle then
+				
+				if pHandle then                       -- Handle Reset
 					timer.cancel(pHandle)
 					pWaiting, pHandle = false, nil
 				end
-
-				-- Other Reset
-				--
+				
+				context_ms = sp_init                  -- Other Reset
 				msg_post(ViewerGUI, SHOW_PLAY)
-				context_ms = sp_init
 			end
 			sp_init = nil
 		elseif (ctrl_pressed or alt_pressed) and action.pressed then
@@ -605,6 +602,7 @@ local input_functions = {
 		end
 	end
 }
+
 function on_input(self, action_id, action)
 	if action_id and input_functions[action_id] then
 		input_functions[action_id](self, action)
