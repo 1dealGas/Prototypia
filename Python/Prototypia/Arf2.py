@@ -48,7 +48,7 @@ def NEW_VERSE() -> None:
 		None
 	'''
 	global VERSE
-	VERSE = []
+	VERSE.clear()
 
 half_pi = pi / 2
 def ESIN(ratio:float) -> float:
