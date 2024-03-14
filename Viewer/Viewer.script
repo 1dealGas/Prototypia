@@ -240,6 +240,12 @@ end
 --
 local FumenModification = 0   -- Reset it to 0 when loading a new Chart[Fumen]
 local AudioRes, Audio, AudioLen, FumenPath   -- Nullify them when exception happens
+local function write_license()
+	local license_str = sys.load_resource("/LICENSE.viewer")
+	local licensefile = io.open( Path .. "LICENSE.viewer", "w" )
+	licensefile:write(license_str)
+	licensefile:close()
+end
 function init(self)
 	-- Initial Settings
 	--
@@ -256,15 +262,9 @@ function init(self)
 	CreateAnim = msg_url( p, v, hash("CreateAnim") )
 	ViewerGUI = msg_url( p, v, hash("UI") )
 
-	-- Write Licenses
+	-- Write Licenses & Do Energy-Saving Strategies
 	--
-	local licensefile = io.open( Path .. "LICENSE.viewer", "w" )
-	licensefile:write( sys.load_resource("/LICENSE.viewer") )
-	licensefile:close()
-	license = nil
-
-	-- Update: Energy-Saving Strategies
-	--
+	pcall(write_license)
 	sys_set_update_frequency(15)
 	collectgarbage("setstepmul", 1)
 	collectgarbage("setpause", 1048576)
