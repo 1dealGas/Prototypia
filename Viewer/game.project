@@ -95,3 +95,7 @@ app_manifest = /System/Viewer.appmanifest
 [windows]
 app_icon = /System/Viewer.ico
 
+[network]
+http_thread_count = 0
+http_cache_enabled = 0
+
