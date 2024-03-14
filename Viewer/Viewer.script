@@ -343,7 +343,6 @@ function fixed_update(self, dt)   -- File listening & GC
 				sys_set_update_frequency(0)
 				scrolling = 2
 			elseif scrolling == 2 then
-				sys_set_update_frequency(0)
 				scrolling = 0
 			else
 				sys_set_update_frequency(15)
@@ -359,13 +358,14 @@ local WAIT_SEC = 0.05
 local pWaiting, pHandle = false
 local function play_later()
 	AcAudio.PlayUnit(Audio, false)   -- Non-looping Play
+
 	if CheckPlaying(Audio) then
 		msg_post(ViewerGUI, SHOW_PAUSE)
 	else
 		msg_post(ViewerGUI, SHOW_PLAY)
 	end
-	pWaiting = false
-	pHandle = nil
+
+	pWaiting, pHandle = false, nil
 end
 ----------------------------------------------
 
