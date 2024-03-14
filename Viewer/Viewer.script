@@ -1,6 +1,7 @@
 -- Prototypia Viewer Main Logics
 -- Copyright(c) 2024- 1dealGas, under the MIT License.
 
+------------------------------------
 -- Our Workflow:
 --    Viewer
 --       · Status
@@ -9,6 +10,7 @@
 --          ·· File Listening Params
 --       · GUI
 --    Python Part
+------------------------------------
 
 
 -- Hash & String Caches
@@ -47,6 +49,7 @@ local defos_set_window_title = defos.set_window_title
 local lfs_attributes = lfs.attributes
 local string_format = string.format
 local go_set = go.set   -- Set tint / tint.w
+local sys_set_update_frequency = sys.set_update_frequency
 
 
 -- Environment
@@ -54,9 +57,13 @@ local go_set = go.set   -- Set tint / tint.w
 local CreateWish, CreateHint, CreateAnim, ViewerGUI
 local Path, OpenWorksVolume = sys.get_save_file("Prototypia Works", "")
 if sys.get_sys_info().system_name == "Darwin" then
-	OpenWorksVolume = function() os.execute( "open " .. string.gsub(Path, "%s", "\\ ") ) end
+	OpenWorksVolume = function()
+		os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )
+	end
 else
-	OpenWorksVolume = function() os.execute("explorer " .. Path) end
+	OpenWorksVolume = function()
+		os.execute("explorer " .. Path)
+	end
 end
 
 
@@ -255,6 +262,12 @@ function init(self)
 	licensefile:write( sys.load_resource("/LICENSE.viewer") )
 	licensefile:close()
 	license = nil
+
+	-- Update: Energy-Saving Strategies
+	--
+	sys_set_update_frequency(15)
+	collectgarbage("setstepmul", 1)
+	collectgarbage("setpause", 1048576)
 end
 
 local last_ms = 0   -- No need to clear this manually
@@ -277,6 +290,7 @@ function update(self, dt)
 	end
 end
 
+local scrolling = 0
 function fixed_update(self, dt)   -- File listening & GC
 	if FumenPath then
 		local mdf = lfs_attributes(FumenPath, modification)
@@ -320,11 +334,25 @@ function fixed_update(self, dt)   -- File listening & GC
 		end
 	end
 
-	if Audio and ( not CheckPlaying(Audio) ) then
-		msg_post(ViewerGUI, SHOW_PLAY)
+	if Audio then
+		if CheckPlaying(Audio) then
+			sys_set_update_frequency(0)
+		else
+			msg_post(ViewerGUI, SHOW_PLAY)
+			if scrolling == 1 then
+				sys_set_update_frequency(0)
+				scrolling = 2
+			elseif scrolling == 2 then
+				sys_set_update_frequency(0)
+				scrolling = 0
+			else
+				sys_set_update_frequency(15)
+			end
+		end
 	end
 	collectgarbage()
 end
+
 
 ------------  Update: Play Later  ------------
 local WAIT_SEC = 0.05
@@ -340,6 +368,7 @@ local function play_later()
 	pHandle = nil
 end
 ----------------------------------------------
+
 
 local msg_functions = {
 	[GUI_LOAD] = function(self, message)   -- message -> {basename_str}
@@ -502,7 +531,8 @@ function on_message(self, message_id, message)
 end
 
 
-local sp_init, ctrl_pressed, alt_pressed = nil, false, false   -- No need to clear this manually
+local sp_init = nil   -- No need to clear this manually
+local ctrl_pressed, alt_pressed = false, false
 local input_functions = {
 	[BUTTON_P] = function(self, action)
 		if (ctrl_pressed or alt_pressed) and action.pressed then
@@ -552,6 +582,7 @@ local input_functions = {
 				local t = (ctrl_pressed or alt_pressed) and (context_ms - 370) or (context_ms - 37)
 				t = (t>0) and t or 0
 				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
+				scrolling = 1
 			end
 		end
 	end,
@@ -572,6 +603,7 @@ local input_functions = {
 				local t = (ctrl_pressed or alt_pressed) and (context_ms + 370) or (context_ms + 37)
 				t = (t>0) and t or 0
 				context_ms = (t<AudioLen-10) and t or (AudioLen-10)
+				scrolling = 1
 			end
 		end
 	end,

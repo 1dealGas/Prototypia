@@ -14,7 +14,7 @@ input_method = HiddenInputField
 
 [project]
 title = Prototypia Viewer
-version = 0.2.5
+version = 0.2.6
 publisher = 1dealGas
 developer = 1dealGas
 custom_resources = LICENSE.viewer
@@ -61,7 +61,7 @@ use_accelerometer = 0
 
 [engine]
 run_while_iconified = 0
-fixed_update_frequency = 10
+fixed_update_frequency = 5
 
 [osx]
 bundle_identifier = prototypia.viewer
@@ -76,6 +76,12 @@ verify_graphics_calls = 0
 
 [physics]
 use_fixed_timestep = 1
+max_collisions = 0
+max_contacts = 0
+allow_dynamic_transforms = 0
+ray_cast_limit_2d = 0
+ray_cast_limit_3d = 0
+trigger_overlap_capacity = 0
 
 [profiler]
 track_cpu = 1
