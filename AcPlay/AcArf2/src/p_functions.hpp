@@ -599,7 +599,7 @@ static int UpdateArf(lua_State* L) {
 	if( !before ) return 0;
 
 	/* Prepare Returns & Process msTime */
-	// Z Distribution: Wish{0,0.05,0.1,0.15}  Hint(-0.06,0)
+	// Z Distribution: Wish{0.07,0.08,0.09,0.10}  Hint(-0.06,0)
 	auto mstime = (uint32_t)luaL_checknumber(L, 1); {
 		if(mstime < 2)					mstime = 2;
 		else if(mstime >= before)			return 0;
@@ -805,7 +805,7 @@ static int UpdateArf(lua_State* L) {
 								// Pos & Scale Setting
 								lua_rawgeti(L, T_WGO, wgo_used);
 								GO WGO = dmScript::CheckGOInstance(L, -1);
-								SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.1f : 0.0f) );
+								SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.09f : 0.07f) );
 								tintw = 1.0f - tintw;		SetScale( WGO, 0.637f + tintw * tintw * 0.437f );
 								lua_pop(L, 1);				// As 0.637f + 0.437f - 0.437f * (1 - tintw * tintw)
 							}
@@ -940,7 +940,7 @@ static int UpdateArf(lua_State* L) {
 										// Pos & Scale Setting
 										lua_rawgeti(L, T_WGO, wgo_used);
 										GO WGO = dmScript::CheckGOInstance(L, -1);
-										SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.15f : 0.05f) );
+										SetPosition( WGO, p3(x, y, wish_c.ofl2 ? 0.1f : 0.08f) );
 										tintw = 1.0f - tintw;	SetScale( WGO, 0.637f + tintw * tintw * 0.437f );
 										lua_pop(L, 1);			// As 0.637f + 0.437f - 0.437f * (1 - tintw * tintw)
 									}
@@ -999,7 +999,7 @@ static int UpdateArf(lua_State* L) {
 				/* Pass Hint & Anim Params */
 				// Specify all tint.w as 1 in the initialization
 				if( dt < -370 ) {
-					SetPosition( hgo, p3(x, y, -(0.05f + dt*0.00001f)) );
+					SetPosition( hgo, p3(x, y, dt*0.00001f - 0.04f) );
 					const float color = 0.1337f + (float)(0.0005 * (510+dt) );   // As 0.07/140
 					htint -> setX(color).setY(color).setZ(color);
 					hgo_used++;
@@ -1012,7 +1012,7 @@ static int UpdateArf(lua_State* L) {
 						break;
 					case HINT_NONJUDGED_LIT:
 						htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
-						SetPosition( hgo, p3(x, y, -0.04f) );
+						SetPosition( hgo, p3(x, y, -0.037f) );
 						hgo_used++;
 						break;
 					case HINT_JUDGED_LIT:   // No break here
