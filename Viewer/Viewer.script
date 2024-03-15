@@ -168,8 +168,9 @@ local function UpdateContext(mstime)
 		--
 		for i = 1, wu do go_set(w_sprites[i], tint_w, wtint[i]) end
 		for i = 1, hu do
+			local helper_tintw = htint[i].x * 1.73
+			go_set( h_helpers[i], tint_w, (helper_tintw>0.37) and 0.37 or helper_tintw )
 			go_set(h_sprites[i], tint, htint[i])
-			go_set(h_helpers[i], tint_w, htint[i].x * 1.73)
 		end
 		for i = 1, au do
 			go_set(al_sprites[i], tint, atint[i])
@@ -244,9 +245,8 @@ end
 local FumenModification = 0   -- Reset it to 0 when loading a new Chart[Fumen]
 local AudioRes, Audio, AudioLen, FumenPath   -- Nullify them when exception happens
 local function write_license()
-	local license_str = sys.load_resource("/LICENSE.viewer")
 	local licensefile = io.open( Path .. "LICENSE.viewer", "w" )
-	licensefile:write(license_str)
+	licensefile:write( sys.load_resource("/LICENSE.viewer") )
 	licensefile:close()
 end
 function init(self)
