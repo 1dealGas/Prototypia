@@ -776,9 +776,9 @@ static int UpdateArf(lua_State* L) {
 
 				/* Self Param Setting */ {
 					const float x = 900.f + (node_x * rotcos - node_y * rotsin) * xscale + xdelta;
-					if( (x>=66.0f) && x<=1734.0f ) {   // X trim
+					if( (x>=-36.0f) && x<=1836.0f ) {   // X trim
 						const float y = 540.f + (node_x * rotsin + node_y * rotcos) * yscale + ydelta;
-						if( (y>=66.0f) && y<=1014.0f ) {   // Y trim
+						if( (y>=-36.0f) && y<=1116.0f ) {   // Y trim
 							const uint32_t k = (uint32_t)(x * 1009.0f) + (uint32_t)(y * 1013.0f);
 							if( last_wgo.count(k) ) {   // Overlap trim
 								uint8_t lwidx_lua = last_wgo[k];
@@ -908,9 +908,9 @@ static int UpdateArf(lua_State* L) {
 							const float child_y = node_y + radius * 112.5f * SIN;
 
 							const float x = 900.f + (child_x * rotcos - child_y * rotsin) * xscale + xdelta;
-							if( (x>=66.0f) && x<=1734.0f ) {   // X trim
+							if( (x>=-36.0f) && x<=1836.0f ) {   // X trim
 								const float y = 540.f + (child_x * rotsin + child_y * rotcos) * yscale + ydelta;
-								if( (y>=66.0f) && y<=1014.0f ) {   // Y trim
+								if( (y>=-36.0f) && y<=1116.0f ) {   // Y trim
 									const uint32_t k = (uint32_t)(x * 1009.0f) + (uint32_t)(y * 1013.0f);
 									if( last_wgo.count(k) ) {   // Overlap trim
 										uint8_t lwidx_lua = last_wgo[k];
