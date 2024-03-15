@@ -17,8 +17,8 @@
 --
 local hash = hash
 local disable, enable, touch = hash("disable"), hash("enable"), hash("touch")
+local Sprite, Helper = hash("Sprite"), hash("Helper")
 local tint_w, tint = hash("tint.w"), hash("tint")
-local Sprite = hash("Sprite")
 
 local msfmt = "[MS] %d · %d"
 local titlefmt = "[%d]  Prototypia Viewer  --  %s  --  %d Hints"
@@ -133,6 +133,7 @@ local function NewContext(buf)
 		for i = 1, h do
 			local H = factory_create(CreateHint)
 			hgos[i], h_sprites[i] = H, msg_url(Ar, H, Sprite)
+			go_set( msg_url(Ar, H, Helper), tint_w, 0.37 )
 			msg_post(H, disable)
 
 			local AL = factory_create(CreateAnim)
@@ -197,16 +198,16 @@ local function UpdateContext(mstime)
 
 		if hu > last_hu then
 			for i = last_hu+1, hu do
-				local hsi = h_sprites[i]
-				if hsi then
-					msg_post(hsi, enable)
+				local hgi = hgos[i]
+				if hgi then
+					msg_post(hgi, enable)
 				end
 			end
 		elseif hu < last_hu then
 			for i = hu+1, last_hu do
-				local hsi = h_sprites[i]
-				if hsi then
-					msg_post(hsi, disable)
+				local hgi = hgos[i]
+				if hgi then
+					msg_post(hgi, disable)
 				end
 			end
 		end
@@ -531,8 +532,7 @@ function on_message(self, message_id, message)
 end
 
 
-local sp_init = nil   -- No need to clear this manually
-local ctrl_pressed, alt_pressed = false, false
+local sp_init, ctrl_pressed, alt_pressed = nil, false, false   -- No need to clear this manually
 local input_functions = {
 	[BUTTON_P] = function(self, action)
 		if (ctrl_pressed or alt_pressed) and action.pressed then
