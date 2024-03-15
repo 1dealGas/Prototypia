@@ -75,7 +75,7 @@ local wu_max = 0   -- A Chart[Fumen] Param that needs to be acquired at the runt
 
 local wtint, htint, atint   -- Tables of tint datas
 local wgos, hgos, agos_l, agos_r   -- Tables of Game Objects' URLs
-local w_sprites, h_sprites, al_sprites, ar_sprites   -- Tables of Sprite Components' URLs
+local w_sprites, h_sprites, h_helpers, al_sprites, ar_sprites   -- Tables of Sprite Components' URLs
 local last_wu, last_hu, last_au = 0, 0, 0   -- Used to send "enable" and "disable" messages
 
 local function EndContext()
@@ -93,7 +93,7 @@ local function EndContext()
 	--
 	wtint, htint, atint = nil, nil, nil
 	wgos, hgos, agos_l, agos_r = nil, nil, nil, nil
-	w_sprites, h_sprites, al_sprites, ar_sprites = nil, nil, nil, nil
+	w_sprites, h_sprites, h_helpers, al_sprites, ar_sprites = nil, nil, nil, nil, nil
 	last_wu, last_hu, last_au = 0, 0, 0
 
 	-- Clean Up
@@ -119,7 +119,7 @@ local function NewContext(buf)
 		-- Create Tables
 		--
 		wgos, hgos, agos_l, agos_r = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
-		w_sprites, h_sprites, al_sprites, ar_sprites = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
+		w_sprites, h_sprites, h_helpers, al_sprites, ar_sprites = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0), NewTable(h, 0)
 		wtint, htint, atint = NewTable(w, 0), NewTable(h, 0), NewTable(h, 0)
 		
 		-- Fill Tables
@@ -132,8 +132,7 @@ local function NewContext(buf)
 
 		for i = 1, h do
 			local H = factory_create(CreateHint)
-			hgos[i], h_sprites[i] = H, msg_url(Ar, H, Sprite)
-			go_set( msg_url(Ar, H, Helper), tint_w, 0.37 )
+			hgos[i], h_sprites[i], h_helpers[i] = H, msg_url(Ar, H, Sprite), msg_url(Ar, H, Helper)
 			msg_post(H, disable)
 
 			local AL = factory_create(CreateAnim)
@@ -168,7 +167,10 @@ local function UpdateContext(mstime)
 		-- Mutate tint
 		--
 		for i = 1, wu do go_set(w_sprites[i], tint_w, wtint[i]) end
-		for i = 1, hu do go_set(h_sprites[i], tint, htint[i]) end
+		for i = 1, hu do
+			go_set(h_sprites[i], tint, htint[i])
+			go_set(h_helpers[i], tint_w, htint[i].x)
+		end
 		for i = 1, au do
 			go_set(al_sprites[i], tint, atint[i])
 			go_set(ar_sprites[i], tint, atint[i])
@@ -359,13 +361,11 @@ local WAIT_SEC = 0.05
 local pWaiting, pHandle = false
 local function play_later()
 	AcAudio.PlayUnit(Audio, false)   -- Non-looping Play
-
 	if CheckPlaying(Audio) then
 		msg_post(ViewerGUI, SHOW_PAUSE)
 	else
 		msg_post(ViewerGUI, SHOW_PLAY)
 	end
-
 	pWaiting, pHandle = false, nil
 end
 ----------------------------------------------
