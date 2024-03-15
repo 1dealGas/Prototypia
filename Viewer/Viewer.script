@@ -169,7 +169,7 @@ local function UpdateContext(mstime)
 		for i = 1, wu do go_set(w_sprites[i], tint_w, wtint[i]) end
 		for i = 1, hu do
 			go_set(h_sprites[i], tint, htint[i])
-			go_set(h_helpers[i], tint_w, htint[i].x)
+			go_set(h_helpers[i], tint_w, htint[i].x * 1.73)
 		end
 		for i = 1, au do
 			go_set(al_sprites[i], tint, atint[i])
