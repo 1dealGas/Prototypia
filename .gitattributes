@@ -16,8 +16,8 @@ Python/Prototypia/WishGroup.py linguist-generated
 
 AcPlay/include/flatbuffers/** linguist-vendored
 AcPlay/include/miniaudio.h linguist-vendored
-AcPlay/src/miniaudio.cpp linguist-vendored
-AcPlay/src/miniaudio.mm linguist-vendored
+AcPlay/src/ma_impl.cpp linguist-vendored
+AcPlay/src/ma_impl.mm linguist-vendored
 
 Viewer/AcDefOS/** linguist-vendored
 Viewer/AcLFS/** linguist-vendored
