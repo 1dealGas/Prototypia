@@ -181,7 +181,6 @@ struct {
 - (void)loadView {
 	self.v = [[ArInputView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
 	self.v.backgroundColor = [UIColor clearColor];
-	self.v.translatesAutoresizingMaskIntoConstraints = NO;
 	self.v.userInteractionEnabled = YES;
 	self.view = self.v;
 }
