@@ -58,3 +58,7 @@ struct jud {
 	bool special_hint_judged = false;
 };
 jud JudgeArf(const ab* vf, uint8_t vfcount, bool any_pressed, bool any_released);
+
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+void InputInit();		void InputUninit();
+#endif
