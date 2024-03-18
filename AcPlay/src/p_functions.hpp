@@ -414,7 +414,7 @@ inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const ui
 	// Process Detection Failure
 	return false;
 }
-jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
+inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
 	// Get msTime & Other Preparations
 	/* Normally, we want the audio_offset to be a positive value,
 	 * and we set the context_ms earlier than the audio mstime.
@@ -422,7 +422,6 @@ jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, 
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
 	context_ms = (context_ms > 0) ? context_ms : 0;
 	context_ms = (context_ms < before) ? context_ms : before;
-	jud returns;
 
 	// Prepare the Iteration Scale
 	uint16_t current_group; {
@@ -433,6 +432,7 @@ jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, 
 	beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
 
 	// Start Judging
+	jud returns;
 	if(any_released) blocked.clear();
 	if(any_pressed) {
 		uint32_t min_time = 0;
@@ -466,7 +466,7 @@ jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, 
 									current_hint.judged_ms = context_ms;
 									current_hint.status = HINT_JUDGED_LIT;
 									if(current_hint_id == special_hint)
-										returns.special_hint_judged = special_hint;   // bool
+										returns.special_hint_judged = (bool)special_hint;
 
 									// Classify
 									if(dt < mindt) {
@@ -484,7 +484,7 @@ jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, 
 									current_hint.judged_ms = context_ms;
 									current_hint.status = HINT_JUDGED_LIT;
 									if(current_hint_id == special_hint)
-										returns.special_hint_judged = special_hint;   // bool
+										returns.special_hint_judged = (bool)special_hint;
 
 									// Classify
 									if(dt < mindt) {

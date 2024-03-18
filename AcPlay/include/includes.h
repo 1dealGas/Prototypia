@@ -19,9 +19,7 @@
 
 
 // Commons
-using namespace std;
 struct ab { float a = 0.0f, b = 0.0f; };   // 2-float Structure
-struct jud { uint8_t hit = 0, early = 0, late = 0, special_hint_judged = 0; };   // 4-uint Structure
 enum {
 	// Hint Status Constants
 	HINT_NONJUDGED = 0, HINT_NONJUDGED_LIT,
@@ -34,23 +32,29 @@ enum {
 	T_WGO = 2, T_HGO, T_AGO_L, T_AGO_R,
 	T_WTINT, T_HTINT, T_ATINT
 };
-jud JudgeArf(const ab* vf, uint8_t vfcount, bool any_pressed, bool any_released);
 
 
 // miniaudio Related
 /* We put our miniaudio-related global variables here,
- * for they are used both in the Defold Lifecycle, and the Judge Func of Aerials Player.
- */
+ * for they are used both in the Defold Lifecycle, and the Judge Func of Aerials Player. */
 
-/* The "Preview" Engine (fast to load, and slow to play) */
+// The "Preview" Engine (fast to load, and slow to play)
 ma_engine PreviewEngine;
 ma_resource_manager* PreviewRM;
 ma_resource_manager_data_source* PreviewResource;   // delete & Set nullptr
 ma_sound* PreviewSound;   // sound_handle: delete & Set nullptr
 bool PreviewPlaying;
 
-/* The "Player" Engine (slow to load, and fast to play) */
+// The "Player" Engine (slow to load, and fast to play)
 ma_engine PlayerEngine;
 ma_resource_manager player_rm, *PlayerRM;
 std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   // HResource -> CopiedBuffer
 std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
+
+
+// Judge System Related
+struct jud {   // 4-uint Structure
+	uint8_t hit = 0, early = 0, late = 0;
+	bool special_hint_judged = false;
+};
+jud JudgeArf(const ab* vf, uint8_t vfcount, bool any_pressed, bool any_released);
