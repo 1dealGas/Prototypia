@@ -5,19 +5,20 @@
 *.script_api linguist-language=YAML
 *.appmanifest linguist-language=YAML
 ext.manifest linguist-language=YAML
-
 *.go linguist-documentation
-AcPlay/(deprecated)libarf2.hpp linguist-documentation
 
-AcPlay/AcArf2/include/arf2_generated.h linguist-generated
-AcPlay/AcArf2/include/ease_constants.h linguist-generated
+AcPlay/include/arf2_generated.h linguist-generated
+AcPlay/include/ease_constants.h linguist-generated
 Python/Prototypia/Arf2Fb.py linguist-generated
 Python/Prototypia/Arf2Index.py linguist-generated
 Python/Prototypia/WishChild.py linguist-generated
 Python/Prototypia/WishGroup.py linguist-generated
 
-AcPlay/AcArf2/include/flatbuffers/** linguist-vendored
-Viewer/AcAudio/** linguist-vendored
+AcPlay/include/miniaudio.h linguist-vendored
+AcPlay/src/miniaudio.cpp linguist-vendored
+AcPlay/src/miniaudio.mm linguist-vendored
+
+AcPlay/include/flatbuffers/** linguist-vendored
 Viewer/AcDefOS/** linguist-vendored
 Viewer/AcLFS/** linguist-vendored
 Viewer/AeDirtyLarry/** linguist-vendored
