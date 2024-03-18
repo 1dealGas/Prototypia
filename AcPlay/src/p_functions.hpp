@@ -377,8 +377,8 @@ inline bool is_safe_to_anmitsu(ArHint& hint) {
 
 	// Preparations
 	if(!allow_anmitsu) return false;
-	const float hl = hint.c_dx - 450.0f, hr = hint.c_dx + 450.0f;
-	const float hd = hint.c_dy - 450.0f, hu = hint.c_dy + 450.0f;
+	const float hl = hint.c_dx - 405.0f, hr = hint.c_dx + 405.0f;
+	const float hd = hint.c_dy - 405.0f, hu = hint.c_dy + 405.0f;
 
 	// Iterate blocked blocks
 	const uint16_t bs = blocked.size();
@@ -397,9 +397,9 @@ inline bool is_safe_to_anmitsu(ArHint& hint) {
 inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const uint8_t vf_count) {
 
 	// Unpack the Hint
-	const float hl = 675.0f + (hint.c_dx * rotcos - hint.c_dy * rotsin) * xscale + xdelta;   // 900 - 112.5 * 2
-	const float hd = 315.0f + (hint.c_dx * rotsin + hint.c_dy * rotcos) * yscale + ydelta;   // 540 - 112.5 * 2
-	const float hr = hl + 450.0f, hu = hd + 450.0f;
+	const float hl = 697.5f + (hint.c_dx * rotcos - hint.c_dy * rotsin) * xscale + xdelta;   // 900 - 112.5 * 1.8
+	const float hd = 337.5f + (hint.c_dx * rotsin + hint.c_dy * rotcos) * yscale + ydelta;   // 540 - 112.5 * 1.8
+	const float hr = hl + 405.0f, hu = hd + 405.0f;
 
 	// Detect Touches
 	for( uint8_t i=0; i<vf_count; i++ ) {
