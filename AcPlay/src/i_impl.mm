@@ -186,14 +186,6 @@ struct {
 	self.view = self.v;
 }
 
-- (void)viewDidLoad {   // Automatic Fullscreen
-	[super viewDidLoad];
-	[self.view.leadingAnchor constraintEqualToAnchor:self.view.superview.leadingAnchor].active = YES;
-	[self.view.trailingAnchor constraintEqualToAnchor:self.view.superview.trailingAnchor].active = YES;
-	[self.view.topAnchor constraintEqualToAnchor:self.view.superview.topAnchor].active = YES;
-	[self.view.bottomAnchor constraintEqualToAnchor:self.view.superview.bottomAnchor].active = YES;
-}
-
 @end
 
 
