@@ -58,11 +58,21 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 		return dmExtension::RESULT_INIT_ERROR;
 	}
 
-	// Register Modules & Do API Stuff
+	// Register Lua Modules
 	lua_State* L = p->m_L;
 	luaL_loadstring(L, "return");						lua_setglobal(L, "I");
 	luaL_register(L, "AcAudio", AcAudio);		luaL_register(L, "Arf2", Arf2);
 	lua_pop(L, 2);   // Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process.
+
+	// Register Platform-Specific Stuff (iOS)
+	#ifdef DM_PLATFORM_IOS
+	iStartListening();
+	#endif
+
+	// Register Platform-Specific Stuff (Android)
+	#ifdef DM_PLATFORM_ANDROID
+	#endif
+
 	return dmExtension::RESULT_OK;
 }
 
