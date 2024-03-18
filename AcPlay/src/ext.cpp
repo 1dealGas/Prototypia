@@ -60,9 +60,9 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 
 	// Register Modules & Do API Stuff
 	lua_State* L = p->m_L;
-	luaL_loadstring(L, "function I() end");
+	luaL_loadstring(L, "return");						lua_setglobal(L, "I");
 	luaL_register(L, "AcAudio", AcAudio);		luaL_register(L, "Arf2", Arf2);
-	lua_pop(L, 3);   // Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process.
+	lua_pop(L, 2);   // Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process.
 	return dmExtension::RESULT_OK;
 }
 
