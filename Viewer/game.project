@@ -14,7 +14,7 @@ input_method = HiddenInputField
 
 [project]
 title = Prototypia Viewer
-version = 0.3.0
+version = 0.4.0
 publisher = 1dealGas
 developer = 1dealGas
 custom_resources = LICENSE.viewer
