@@ -7,10 +7,10 @@ struct {
 } ArTouches[10];
 
 
-/* A custom UIView to receive input events */
+/* Create a custom UIView to receive input events */
 #import <UIKit/UIKit.h>
-@interface ArInput : UIView @end
-@implementation ArInput
+@interface ArInputView : UIView @end
+@implementation ArInputView
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
 	/* Process touches */
@@ -171,18 +171,48 @@ struct {
 @end
 
 
-/* Register the custom UIView into ViewController */
-#import "ViewController.h"
-@interface ViewController () @end
-@implementation ViewController
+/* Create a custom UIViewController that applies our custom UIView */
+@interface ArInputViewController : UIViewController
+@property(strong, nonatomic) ArInputView *v;
+@end
 
-- (void)viewDidLoad {
+@implementation ArInputViewController
+
+- (void)loadView {
+	self.v = [[ArInputView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+	self.v.backgroundColor = [UIColor clearColor];
+	self.v.translatesAutoresizingMaskIntoConstraints = NO;
+	self.v.userInteractionEnabled = YES;
+	self.view = self.v;
+}
+
+- (void)viewDidLoad {   // Automatic Fullscreen
 	[super viewDidLoad];
-	ArInput *AIview = [ [ArInput alloc] initWithFrame: self.view.bounds ];
-	AIview.backgroundColor = [UIColor clearColor];
-	AIview.userInteractionEnabled = YES;
-	[self.view addSubview:AIview];
+	[self.view.leadingAnchor constraintEqualToAnchor:self.view.superview.leadingAnchor].active = YES;
+	[self.view.trailingAnchor constraintEqualToAnchor:self.view.superview.trailingAnchor].active = YES;
+	[self.view.topAnchor constraintEqualToAnchor:self.view.superview.topAnchor].active = YES;
+	[self.view.bottomAnchor constraintEqualToAnchor:self.view.superview.bottomAnchor].active = YES;
 }
 
 @end
+
+
+/* Create a delegate class that applies our custom UIViewController */
+@interface ArDelegate : UIResponder <UIApplicationDelegate>
+@property(strong, nonatomic) UIWindow *w;
+@end
+
+@implementation ArDelegate
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+	self.w = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+	self.w.rootViewController = [[ArInputViewController alloc] init];
+	self.w.backgroundColor = [UIColor clearColor];
+	self.w.windowLevel = UIWindowLevelAlert;
+	[self.w makeKeyAndVisible];
+	return YES;
+}
+
+@end
+
 #endif
