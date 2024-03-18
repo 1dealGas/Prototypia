@@ -52,7 +52,7 @@ std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 /* Judge System Configs */
 lua_State* EngineLuaState = nullptr;
-bool haptic_enabled, hitsound_enabled;
+bool haptic_enabled, hitsound_enabled;			double PosDiv = 0.0;
 struct jud {
 	uint8_t hit = 0, early = 0, late = 0;
 	bool special_hint_judged = false;

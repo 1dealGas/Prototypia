@@ -370,14 +370,6 @@ static int SetIDelta(lua_State *L) {
 		{ idelta = 0;		mindt = -JUDGE_RANGE;			maxdt = JUDGE_RANGE; }
 	return 0;
 }
-static int SetHaptic(lua_State *L) {
-	haptic_enabled = lua_toboolean(L, 1);
-	return 0;
-}
-static int SetHitsound(lua_State *L) {
-	hitsound_enabled = lua_toboolean(L, 1);
-	return 0;
-}
 
 
 // Judge Functions
@@ -427,7 +419,7 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	/* Normally, we want the audio_offset to be a positive value,
 	 * and we set the context_ms earlier than the audio mstime.
 	 */
-	if(!before) return {0,0,0,0};
+	if(!before) return {0,0,0,false};
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
 	context_ms = (context_ms > 0) ? context_ms : 0;
 	context_ms = (context_ms < before) ? context_ms : before;
@@ -1287,6 +1279,18 @@ static int SetDaymode(lua_State *L) {
 }
 static int SetAnmitsu(lua_State *L) {
 	allow_anmitsu = lua_toboolean(L, 1);
+	return 0;
+}
+static int SetHaptic(lua_State *L) {
+	haptic_enabled = lua_toboolean(L, 1);
+	return 0;
+}
+static int SetHitsound(lua_State *L) {
+	hitsound_enabled = lua_toboolean(L, 1);
+	return 0;
+}
+static int SetPosDiv(lua_State *L) {
+	PosDiv = luaL_checknumber(L, 1);
 	return 0;
 }
 static int NewTable(lua_State *L) {

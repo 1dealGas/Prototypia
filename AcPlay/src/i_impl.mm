@@ -4,7 +4,6 @@
 
 /* C++ Structures */
 // This is mainly a C++ module, and only use Objective-C syntaxes when interacting with iOS APIs.
-double ArPosDiv = 1;
 struct { double dx = 0.0, dy = 0.0; uint8_t phase = 0; } ArTouches[10], ArtCaches[10];
 uint8_t BCount, MCount, ECount, ACount;   // A: Abandon
 
@@ -132,17 +131,10 @@ uint8_t BCount, MCount, ECount, ACount;   // A: Abandon
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
-
-	// Inject UIView
 	ArInput *AIview = [ [ArInput alloc] initWithFrame: self.view.bounds ];
 	AIview.backgroundColor = [UIColor clearColor];
 	AIview.userInteractionEnabled = YES;
 	[self.view addSubview:AIview];
-
-	// Calculate PosDiv
-	const CGFloat width_ratio = self.view.bounds.size.width / 1800.0;
-	const CGFloat height_ratio = self.view.bounds.size.height / 1080.0;
-	ArPosDiv = (width_ratio < height_ratio) ? width_ratio : height_ratio ;
 }
 
 @end

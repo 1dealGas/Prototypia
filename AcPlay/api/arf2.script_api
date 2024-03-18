@@ -66,16 +66,6 @@
     parameters:
     - name: idelta
       type: number
-  - name: SetHaptic
-    type: function
-    parameters:
-    - name: haptic_enabled
-      type: boolean
-  - name: SetHitsound
-    type: function
-    parameters:
-    - name: hitsound_enabled
-      type: boolean
 
 
   - name: JudgeArf
@@ -135,6 +125,24 @@
     parameters:
     - name: is_daymode
       type: boolean
+
+  - name: SetHaptic
+    type: function
+    parameters:
+    - name: haptic_enabled
+      type: boolean
+
+  - name: SetHitsound
+    type: function
+    parameters:
+    - name: hitsound_enabled
+      type: boolean
+
+  - name: SetPosDiv
+    type: function
+    parameters:
+    - name: posdiv
+      type: number
 
 
   - name: NewTable
