@@ -141,6 +141,10 @@
   - name: SetPosDiv
     type: function
     parameters:
+    - name: center_x
+      type: number
+    - name: center_y
+      type: number
     - name: posdiv
       type: number
 
