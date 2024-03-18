@@ -414,7 +414,7 @@ inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const ui
 	// Process Detection Failure
 	return false;
 }
-static jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
+jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
 	// Get msTime & Other Preparations
 	/* Normally, we want the audio_offset to be a positive value,
 	 * and we set the context_ms earlier than the audio mstime.
