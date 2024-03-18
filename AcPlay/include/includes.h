@@ -33,25 +33,25 @@ enum {
 };
 
 
-// miniaudio Related
+// Audio & Judge Related
 /* We put our miniaudio-related global variables here,
  * for they are used both in the Defold Lifecycle, and the Judge Func of Aerials Player. */
 
-// The "Preview" Engine (fast to load, and slow to play)
+/* The "Preview" Engine (fast to load, and slow to play) */
 ma_engine PreviewEngine;
 ma_resource_manager* PreviewRM;
 ma_resource_manager_data_source* PreviewResource;   // delete & Set nullptr
 ma_sound* PreviewSound;   // sound_handle: delete & Set nullptr
 bool PreviewPlaying;
 
-// The "Player" Engine (slow to load, and fast to play)
+/* The "Player" Engine (slow to load, and fast to play) */
 ma_engine PlayerEngine;
 ma_resource_manager player_rm, *PlayerRM;
 std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   // HResource -> CopiedBuffer
 std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
-
-// Judge System Related
+/* Judge System Configs */
+lua_State* EngineLuaState;
 bool haptic_enabled, hitsound_enabled;
 struct jud {
 	uint8_t hit = 0, early = 0, late = 0;
