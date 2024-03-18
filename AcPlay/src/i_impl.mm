@@ -27,14 +27,34 @@ uint8_t BCount, MCount, ECount, ACount;   // A: Abandon
 	 * and iterate the whole "event.touches" list.
 	 */
 	if(BCount == 0) {
-		// Process touches, set Params
-		// Do Aerials Calls
-		// Update Caches
+		/* Process touches, set Params */
+		ab vf[10];
+
+		/* Do Aerials Calls */
+		const jud jud_result = JudgeArf(vf, BCount, true, false);
+		const bool has_hint_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
+		if(has_hint_judged && haptic_enabled) {
+
+		}
+		
+		// Lua Function I(gui_x, gui_y, gui_phase, play_hitsound)
+		if(EngineLuaState) {
+			lua_getglobal(EngineLuaState, "I");
+			lua_pushnumber(EngineLuaState, 0);
+			lua_pushnumber(EngineLuaState, 0);
+			lua_pushnumber(EngineLuaState, 0);
+			lua_pushboolean(EngineLuaState, has_hint_judged && hitsound_enabled);
+			lua_pcall(EngineLuaState, 4, 0);
+		}
+		
+
+		/* Update Caches */
 		for(uint8_t i=0; i<10; i++) {
 			ArtCaches[i].dx = ArTouches[i].dx;
 			ArtCaches[i].dy = ArTouches[i].dy;
 			ArtCaches[i].phase = ArTouches[i].phase;
 		}
+		BCount--;
 	}
 	else
 		BCount--;
@@ -46,16 +66,17 @@ uint8_t BCount, MCount, ECount, ACount;   // A: Abandon
 	// NSLog(@"Touch moved to location: %@", NSStringFromCGPoint(location));
 
 	if(MCount == 0) {
-		// Process touches, set Params
+		/* Process touches, set Params */
 
-		// Do Aerials Calls
+		/* Do Aerials Calls */
 
-		// Update Caches
+		/* Update Caches */
 		for(uint8_t i=0; i<10; i++) {
 			ArtCaches[i].dx = ArTouches[i].dx;
 			ArtCaches[i].dy = ArTouches[i].dy;
 			ArtCaches[i].phase = ArTouches[i].phase;
 		}
+		MCount--;
 	}
 	else
 		MCount--;
@@ -65,16 +86,17 @@ uint8_t BCount, MCount, ECount, ACount;   // A: Abandon
 	NSLog(@"Touch ended");
 
 	if(ECount == 0) {
-		// Process touches, set Params
+		/* Process touches, set Params */
 
-		// Do Aerials Calls
+		/* Do Aerials Calls */
 
-		// Update Caches
+		/* Update Caches */
 		for(uint8_t i=0; i<10; i++) {
 			ArtCaches[i].dx = ArTouches[i].dx;
 			ArtCaches[i].dy = ArTouches[i].dy;
 			ArtCaches[i].phase = ArTouches[i].phase;
 		}
+		ECount--;
 	}
 	else
 		ECount--;
@@ -84,16 +106,17 @@ uint8_t BCount, MCount, ECount, ACount;   // A: Abandon
 	NSLog(@"Touch cancelled");
 
 	if(ACount == 0) {
-		// Process touches, set Params
+		/* Process touches, set Params */
 
-		// Do Aerials Calls
+		/* Do Aerials Calls */
 
-		// Update Caches
+		/* Update Caches */
 		for(uint8_t i=0; i<10; i++) {
 			ArtCaches[i].dx = ArTouches[i].dx;
 			ArtCaches[i].dy = ArTouches[i].dy;
 			ArtCaches[i].phase = ArTouches[i].phase;
 		}
+		ACount--;
 	}
 	else
 		ACount--;
