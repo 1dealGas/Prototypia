@@ -66,6 +66,17 @@
     parameters:
     - name: idelta
       type: number
+  - name: SetHaptic
+    type: function
+    parameters:
+    - name: haptic_enabled
+      type: boolean
+  - name: SetHitsound
+    type: function
+    parameters:
+    - name: hitsound_enabled
+      type: boolean
+
 
   - name: JudgeArf
     type: function

@@ -24,6 +24,7 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 
 	{"SetXScale", SetXS}, {"SetYScale", SetYS}, {"SetXDelta", SetXD}, {"SetYDelta", SetYD},
 	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
+	{"SetHaptic", SetHaptic}, {"SetHitsound", SetHitsound},
 
 	{"NewTable", NewTable}, {0, 0}
 };

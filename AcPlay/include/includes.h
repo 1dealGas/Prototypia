@@ -2,7 +2,6 @@
 /* We use the "pragma once" Style. */
 #pragma once
 
-
 // Sys Includes
 #include <dmsdk/sdk.h>
 #include <dmsdk/dlib/log.h>
@@ -53,6 +52,7 @@ std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 
 // Judge System Related
+bool haptic_enabled, hitsound_enabled;
 struct jud {
 	uint8_t hit = 0, early = 0, late = 0;
 	bool special_hint_judged = false;
