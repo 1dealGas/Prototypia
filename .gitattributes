@@ -14,11 +14,11 @@ Python/Prototypia/Arf2Index.py linguist-generated
 Python/Prototypia/WishChild.py linguist-generated
 Python/Prototypia/WishGroup.py linguist-generated
 
+AcPlay/include/flatbuffers/** linguist-vendored
 AcPlay/include/miniaudio.h linguist-vendored
 AcPlay/src/miniaudio.cpp linguist-vendored
 AcPlay/src/miniaudio.mm linguist-vendored
 
-AcPlay/include/flatbuffers/** linguist-vendored
 Viewer/AcDefOS/** linguist-vendored
 Viewer/AcLFS/** linguist-vendored
 Viewer/AeDirtyLarry/** linguist-vendored
