@@ -34,7 +34,7 @@ enum {
 	T_WGO = 2, T_HGO, T_AGO_L, T_AGO_R,
 	T_WTINT, T_HTINT, T_ATINT
 };
-static jud JudgeArf(const ab* vf, uint8_t vfcount, bool any_pressed, bool any_released);
+jud JudgeArf(const ab* vf, uint8_t vfcount, bool any_pressed, bool any_released);
 
 
 // miniaudio Related
