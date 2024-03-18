@@ -10,6 +10,8 @@
       type: table
     - name: is_auto
       type: boolean
+    - name: unit_handle
+      type: table
     returns:
     - name: before
       type: number
