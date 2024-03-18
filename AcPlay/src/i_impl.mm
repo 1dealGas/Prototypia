@@ -39,14 +39,15 @@ struct {
 			[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, ArTouches[0].x);
 		lua_pushnumber(EngineLuaState, ArTouches[0].y);
 		lua_pushnumber(EngineLuaState, ArTouches[0].phase);
+		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
 		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
-		lua_call(EngineLuaState, 4, 0);
+		lua_call(EngineLuaState, 5, 0);
 	}
 }
 
@@ -77,14 +78,15 @@ struct {
 			[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, ArTouches[0].x);
 		lua_pushnumber(EngineLuaState, ArTouches[0].y);
 		lua_pushnumber(EngineLuaState, ArTouches[0].phase);
+		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
 		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
-		lua_call(EngineLuaState, 4, 0);
+		lua_call(EngineLuaState, 5, 0);
 	}
 }
 
@@ -115,14 +117,15 @@ struct {
 			[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, ArTouches[0].x);
 		lua_pushnumber(EngineLuaState, ArTouches[0].y);
 		lua_pushnumber(EngineLuaState, ArTouches[0].phase);
+		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
 		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
-		lua_call(EngineLuaState, 4, 0);
+		lua_call(EngineLuaState, 5, 0);
 	}
 }
 
@@ -153,14 +156,15 @@ struct {
 			[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, ArTouches[0].x);
 		lua_pushnumber(EngineLuaState, ArTouches[0].y);
 		lua_pushnumber(EngineLuaState, ArTouches[0].phase);
+		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
 		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
-		lua_call(EngineLuaState, 4, 0);
+		lua_call(EngineLuaState, 5, 0);
 	}
 }
 
