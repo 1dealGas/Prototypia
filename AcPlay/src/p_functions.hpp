@@ -427,6 +427,7 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	/* Normally, we want the audio_offset to be a positive value,
 	 * and we set the context_ms earlier than the audio mstime.
 	 */
+	if(!before) return {0,0,0,0};
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
 	context_ms = (context_ms > 0) ? context_ms : 0;
 	context_ms = (context_ms < before) ? context_ms : before;
@@ -1246,8 +1247,7 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Clean Up & Do Returns */
-	// Echoes Processes NYI
+	/* Clean Up & Do Returns (Echoes Processes NYI) */
 	lua_checkstack(L, 4);			lua_pushnumber(L, hint_lost);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
