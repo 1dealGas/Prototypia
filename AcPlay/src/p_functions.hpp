@@ -1290,8 +1290,8 @@ static int SetHitsound(lua_State *L) {
 	return 0;
 }
 static int SetPosDiv(lua_State *L) {
-	PosDiv = luaL_checknumber(L, 1);
-	return 0;
+	CenterX = luaL_checknumber(L, 1);		CenterY = luaL_checknumber(L, 2);
+	PosDiv = luaL_checknumber(L, 3);		return 0;
 }
 static int NewTable(lua_State *L) {
 	lua_checkstack(L, 1);
