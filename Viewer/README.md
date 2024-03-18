@@ -4,7 +4,7 @@ Aerials Chart[Fumen] viewer made with `Defold` and `Aerials Player v2` .
 
 ## Setup
 
-1. Copy the **whole** `AcPlay/AcArf2` volume into the root of the Project Volume ;
+1. Copy the **whole** `AcPlay` volume into the root of the Project Volume ;
 
 2. Open `game.project` with `Defold Editer` **(1.7.0 or upper)** .
 
