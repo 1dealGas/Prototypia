@@ -53,8 +53,8 @@ std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 
 // Judge System Related
-struct jud { uint8_t hit = 0, early = 0, late = 0;	bool special_hint_judged = false; };
+struct jud {
+	uint8_t hit = 0, early = 0, late = 0;
+	bool special_hint_judged = false;
+};
 jud JudgeArf(const ab* vf, uint8_t vfcount, bool any_pressed, bool any_released);
-#ifdef DM_PLATFORM_IOS
-extern void iStartListening();
-#endif
