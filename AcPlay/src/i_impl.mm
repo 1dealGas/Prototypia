@@ -200,7 +200,7 @@ struct {
 	self.w.rootViewController = [[ArInputViewController alloc] init];
 	self.w.backgroundColor = [UIColor clearColor];
 	self.w.windowLevel = UIWindowLevelAlert;
-	[self.w makeKeyAndVisible];
+	self.w.hidden = NO;
 	return YES;
 }
 
