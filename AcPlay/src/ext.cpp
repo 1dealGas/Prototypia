@@ -21,12 +21,13 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 {
 	{"InitArf", InitArf}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
 	{"SetAudioOffset", SetAudioOffset}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArfLua},
+	{"SetHaptic", SetHaptic}, {"SetHitsound", SetHitsound},
 
 	{"SetXScale", SetXS}, {"SetYScale", SetYS}, {"SetXDelta", SetXD}, {"SetYDelta", SetYD},
 	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
-	{"SetHaptic", SetHaptic}, {"SetHitsound", SetHitsound},
 
-	{"NewTable", NewTable}, {0, 0}
+	{"NewTable", NewTable},
+	{0, 0}
 };
 
 
@@ -60,18 +61,18 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	}
 
 	// Register Lua Modules
-	lua_State* L = p->m_L;
-	luaL_loadstring(L, "return");						lua_setglobal(L, "I");
-	luaL_register(L, "AcAudio", AcAudio);		luaL_register(L, "Arf2", Arf2);
-	lua_pop(L, 2);   // Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process.
+	/* Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process. */
+	EngineLuaState = p->m_L;
+	luaL_loadstring(EngineLuaState, "return");				lua_setglobal(EngineLuaState, "I");
+	luaL_register(EngineLuaState, "AcAudio", AcAudio);
+	luaL_register(EngineLuaState, "Arf2", Arf2);
+	lua_pop(EngineLuaState, 2);
 
 	// Register Platform-Specific Stuff (Android)
 	#ifdef DM_PLATFORM_ANDROID
 	#endif
-
 	return dmExtension::RESULT_OK;
 }
-
 inline void AcPlayOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 	switch(e->m_Event) {   // PreviewSound won't be nullptr when playing
 		case dmExtension::EVENT_ID_ICONIFYAPP:
@@ -108,7 +109,6 @@ inline void AcPlayOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 		default:;   /* break omitted */
 	}
 }
-
 inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	// Close Exisiting Units(miniaudio sounds)
 	if(PreviewSound) {
@@ -129,12 +129,12 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 			ma_resource_manager_data_source_uninit(it.first);
 
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
+	// Then Do Return. No further cleranup since it's the finalizer
 	ma_engine_uninit(&PreviewEngine);
 	ma_engine_uninit(&PlayerEngine);
-
-	// No further cleranup since it's the finalizer
 	return dmExtension::RESULT_OK;
 }
-
-inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
+inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
+	return dmExtension::RESULT_OK;
+}
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
