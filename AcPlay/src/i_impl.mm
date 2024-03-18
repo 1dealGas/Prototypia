@@ -215,4 +215,16 @@ struct {
 
 @end
 
+
+/* Defold Binding */
+ArDelegate* D = NULL;
+void InputInit() {
+	D = [[ArDelegate alloc] init];
+	dmExtension::RegisteriOSUIApplicationDelegate(D);
+}
+void InputUninit() {
+	dmExtension::UnregisteriOSUIApplicationDelegate(D);
+	D = NULL;
+}
+
 #endif

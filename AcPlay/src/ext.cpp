@@ -67,12 +67,14 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	luaL_register(L, "AcAudio", AcAudio);		luaL_register(L, "Arf2", Arf2);
 	lua_pop(L, 2);										EngineLuaState = p->m_L;
 
-	// Register Platform-Specific Stuff (Android)
-	#ifdef DM_PLATFORM_ANDROID
+	// Register Platform-Specific Stuff
+	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+	InputInit();
 	#endif
 
 	return dmExtension::RESULT_OK;
 }
+
 inline void AcPlayOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 	switch(e->m_Event) {   // PreviewSound won't be nullptr when playing
 		case dmExtension::EVENT_ID_ICONIFYAPP:
@@ -109,6 +111,7 @@ inline void AcPlayOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 		default:;   /* break omitted */
 	}
 }
+
 inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	// Close Exisiting Units(miniaudio sounds)
 	if(PreviewSound) {
@@ -129,12 +132,19 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 			ma_resource_manager_data_source_uninit(it.first);
 
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
-	// Then Do Return. No further cleranup since it's the finalizer.
 	ma_engine_uninit(&PreviewEngine);
 	ma_engine_uninit(&PlayerEngine);
+
+	// Uninit Platform-Specific Stuff
+	// Then Do Return. No further cleranup since it's the finalizer.
+	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+	InputUninit();
+	#endif
 	return dmExtension::RESULT_OK;
 }
+
 inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
+
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
