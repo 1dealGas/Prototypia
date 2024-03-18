@@ -62,15 +62,15 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 
 	// Register Lua Modules
 	/* Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process. */
-	EngineLuaState = p->m_L;
-	luaL_loadstring(EngineLuaState, "return");				lua_setglobal(EngineLuaState, "I");
-	luaL_register(EngineLuaState, "AcAudio", AcAudio);
-	luaL_register(EngineLuaState, "Arf2", Arf2);
-	lua_pop(EngineLuaState, 2);
+	const auto L = p->m_L;
+	luaL_loadstring(L, "return");						lua_setglobal(L, "I");
+	luaL_register(L, "AcAudio", AcAudio);		luaL_register(L, "Arf2", Arf2);
+	lua_pop(L, 2);										EngineLuaState = p->m_L;
 
 	// Register Platform-Specific Stuff (Android)
 	#ifdef DM_PLATFORM_ANDROID
 	#endif
+
 	return dmExtension::RESULT_OK;
 }
 inline void AcPlayOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
@@ -129,7 +129,7 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 			ma_resource_manager_data_source_uninit(it.first);
 
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
-	// Then Do Return. No further cleranup since it's the finalizer
+	// Then Do Return. No further cleranup since it's the finalizer.
 	ma_engine_uninit(&PreviewEngine);
 	ma_engine_uninit(&PlayerEngine);
 	return dmExtension::RESULT_OK;
