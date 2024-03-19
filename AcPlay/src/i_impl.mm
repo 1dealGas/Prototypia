@@ -225,7 +225,7 @@ void* FtId = NULL;
 
 /* Create a Delegate class that applies our custom UIViewController */
 @interface ArInputDelegate : UIResponder <UIApplicationDelegate>
-@property(strong, nonatomic) UIWindow *w;
+@property(strong, nonatomic) ArInputWindow *w;
 @end
 
 @implementation ArInputDelegate
