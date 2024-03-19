@@ -11,7 +11,7 @@ constexpr luaL_reg AcAudio[] = {
 	{"PlayUnit", AmPlayUnit}, {"CheckPlaying", AmCheckPlaying}, {"StopUnit", AmStopUnit},
 	{"PlayPreview", AmPlayPreview}, {"StopPreview", AmStopPreview},
 	{"GetTime", AmGetTime}, {"SetTime", AmSetTime},
-	{0, 0}
+	{nullptr, nullptr}
 };
 
 
@@ -29,7 +29,8 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 	{"JudgeArfDesktop", JudgeArfDesktop},
 	#endif
 
-	{"NewTable", NewTable}, {0, 0}
+	{"NewTable", NewTable},
+	{nullptr, nullptr}
 };
 
 
@@ -38,6 +39,11 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 #include <atomic>
 std::atomic<uint64_t> input_queue[256];
 uint8_t eq_idx = 0, dq_idx = 0;
+
+inline int InputBoot(lua_State* L) {
+	input_booted = true;
+	return 0;
+}
 
 inline void InputEnqueue(const double gui_x, const double gui_y, const uint64_t gui_phase, const uint64_t has_obj_judged, const uint64_t special_judged) {
 	// gui_x(0~30, always non-negative), gui_y(31~60, always non-negative)
@@ -102,6 +108,7 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	// Register Platform-Specific Stuff
 	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
+	lua_pushcfunction(L, InputBoot);				lua_setglobal(L, "InputBoot");
 	lua_pushcfunction(L, InputDequeue);				lua_setglobal(L, "InputDequeue");
 	InputInit();
 	#endif
@@ -177,8 +184,5 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	return dmExtension::RESULT_OK;
 }
 
-inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
-	return dmExtension::RESULT_OK;
-}
-
+inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)

@@ -58,7 +58,8 @@ void* FtId = NULL;
 	}
 
 	/* Do Lua Call */
-	InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+    if(input_booted)
+	    InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
 }
 
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
@@ -99,7 +100,8 @@ void* FtId = NULL;
 	}
 
 	/* Do Lua Call */
-	InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+    if(input_booted)
+	    InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
 }
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
@@ -141,7 +143,8 @@ void* FtId = NULL;
 	}
 
 	/* Do Lua Call */
-	InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+    if(input_booted)
+	    InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
 }
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
@@ -183,7 +186,8 @@ void* FtId = NULL;
 	}
 
 	/* Do Lua Call */
-	InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+    if(input_booted)
+	    InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
 }
 
 @end

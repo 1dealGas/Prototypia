@@ -59,9 +59,12 @@ struct jud {
 bool haptic_enabled = false;
 
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+bool input_booted = false;
+double PosDiv = 1.0, CenterX = 900.0, CenterY = 540.0;  // Use Lua to manage them on desktop platforms.
+
 void InputInit();
 void InputUninit();
 void InputEnqueue(double, double, uint8_t, bool, bool);
-double PosDiv = 1.0, CenterX = 900.0, CenterY = 540.0;  // Use Lua to manage them on desktop platforms.
+
 jud JudgeArf(const ab*, uint64_t, uint64_t, uint64_t);
 #endif
