@@ -57,14 +57,14 @@ void* FtId = NULL;
 		}
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, has_obj_judged, special_hint_judged) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, FirstTouch.x);
 		lua_pushnumber(EngineLuaState, FirstTouch.y);
 		lua_pushnumber(EngineLuaState, FirstTouch.phase);
+		lua_pushboolean(EngineLuaState, has_obj_judged);
 		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
-		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
 		lua_call(EngineLuaState, 5, 0);
 	}
 }
@@ -106,14 +106,14 @@ void* FtId = NULL;
 		}
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, has_obj_judged, special_hint_judged) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, FirstTouch.x);
 		lua_pushnumber(EngineLuaState, FirstTouch.y);
 		lua_pushnumber(EngineLuaState, FirstTouch.phase);
+		lua_pushboolean(EngineLuaState, has_obj_judged);
 		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
-		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
 		lua_call(EngineLuaState, 5, 0);
 	}
 }
@@ -156,14 +156,14 @@ void* FtId = NULL;
 		}
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, has_obj_judged, special_hint_judged) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, FirstTouch.x);
 		lua_pushnumber(EngineLuaState, FirstTouch.y);
 		lua_pushnumber(EngineLuaState, FirstTouch.phase);
+		lua_pushboolean(EngineLuaState, has_obj_judged);
 		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
-		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
 		lua_call(EngineLuaState, 5, 0);
 	}
 }
@@ -206,14 +206,14 @@ void* FtId = NULL;
 		}
 	}
 
-	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
+	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, has_obj_judged, special_hint_judged) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
 		lua_pushnumber(EngineLuaState, FirstTouch.x);
 		lua_pushnumber(EngineLuaState, FirstTouch.y);
 		lua_pushnumber(EngineLuaState, FirstTouch.phase);
+		lua_pushboolean(EngineLuaState, has_obj_judged);
 		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
-		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
 		lua_call(EngineLuaState, 5, 0);
 	}
 }
