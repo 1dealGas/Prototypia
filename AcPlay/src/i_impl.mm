@@ -28,11 +28,11 @@ void* FtId = NULL;
 			540.0 + (3*CenterY - location.y) / PosDiv,
 			0
 		};
-		if( ArTouch.empty() ) {
+		if( ArTouches.empty() ) {
 			FirstTouch = new_touch;
 			FtId = id;
 		}
-		ArTouch.emplace(id, new_touch);
+		ArTouches.emplace(id, new_touch);
 	}
 
 	/* Judge & Do Haptics */
@@ -106,7 +106,7 @@ void* FtId = NULL;
 	/* Process touches */
 	for(UITouch *touch in touches) {
 		void* id = (__bridge void*)touch;
-		ArTouch.erase(id);
+		ArTouches.erase(id);
 		if(id == FtId) {
 			CGPoint location = [touch locationInView:self.view];
 			FirstTouch = {   // On UIKit (0,0) is the Left Top of the View
@@ -148,7 +148,7 @@ void* FtId = NULL;
 	/* Process touches */
 	for(UITouch *touch in touches) {
 		void* id = (__bridge void*)touch;
-		ArTouch.erase(id);
+		ArTouches.erase(id);
 		if(id == FtId) {
 			CGPoint location = [touch locationInView:self.view];
 			FirstTouch = {   // On UIKit (0,0) is the Left Top of the View
