@@ -45,11 +45,18 @@ inline int InputBoot(lua_State* L) {
 	return 0;
 }
 
-inline void InputEnqueue(const double gui_x, const double gui_y, const uint64_t gui_phase, const uint64_t has_obj_judged, const uint64_t special_judged) {
-	// gui_x(0~30, always non-negative), gui_y(31~60, always non-negative)
-	// gui_phase(61~62), has_obj_judged(63), special_judged(64)
-	const auto s = (uint64_t)(gui_x*1024) + ((uint64_t)(gui_y*1024)<<30) + (gui_phase<<60) + (has_obj_judged<<62) + (special_judged<<63);
-	input_queue[eq_idx].store(s);
+inline void InputEnqueue(const double gui_x, const double gui_y, const uint64_t gui_phase, const jud& jrs) {
+	// gui_x(1-18, always non-negative), gui_y(19-36, always non-negative), gui_phase(37-38)
+	// hit(39-46), early(47-54), late(55-62), special_hint_judged(63)
+	input_queue[eq_idx].store(
+		+ ( (uint64_t)(gui_x*128) )
+		+ ( (uint64_t)(gui_y*128) << 18 )
+		+ ( gui_phase << 36)
+		+ ( (uint64_t)jrs.hit << 38 )
+		+ ( (uint64_t)jrs.early << 46 )
+		+ ( (uint64_t)jrs.late << 54 )
+		+ ( (uint64_t)jrs.special_hint_judged << 62 )
+	);
 	eq_idx++;   // Utilized the uint8_t overflowing to let the queue loop. Fast and a little bit dirty.
 }
 
@@ -57,12 +64,14 @@ inline int InputDequeue(lua_State* L) {
 	while(dq_idx != eq_idx) {
 		const auto s = input_queue[dq_idx].load();
 		lua_getglobal(L, "I");
-		lua_pushnumber( L, (s & 0x3fffffff) / 1024.0 );
-		lua_pushnumber( L, ((s>>30) & 0x3fffffff) / 1024.0 );
-		lua_pushnumber( L, (s>>60) & 0b11 );
-		lua_pushboolean( L, (s>>62) & 0b1 );
-		lua_pushboolean( L, (s>>63) );
-		lua_call(L, 5, 0);
+		lua_pushnumber( L, (s & 0x3ffff) / 128.0 );			// gui_x
+		lua_pushnumber( L, ((s>>18) & 0x3ffff) / 128.0 );		// gui_y
+		lua_pushnumber( L, (s>>36) & 0b11 );					// gui_phase
+		lua_pushnumber( L, (s>>38) & 0xff );					// hit
+		lua_pushnumber( L, (s>>46) & 0xff );					// early
+		lua_pushnumber( L, (s>>54) & 0xff );					// late
+		lua_pushboolean( L, (s>>62) );						// special_hint_judged
+		lua_call(L, 7, 0);
 		dq_idx++;   // Overflowing
 	}
 	return 0;
@@ -183,6 +192,5 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	#endif
 	return dmExtension::RESULT_OK;
 }
-
 inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)

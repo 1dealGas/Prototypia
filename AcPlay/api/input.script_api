@@ -8,8 +8,12 @@
     type: number
   - name: gui_phase
     type: number
-  - name: has_obj_judged
-    type: boolean
+  - name: hit
+    type: number
+  - name: early
+    type: number
+  - name: late
+    type: number
   - name: special_hint_judged
     type: boolean
 
