@@ -60,7 +60,7 @@ static std::vector<ArHint*> blocked;
 static bool is_judging;
 
 
-// Init Function
+// Init & Final Functions
 static int InitArf(lua_State* L) {
 
 	/* Viewer Usage
@@ -350,243 +350,10 @@ static int InitArf(lua_State* L) {
 	lua_pushnumber( L, A->wgo_required() );	lua_pushnumber( L, A->hgo_required() );
 	return 4;
 }
-
-
-// Offset Functions
-static int SetAudioOffset(lua_State *L) {
-	const int32_t _ofs = luaL_checknumber(L, 1);
-	if( _ofs>=-1000 && _ofs<=1000 )
-		audio_offset = _ofs;
-	else
-		audio_offset = 0;
+static int FinalArf(lua_State *L) {
+	Arf::clear();
+	ArfBefore = 0;
 	return 0;
-}
-static int SetIDelta(lua_State *L) {
-	constexpr uint8_t JR_REV = 100 - JUDGE_RANGE;
-	const int8_t _id = luaL_checknumber(L, 1);
-	if( _id>=-JR_REV && _id<=JR_REV )
-		{ idelta = _id;		mindt = -JUDGE_RANGE + _id;		maxdt = JUDGE_RANGE + _id; }
-	else
-		{ idelta = 0;		mindt = -JUDGE_RANGE;			maxdt = JUDGE_RANGE; }
-	return 0;
-}
-
-
-// Judge Functions
-inline bool is_safe_to_anmitsu(ArHint& hint) {
-
-	// Preparations
-	if(!allow_anmitsu) return false;
-	const float hl = hint.c_dx - 405.0f, hr = hint.c_dx + 405.0f;
-	const float hd = hint.c_dy - 405.0f, hu = hint.c_dy + 405.0f;
-
-	// Iterate blocked blocks
-	const uint16_t bs = blocked.size();
-	for( uint16_t i=0; i<bs; i++ ) {
-		const float x = blocked[i] -> c_dx;
-		if( (x>hl) && x<hr ) {
-			const float y = blocked[i] -> c_dy;
-			if( (y>hu) && y<hd ) return false;
-		}
-	}
-
-	// Register "Safe to Anmitsu" Hints
-	blocked.emplace_back(&hint);
-	return true;
-}
-inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const uint8_t vf_count) {
-
-	// Unpack the Hint
-	const float hl = 697.5f + (hint.c_dx * rotcos - hint.c_dy * rotsin) * xscale + xdelta;   // 900 - 112.5 * 1.8
-	const float hd = 337.5f + (hint.c_dx * rotsin + hint.c_dy * rotcos) * yscale + ydelta;   // 540 - 112.5 * 1.8
-	const float hr = hl + 405.0f, hu = hd + 405.0f;
-
-	// Detect Touches
-	for( uint8_t i=0; i<vf_count; i++ ) {
-		const float x = valid_fingers[i].a;
-		if( (x>=hl) && x<=hr ) {
-			const float y = valid_fingers[i].b;
-			if( (y>=hd) && y<=hu )
-				return true;
-		}
-	}
-
-	// Process Detection Failure
-	return false;
-}
-inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
-	// Get msTime & Other Preparations
-	/* Normally, we want the audio_offset to be a positive value,
-	 * and we set the context_ms earlier than the audio mstime.
-	 */
-	if(!ArfBefore) return {0,0,0,false};
-	is_judging = true;
-
-	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
-	context_ms = (context_ms > 0) ? context_ms : 0;
-	context_ms = (context_ms < ArfBefore) ? context_ms : ArfBefore;
-
-	// Prepare the Iteration Scale
-	uint16_t current_group; {
-		const uint16_t location_group = context_ms >> 9 ;   // floordiv 512
-		current_group = (location_group > 1) ? (location_group - 1) : 0 ;
-	}
-	uint16_t beyond_group = current_group + 3;
-	beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
-
-	// Start Judging
-	jud returns;
-	if(any_released) blocked.clear();
-	if(any_pressed) {
-		uint32_t min_time = 0;
-		for( ; current_group < beyond_group; current_group++ ) {
-
-			const uint8_t hint_count = Arf::index[current_group].hidx_count;
-			if(!hint_count) continue;
-
-			const auto hint_ids = Arf::index[current_group].hidx;
-			for( uint8_t i=0; i<hint_count; i++ ) {
-				const auto current_hint_id = hint_ids[i];
-				auto& current_hint = Arf::hint[current_hint_id];
-
-				// Jump Judging based on the Sort Assumption
-				const int32_t dt = context_ms - current_hint.ms;
-				if(dt < -510) break;
-				if(dt > 470) continue;
-
-				// Hint Status Manipulation
-				const bool htn = has_touch_near(current_hint, vf, vfcount);
-				switch(current_hint.status) {
-					case HINT_NONJUDGED:   // No break here
-					case HINT_NONJUDGED_LIT:
-						if(htn) {
-							if( (dt >= -100) && dt <= 100 ) {
-								const bool ista = is_safe_to_anmitsu(current_hint);
-
-								if(!min_time) {
-									// Data Update
-									min_time = current_hint.ms;
-									current_hint.judged_ms = context_ms;
-									current_hint.status = HINT_JUDGED_LIT;
-									if(current_hint_id == special_hint)
-										returns.special_hint_judged = (bool)special_hint;
-
-									// Classify
-									if(dt < mindt) {
-										current_hint.elstatus = HINT_EARLY;
-										returns.early++;
-									}
-									else if(dt <= maxdt) returns.hit++;
-									else {
-										current_hint.elstatus = HINT_LATE;
-										returns.late++;
-									}
-								}
-								else if( (current_hint.ms == min_time) || ista ) {
-									// Data Update
-									current_hint.judged_ms = context_ms;
-									current_hint.status = HINT_JUDGED_LIT;
-									if(current_hint_id == special_hint)
-										returns.special_hint_judged = (bool)special_hint;
-
-									// Classify
-									if(dt < mindt) {
-										current_hint.elstatus = HINT_EARLY;
-										returns.early++;
-									}
-									else if(dt <= maxdt) returns.hit++;
-									else {
-										current_hint.elstatus = HINT_LATE;
-										returns.late++;
-									}
-								}
-								else current_hint.status = HINT_NONJUDGED_LIT;
-
-							}
-							else current_hint.status = HINT_NONJUDGED_LIT;
-						}
-						else current_hint.status = HINT_NONJUDGED;
-						break;
-
-					case HINT_JUDGED_LIT:
-						if(!htn)
-							current_hint.status = HINT_JUDGED;
-						break;
-
-					default:;
-				}
-			}
-		}
-	}
-
-	else for( ; current_group < beyond_group; current_group++ ) {
-		const uint8_t hint_count = Arf::index[current_group].hidx_count;
-		if(!hint_count) continue;
-
-		const auto hint_ids = Arf::index[current_group].hidx;
-		for( uint8_t i=0; i<hint_count; i++ ) {
-			const auto current_hint_id = hint_ids[i];
-			auto& current_hint = Arf::hint[current_hint_id];
-
-			// Jump Judging based on the Sort Assumption
-			const int32_t dt = context_ms - current_hint.ms;
-			if(dt < -510) break;
-			if(dt > 470) continue;
-
-			// Hint Status Manipulation
-			const bool htn = has_touch_near(current_hint, vf, vfcount);
-			switch(current_hint.status) {
-				case HINT_NONJUDGED:   // No break here
-				case HINT_NONJUDGED_LIT:
-					if(htn) current_hint.status = HINT_NONJUDGED_LIT;
-					else current_hint.status = HINT_NONJUDGED;
-					break;
-				case HINT_JUDGED_LIT:
-					if(!htn) current_hint.status = HINT_JUDGED;
-					break;
-				default:;
-			}
-		}
-	}
-
-	is_judging = false;
-	return returns;
-}
-static int JudgeArfDesktop(lua_State* L) {
-	// JudgeArfDesktop(table_touch)
-	//       -> hint_hit, hint_early, hint_late, special_hint_judged
-	if( !ArfBefore ) return 0;
-
-	// Unpack Touches
-	ab vf[10];
-	uint8_t vfcount = 0;
-	bool any_pressed = false, any_released = false;
-	for( uint8_t i=0; i<10; i++ ) {
-		lua_rawgeti(L, 2, i+1);
-		const v3 f = dmScript::CheckVector3(L, -1);
-		lua_pop(L, 1);
-
-		switch( (uint8_t)f->getZ() ) {
-			case 1:
-				any_pressed = true;   // No break here
-			case 2:
-				vf[vfcount].a = f->getX();
-				vf[vfcount].b = f->getY();
-				vfcount++;
-				break;
-			case 3:
-				any_released = true;
-				break;
-			default:;
-		}
-	}
-
-	// Start Judging & Do Returns
-	const auto returns = JudgeArf(vf, vfcount, any_pressed, any_released);
-	lua_pushnumber(L, returns.hit);
-	lua_pushnumber(L, returns.early);		lua_pushnumber(L, returns.late);
-	lua_pushboolean(L, returns.special_hint_judged);
-	return 4;
 }
 
 
@@ -1249,12 +1016,31 @@ static int UpdateArf(lua_State* L) {
 }
 
 
-// Sundries
-static int FinalArf(lua_State *L) {
-	Arf::clear();
-	ArfBefore = 0;
+// Setting Functions
+static int SetAudioOffset(lua_State *L) {
+	const int32_t _ofs = luaL_checknumber(L, 1);
+	if( _ofs>=-1000 && _ofs<=1000 )
+		audio_offset = _ofs;
+	else
+		audio_offset = 0;
 	return 0;
 }
+static int SetIDelta(lua_State *L) {
+	constexpr uint8_t JR_REV = 100 - JUDGE_RANGE;
+	const int8_t _id = luaL_checknumber(L, 1);
+	if( _id>=-JR_REV && _id<=JR_REV )
+	{ idelta = _id;		mindt = -JUDGE_RANGE + _id;		maxdt = JUDGE_RANGE + _id; }
+	else
+	{ idelta = 0;		mindt = -JUDGE_RANGE;			maxdt = JUDGE_RANGE; }
+	return 0;
+}
+static int SetHaptic(lua_State *L) {
+	haptic_enabled = lua_toboolean(L, 1);
+	return 0;
+}
+
+
+// Script Functions
 static int SetXS(lua_State *L) {
 	xscale = luaL_checknumber(L, 1);
 	return 0;
@@ -1284,10 +1070,201 @@ static int SetAnmitsu(lua_State *L) {
 	allow_anmitsu = lua_toboolean(L, 1);
 	return 0;
 }
-static int SetHaptic(lua_State *L) {
-	haptic_enabled = lua_toboolean(L, 1);
-	return 0;
+
+
+// Judge Functions
+inline bool is_safe_to_anmitsu(ArHint& hint) {
+
+	// Preparations
+	if(!allow_anmitsu) return false;
+	const float hl = hint.c_dx - 405.0f, hr = hint.c_dx + 405.0f;
+	const float hd = hint.c_dy - 405.0f, hu = hint.c_dy + 405.0f;
+
+	// Iterate blocked blocks
+	const uint16_t bs = blocked.size();
+	for( uint16_t i=0; i<bs; i++ ) {
+		const float x = blocked[i] -> c_dx;
+		if( (x>hl) && x<hr ) {
+			const float y = blocked[i] -> c_dy;
+			if( (y>hu) && y<hd ) return false;
+		}
+	}
+
+	// Register "Safe to Anmitsu" Hints
+	blocked.emplace_back(&hint);
+	return true;
 }
+inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const uint8_t vf_count) {
+
+	// Unpack the Hint
+	const float hl = 697.5f + (hint.c_dx * rotcos - hint.c_dy * rotsin) * xscale + xdelta;   // 900 - 112.5 * 1.8
+	const float hd = 337.5f + (hint.c_dx * rotsin + hint.c_dy * rotcos) * yscale + ydelta;   // 540 - 112.5 * 1.8
+	const float hr = hl + 405.0f, hu = hd + 405.0f;
+
+	// Detect Touches
+	for( uint8_t i=0; i<vf_count; i++ ) {
+		const float x = valid_fingers[i].a;
+		if( (x>=hl) && x<=hr ) {
+			const float y = valid_fingers[i].b;
+			if( (y>=hd) && y<=hu )
+				return true;
+		}
+	}
+
+	// Process Detection Failure
+	return false;
+}
+inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
+	// Get msTime & Other Preparations
+	/* Normally, we want the audio_offset to be a positive value,
+	 * and we set the context_ms earlier than the audio mstime.
+	 */
+	if(!ArfBefore) return {0,0,0,false};
+	is_judging = true;
+
+	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
+	context_ms = (context_ms > 0) ? context_ms : 0;
+	context_ms = (context_ms < ArfBefore) ? context_ms : ArfBefore;
+
+	// Prepare the Iteration Scale
+	uint16_t current_group; {
+		const uint16_t location_group = context_ms >> 9 ;   // floordiv 512
+		current_group = (location_group > 1) ? (location_group - 1) : 0 ;
+	}
+	uint16_t beyond_group = current_group + 3;
+	beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
+
+	// Start Judging
+	jud returns;
+	if(any_released) blocked.clear();
+	if(any_pressed) {
+		uint32_t min_time = 0;
+		for( ; current_group < beyond_group; current_group++ ) {
+
+			const uint8_t hint_count = Arf::index[current_group].hidx_count;
+			if(!hint_count) continue;
+
+			const auto hint_ids = Arf::index[current_group].hidx;
+			for( uint8_t i=0; i<hint_count; i++ ) {
+				const auto current_hint_id = hint_ids[i];
+				auto& current_hint = Arf::hint[current_hint_id];
+
+				// Jump Judging based on the Sort Assumption
+				const int32_t dt = context_ms - current_hint.ms;
+				if(dt < -510) break;
+				if(dt > 470) continue;
+
+				// Hint Status Manipulation
+				const bool htn = has_touch_near(current_hint, vf, vfcount);
+				switch(current_hint.status) {
+					case HINT_NONJUDGED:   // No break here
+					case HINT_NONJUDGED_LIT:
+						if(htn) {
+							if( (dt >= -100) && dt <= 100 ) {
+								const bool ista = is_safe_to_anmitsu(current_hint);
+
+								if(!min_time) {
+									// Data Update
+									min_time = current_hint.ms;
+									current_hint.judged_ms = context_ms;
+									current_hint.status = HINT_JUDGED_LIT;
+									if(current_hint_id == special_hint)
+										returns.special_hint_judged = (bool)special_hint;
+
+									// Classify
+									if(dt < mindt) {
+										current_hint.elstatus = HINT_EARLY;
+										returns.early++;
+									}
+									else if(dt <= maxdt) returns.hit++;
+									else {
+										current_hint.elstatus = HINT_LATE;
+										returns.late++;
+									}
+								}
+								else if( (current_hint.ms == min_time) || ista ) {
+									// Data Update
+									current_hint.judged_ms = context_ms;
+									current_hint.status = HINT_JUDGED_LIT;
+									if(current_hint_id == special_hint)
+										returns.special_hint_judged = (bool)special_hint;
+
+									// Classify
+									if(dt < mindt) {
+										current_hint.elstatus = HINT_EARLY;
+										returns.early++;
+									}
+									else if(dt <= maxdt) returns.hit++;
+									else {
+										current_hint.elstatus = HINT_LATE;
+										returns.late++;
+									}
+								}
+								else current_hint.status = HINT_NONJUDGED_LIT;
+
+							}
+							else current_hint.status = HINT_NONJUDGED_LIT;
+						}
+						else current_hint.status = HINT_NONJUDGED;
+						break;
+
+					case HINT_JUDGED_LIT:
+						if(!htn)
+							current_hint.status = HINT_JUDGED;
+						break;
+
+					default:;
+				}
+			}
+		}
+	}
+
+	else for( ; current_group < beyond_group; current_group++ ) {
+		const uint8_t hint_count = Arf::index[current_group].hidx_count;
+		if(!hint_count) continue;
+
+		const auto hint_ids = Arf::index[current_group].hidx;
+		for( uint8_t i=0; i<hint_count; i++ ) {
+			const auto current_hint_id = hint_ids[i];
+			auto& current_hint = Arf::hint[current_hint_id];
+
+			// Jump Judging based on the Sort Assumption
+			const int32_t dt = context_ms - current_hint.ms;
+			if(dt < -510) break;
+			if(dt > 470) continue;
+
+			// Hint Status Manipulation
+			const bool htn = has_touch_near(current_hint, vf, vfcount);
+			switch(current_hint.status) {
+				case HINT_NONJUDGED:   // No break here
+				case HINT_NONJUDGED_LIT:
+					if(htn) current_hint.status = HINT_NONJUDGED_LIT;
+					else current_hint.status = HINT_NONJUDGED;
+					break;
+				case HINT_JUDGED_LIT:
+					if(!htn) current_hint.status = HINT_JUDGED;
+					break;
+				default:;
+			}
+		}
+	}
+
+	is_judging = false;
+	return returns;
+}
+static int JudgeArfDesktop(lua_State* L) {
+	// JudgeArfDesktop(cursor_x, cursor_y, cursor_phase) -> hit, early, late, special_hint_judged
+	if( !ArfBefore ) return 0;
+	const ab cxy = { (float)luaL_checknumber(L,1), (float)luaL_checknumber(L,2) };
+	const uint8_t cp = luaL_checknumber(L, 3);
+	const auto returns = JudgeArf(&cxy, 1, cp==0, cp==2);
+	lua_pushnumber(L, returns.hit);			lua_pushnumber(L, returns.early);
+	lua_pushnumber(L, returns.late);		lua_pushboolean(L, returns.special_hint_judged);
+	return 4;
+}
+
+
+// Util
 static int NewTable(lua_State *L) {
 	lua_checkstack(L, 1);
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
