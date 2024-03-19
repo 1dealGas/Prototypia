@@ -1,5 +1,5 @@
 // Aerials Input System Implementation for iOS
-//#ifdef DM_PLATFORM_IOS
+#ifdef DM_PLATFORM_IOS
 #include <includes.h>
 
 
