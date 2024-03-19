@@ -51,7 +51,7 @@ std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   /
 std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 /* Judge System Configs */
-lua_State* EngineLuaState = nullptr;
+lua_State* EngineLuaState = nullptr;			uint32_t ArfBefore;
 bool haptic_enabled, hitsound_enabled;			double PosDiv = 1.0, CenterX, CenterY;
 struct jud {
 	uint8_t hit = 0, early = 0, late = 0;

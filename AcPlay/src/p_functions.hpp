@@ -46,7 +46,7 @@ int16_t audio_offset;
 ma_sound* current_audio;
 
 // Settings
-static uint32_t before;
+// uint32_t ArfBefore  ->  includes.h
 static uint16_t special_hint;
 static float xscale, yscale, xdelta, ydelta, rotsin, rotcos;
 static bool daymode, allow_anmitsu;
@@ -77,7 +77,7 @@ static int InitArf(lua_State* L) {
 
 
 	// Prevent Repeated Calling & Ensure a clean Initialization
-	if(before) return 0;
+	if(ArfBefore) return 0;
 	last_wgo.clear();
 	blocked.clear();
 
@@ -106,7 +106,7 @@ static int InitArf(lua_State* L) {
 	// Code Style: If there is no element in a container, we'll remain the handle as nullptr.
 	//             Be Sure to Detect Nullptrs before Using Containers.
 	auto A = GetArf2( ArfBuf );
-	before = A -> before();
+	ArfBefore = A -> before();
 	special_hint = A -> special_hint();
 
 	/* DeltaNodes in Layer 1 */ {
@@ -346,7 +346,7 @@ static int InitArf(lua_State* L) {
 
 	// Do Returns
 	lua_checkstack(L, 4);
-	lua_pushnumber( L, before );				lua_pushnumber( L, hint_size );
+	lua_pushnumber( L, ArfBefore );				lua_pushnumber( L, hint_size );
 	lua_pushnumber( L, A->wgo_required() );	lua_pushnumber( L, A->hgo_required() );
 	return 4;
 }
@@ -419,10 +419,10 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	/* Normally, we want the audio_offset to be a positive value,
 	 * and we set the context_ms earlier than the audio mstime.
 	 */
-	if(!before) return {0,0,0,false};
+	if(!ArfBefore) return {0,0,0,false};
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
 	context_ms = (context_ms > 0) ? context_ms : 0;
-	context_ms = (context_ms < before) ? context_ms : before;
+	context_ms = (context_ms < ArfBefore) ? context_ms : ArfBefore;
 
 	// Prepare the Iteration Scale
 	uint16_t current_group; {
@@ -552,7 +552,7 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 static int JudgeArfLua(lua_State* L) {
 	// JudgeArf(table_touch)
 	//       -> hint_hit, hint_early, hint_late, special_hint_judged
-	if( !before ) return 0;
+	if( !ArfBefore ) return 0;
 
 	// Unpack Touches
 	ab vf[10];
@@ -632,7 +632,7 @@ static int UpdateArf(lua_State* L) {
 
 	/* We still let Lua pass the mstime,
 	 * to keep the extension compatible with the Viewer. */
-	if( !before ) return 0;
+	if( !ArfBefore ) return 0;
 
 	/* Prepare Returns & Process msTime */
 	// Z Distribution: Wish{0.07,0.08,0.09,0.10}  Hint(-0.06,0)
@@ -640,7 +640,7 @@ static int UpdateArf(lua_State* L) {
 	uint8_t wgo_used = 0, hgo_used = 0, ago_used = 0;
 	auto mstime = (uint32_t)luaL_checknumber(L, 1); {
 		if(mstime < 2)					mstime = 2;
-		else if(mstime >= before)		return 0;
+		else if(mstime >= ArfBefore)		return 0;
 	}
 	const uint16_t location_group = mstime >> 9 ;   // floordiv 512
 
@@ -1249,7 +1249,7 @@ static int UpdateArf(lua_State* L) {
 // Sundries
 static int FinalArf(lua_State *L) {
 	Arf::clear();
-	before = 0;
+	ArfBefore = 0;
 	return 0;
 }
 static int SetXS(lua_State *L) {
