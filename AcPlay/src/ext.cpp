@@ -25,10 +25,43 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 	{"SetXScale", SetXS}, {"SetYScale", SetYS}, {"SetXDelta", SetXD}, {"SetYDelta", SetYD},
 	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
 
-	{"JudgeArfDesktop", JudgeArfDesktop}, {"SetPosDivDesktop", SetPosDivDesktop},
-	{"NewTable", NewTable},
-	{0, 0}
+	#if !defined(DM_PLATFORM_IOS) && !defined(DM_PLATFORM_ANDROID)
+	{"JudgeArfDesktop", JudgeArfDesktop},
+	#endif
+
+	{"NewTable", NewTable}, {0, 0}
 };
+
+
+// Input Queue
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+#include <atomic>
+std::atomic<uint64_t> input_queue[256];
+uint8_t eq_idx = 0, dq_idx = 0;
+
+inline void InputEnqueue(const double gui_x, const double gui_y, const uint64_t gui_phase, const uint64_t has_obj_judged, const uint64_t special_judged) {
+	// gui_x(0~30, always non-negative), gui_y(31~60, always non-negative)
+	// gui_phase(61~62), has_obj_judged(63), special_judged(64)
+	const auto s = (uint64_t)(gui_x*1024) + ((uint64_t)(gui_y*1024)<<30) + (gui_phase<<60) + (has_obj_judged<<62) + (special_judged<<63);
+	input_queue[eq_idx].store(s);
+	eq_idx = (eq_idx+1) % 256;
+}
+
+inline int InputDequeue(lua_State* L) {
+	while(dq_idx != eq_idx) {
+		const auto s = input_queue[dq_idx].load();
+		lua_getglobal(L, "I");
+		lua_pushnumber( L, (s & 0x3fffffff) / 1024.0 );
+		lua_pushnumber( L, ((s>>30) & 0x3fffffff) / 1024.0 );
+		lua_pushnumber( L, (s>>60) & 0b11 );
+		lua_pushboolean( L, (s>>62) & 0b1 );
+		lua_pushboolean( L, (s>>63) );
+		lua_call(L, 5, 0);
+		dq_idx = (dq_idx+1) % 256;
+	}
+	return 0;
+}
+#endif
 
 
 /* Binding Stuff */
@@ -53,7 +86,7 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	PlayerRM = &player_rm;
 
 	// Init the Player Engine: a custom engine config
-	auto engine_config			= ma_engine_config_init();
+	auto engine_config	= ma_engine_config_init();
 	engine_config.pResourceManager		= PlayerRM;
 	if( ma_engine_init(&engine_config, &PlayerEngine) != MA_SUCCESS ) {
 		dmLogFatal("Failed to Init the miniaudio Engine \"Player\".");
@@ -63,12 +96,13 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	// Register Lua Modules
 	/* Defold Restriction: Must Get the Lua Stack Balanced in the Initiation Process. */
 	const auto L = p->m_L;
-	luaL_loadstring(L, "return");						lua_setglobal(L, "I");
 	luaL_register(L, "AcAudio", AcAudio);		luaL_register(L, "Arf2", Arf2);
-	lua_pop(L, 2);										EngineLuaState = p->m_L;
+	lua_pop(L, 2);
 
 	// Register Platform-Specific Stuff
 	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
+	lua_pushcfunction(L, InputDequeue);				lua_setglobal(L, "InputDequeue");
 	InputInit();
 	#endif
 

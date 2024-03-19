@@ -51,14 +51,17 @@ std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   /
 std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 /* Judge System Configs */
-bool haptic_enabled = false;								uint32_t ArfBefore;
-double PosDiv = 1.0, CenterX = 900.0, CenterY = 540.0;		lua_State* EngineLuaState = nullptr;
+uint32_t ArfBefore;
 struct jud {
 	uint8_t hit = 0, early = 0, late = 0;
 	bool special_hint_judged = false;
 };
-jud JudgeArf(const ab* vf, uint8_t vfcount, bool any_pressed, bool any_released);
+bool haptic_enabled = false;
 
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
-void InputInit();		void InputUninit();
+void InputInit();
+void InputUninit();
+void InputEnqueue(double, double, uint8_t, bool, bool);
+double PosDiv = 1.0, CenterX = 900.0, CenterY = 540.0;  // Use Lua to manage them on desktop platforms.
+jud JudgeArf(const ab*, uint64_t, uint64_t, uint64_t);
 #endif
