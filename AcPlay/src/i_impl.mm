@@ -215,8 +215,8 @@ void* FtId = NULL;
 	self.view = v;
 }
 
-- (void)viewDidLayoutSubviews {  
-    [super viewDidLayoutSubviews];
+- (void)viewDidLayoutSubviews {
+	[super viewDidLayoutSubviews];
 	double WindowWthenDiv = self.view.window.bounds.size.width;
 	double WindowHthenDiv = self.view.window.bounds.size.height;
 	CenterX = WindowWthenDiv * 0.5;		CenterY = WindowHthenDiv * 0.5;
