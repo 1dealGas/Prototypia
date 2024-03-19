@@ -552,8 +552,8 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	is_judging = false;
 	return returns;
 }
-static int JudgeArfLua(lua_State* L) {
-	// JudgeArf(table_touch)
+static int JudgeArfDesktop(lua_State* L) {
+	// JudgeArfDesktop(table_touch)
 	//       -> hint_hit, hint_early, hint_late, special_hint_judged
 	if( !ArfBefore ) return 0;
 
@@ -1016,7 +1016,7 @@ static int UpdateArf(lua_State* L) {
 				if (dt < -510) break;
 
 				/* Do Hint Sweeping */
-				if( (dt>100 && !is_judging) && (hint_c.status==HINT_NONJUDGED || hint_c.status==HINT_NONJUDGED_LIT) ) {
+				if( dt>100 && !is_judging && hint_c.status<2 ) {
 					hint_c.status = HINT_SWEEPED;
 					hint_lost++;
 				}
@@ -1288,11 +1288,7 @@ static int SetHaptic(lua_State *L) {
 	haptic_enabled = lua_toboolean(L, 1);
 	return 0;
 }
-static int SetHitsound(lua_State *L) {
-	hitsound_enabled = lua_toboolean(L, 1);
-	return 0;
-}
-static int SetPosDiv(lua_State *L) {
+static int SetPosDivDesktop(lua_State *L) {
 	CenterX = luaL_checknumber(L, 1);		CenterY = luaL_checknumber(L, 2);
 	PosDiv = luaL_checknumber(L, 3);		return 0;
 }

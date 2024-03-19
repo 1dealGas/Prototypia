@@ -20,12 +20,12 @@ constexpr luaL_reg AcAudio[] = {
 constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Function.
 {
 	{"InitArf", InitArf}, {"UpdateArf", UpdateArf}, {"FinalArf", FinalArf},
-	{"SetAudioOffset", SetAudioOffset}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArfLua},
+	{"SetAudioOffset", SetAudioOffset}, {"SetIDelta", SetIDelta}, {"SetHaptic", SetHaptic},
 
 	{"SetXScale", SetXS}, {"SetYScale", SetYS}, {"SetXDelta", SetXD}, {"SetYDelta", SetYD},
 	{"SetRotDeg", SetRotDeg}, {"SetDaymode", SetDaymode}, {"SetAnmitsu", SetAnmitsu},
-	{"SetHaptic", SetHaptic}, {"SetHitsound", SetHitsound}, {"SetPosDiv", SetPosDiv},
 
+	{"JudgeArfDesktop", JudgeArfDesktop}, {"SetPosDivDesktop", SetPosDivDesktop},
 	{"NewTable", NewTable},
 	{0, 0}
 };
