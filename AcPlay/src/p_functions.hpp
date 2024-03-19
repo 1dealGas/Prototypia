@@ -57,7 +57,6 @@ static uint16_t dt_p1, dt_p2;
 static int8_t mindt = -37, maxdt = 37, idelta = 0;
 static std::unordered_map<uint32_t, uint8_t> last_wgo;
 static std::vector<ArHint*> blocked;
-static bool is_judging;
 
 
 // Init & Final Functions
@@ -106,7 +105,6 @@ static int InitArf(lua_State* L) {
 	// Code Style: If there is no element in a container, we'll remain the handle as nullptr.
 	//             Be Sure to Detect Nullptrs before Using Containers.
 	auto A = GetArf2( ArfBuf );
-	ArfBefore = A -> before();
 	special_hint = A -> special_hint();
 
 	/* DeltaNodes in Layer 1 */ {
@@ -346,13 +344,13 @@ static int InitArf(lua_State* L) {
 
 	// Do Returns
 	lua_checkstack(L, 4);
-	lua_pushnumber( L, ArfBefore );				lua_pushnumber( L, hint_size );
+	lua_pushnumber( L, A -> before() );		lua_pushnumber( L, hint_size );
 	lua_pushnumber( L, A->wgo_required() );	lua_pushnumber( L, A->hgo_required() );
+	ArfBefore = A -> before();
 	return 4;
 }
 static int FinalArf(lua_State *L) {
-	Arf::clear();
-	ArfBefore = 0;
+	ArfBefore = 0;		Arf::clear();
 	return 0;
 }
 
@@ -410,7 +408,7 @@ static int UpdateArf(lua_State* L) {
 	uint8_t wgo_used = 0, hgo_used = 0, ago_used = 0;
 	auto mstime = (uint32_t)luaL_checknumber(L, 1); {
 		if(mstime < 2)					mstime = 2;
-		else if(mstime >= ArfBefore)		return 0;
+		else if(mstime >= ArfBefore)	return 0;
 	}
 	const uint16_t location_group = mstime >> 9 ;   // floordiv 512
 
@@ -775,15 +773,16 @@ static int UpdateArf(lua_State* L) {
 			for(uint8_t i=0; i<hint_count; i++) {
 				const auto hint_cid = hint_ids[i];
 				auto& hint_c = Arf::hint[hint_cid];
+				dmSpinlock::Lock(&hint_c.lock);
 
 				/* Calculate Dt & Jump Judging based on the Sort Assumption */
 				const auto dt = (int32_t)mstime - (int32_t)hint_c.ms;
 				const auto jdt = (int32_t)mstime - (int32_t)hint_c.judged_ms;
-				if (dt > 470) continue;
-				if (dt < -510) break;
+				if (dt > 470)	{ dmSpinlock::Unlock(&hint_c.lock); continue; }   // Hint For Loop
+				if (dt < -510)	{ dmSpinlock::Unlock(&hint_c.lock); break; }   // Hint For Loop
 
 				/* Do Hint Sweeping */
-				if( dt>100 && !is_judging && hint_c.status<2 ) {
+				if( dt>100  && hint_c.status<2 ) {
 					hint_c.status = HINT_SWEEPED;
 					hint_lost++;
 				}
@@ -812,12 +811,12 @@ static int UpdateArf(lua_State* L) {
 						htint -> setX(0.2037f).setY(0.2037f).setZ(0.2037f);
 						SetPosition( hgo, p3(x, y, -0.04f) );
 						hgo_used++;
-						break;
+						break;   // Switch Case
 					case HINT_NONJUDGED_LIT:
 						htint -> setX(0.3737f).setY(0.3737f).setZ(0.3737f);
 						SetPosition( hgo, p3(x, y, -0.037f) );
 						hgo_used++;
-						break;
+						break;   // Switch Case
 					case HINT_JUDGED_LIT:   // No break here
 						SetPosition( hgo, p3(x, y, -0.01f) );
 						switch(hint_c.elstatus) {
@@ -826,13 +825,13 @@ static int UpdateArf(lua_State* L) {
 									if(daymode)		htint -> setX(H_HIT_R).setY(H_HIT_G).setZ(H_HIT_B);
 									else			htint -> setX(H_HIT_C).setY(H_HIT_C).setZ(H_HIT_C);
 								}
-								break;
+								break;   // Switch Case
 							case HINT_EARLY:
 								htint -> setX(H_EARLY_R).setY(H_EARLY_G).setZ(H_EARLY_B);
-								break;
+								break;   // Switch Case
 							case HINT_LATE:
 								htint -> setX(H_LATE_R).setY(H_LATE_G).setZ(H_LATE_B);
-								break;
+								break;   // Switch Case
 							default:;
 						}
 						hgo_used++;
@@ -865,13 +864,13 @@ static int UpdateArf(lua_State* L) {
 										if(daymode)		atint -> setX(A_HIT_R).setY(A_HIT_G).setZ(A_HIT_B);
 										else			atint -> setX(A_HIT_C).setY(A_HIT_C).setZ(A_HIT_C);
 									}
-									break;
+									break;   // Switch Case
 								case HINT_EARLY:
 									atint -> setX(A_EARLY_R).setY(A_EARLY_G).setZ(A_EARLY_B);
-									break;
+									break;   // Switch Case
 								case HINT_LATE:
 									atint -> setX(A_LATE_R).setY(A_LATE_G).setZ(A_LATE_B);
-									break;
+									break;   // Switch Case
 								default:;
 							}
 
@@ -895,7 +894,7 @@ static int UpdateArf(lua_State* L) {
 								SetScale( agor, 1.0 + 0.637 * anim_calculate );
 							}
 						}
-						break;
+						break;   // Switch Case
 					case HINT_SWEEPED:
 						{
 							SetPosition( hgo, p3(x, y, -0.02f + dt*0.00001f) );
@@ -903,7 +902,7 @@ static int UpdateArf(lua_State* L) {
 							color *= 0.51f;								htint -> setY(color).setZ(color);
 							hgo_used++;
 						}
-						break;
+						break;   // Switch Case
 					case HINT_AUTO:
 
 						// Hint
@@ -968,7 +967,7 @@ static int UpdateArf(lua_State* L) {
 								SetScale( agor, 1.0 + 0.637 * anim_calculate );
 							}
 						}
-						break;
+						break;   // Switch Case
 					default:;
 				}
 				else if( jdt<=370 && (hint_c.status==HINT_JUDGED || hint_c.status==HINT_JUDGED_LIT) ) {
@@ -1004,6 +1003,8 @@ static int UpdateArf(lua_State* L) {
 						SetScale( agor, 1.0 + 0.637 * anim_calculate );
 					}
 				}
+
+				dmSpinlock::Unlock(&hint_c.lock);
 			}
 		}
 	}
@@ -1120,7 +1121,6 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	 * and we set the context_ms earlier than the audio mstime.
 	 */
 	if(!ArfBefore) return {0,0,0,false};
-	is_judging = true;
 	jud returns;
 
 	// Prepare the Context msTime
@@ -1133,31 +1133,6 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	const uint16_t init_group = (location_group > 1) ? (location_group - 1) : 0 ;
 	uint16_t beyond_group = init_group + 3;
 			 beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
-
-	// Do Sweeping
-	/* Sweeping is mainly done at UpdateArf(), and the sweeping here is just for robustness concerns. */
-	for( uint8_t current_group=init_group; current_group<beyond_group; current_group++ ) {
-
-		const uint8_t hint_count = Arf::index[current_group].hidx_count;
-		if(!hint_count) continue;
-
-		const auto hint_ids = Arf::index[current_group].hidx;
-		for( uint8_t i=0; i<hint_count; i++ ) {
-			const auto current_hint_id = hint_ids[i];
-			auto& hint_c = Arf::hint[current_hint_id];
-
-			// Jump Judging based on the Sort Assumption
-			const int32_t dt = context_ms - hint_c.ms;
-			if(dt < -510) break;
-			if(dt > 470) continue;
-
-			if( dt>100 && !is_judging && hint_c.status<2 ) {
-				hint_c.status = HINT_SWEEPED;
-				returns.late++;
-			}
-		}
-	}
-
 
 	// Start Judging
 	if(any_released) blocked.clear();
@@ -1172,11 +1147,12 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 			for( uint8_t i=0; i<hint_count; i++ ) {
 				const auto current_hint_id = hint_ids[i];
 				auto& current_hint = Arf::hint[current_hint_id];
+				dmSpinlock::Lock(&current_hint.lock);
 
 				// Jump Judging based on the Sort Assumption
 				const int32_t dt = context_ms - current_hint.ms;
-				if(dt < -510) break;
-				if(dt > 470) continue;
+				if(dt < -510)	{ dmSpinlock::Unlock(&current_hint.lock); break; }   // Hint For Loop
+				if(dt > 470)	{ dmSpinlock::Unlock(&current_hint.lock); continue; }   // Hint For Loop
 
 				// Hint Status Manipulation
 				const bool htn = has_touch_near(current_hint, vf, vfcount);
@@ -1230,15 +1206,17 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 							else current_hint.status = HINT_NONJUDGED_LIT;
 						}
 						else current_hint.status = HINT_NONJUDGED;
-						break;
+						break;   // Switch Case
 
 					case HINT_JUDGED_LIT:
 						if(!htn)
 							current_hint.status = HINT_JUDGED;
-						break;
+						break;   // Switch Case
 
 					default:;
 				}
+
+				dmSpinlock::Unlock(&current_hint.lock);
 			}
 		}
 	}
@@ -1251,11 +1229,12 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 		for( uint8_t i=0; i<hint_count; i++ ) {
 			const auto current_hint_id = hint_ids[i];
 			auto& current_hint = Arf::hint[current_hint_id];
+			dmSpinlock::Lock(&current_hint.lock);
 
 			// Jump Judging based on the Sort Assumption
 			const int32_t dt = context_ms - current_hint.ms;
-			if(dt < -510) break;
-			if(dt > 470) continue;
+			if(dt < -510)	{ dmSpinlock::Unlock(&current_hint.lock); break; }   // Hint For Loop
+			if(dt > 470)	{ dmSpinlock::Unlock(&current_hint.lock); continue; }   // Hint For Loop
 
 			// Hint Status Manipulation
 			const bool htn = has_touch_near(current_hint, vf, vfcount);
@@ -1264,16 +1243,17 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 				case HINT_NONJUDGED_LIT:
 					if(htn) current_hint.status = HINT_NONJUDGED_LIT;
 					else current_hint.status = HINT_NONJUDGED;
-					break;
+					break;   // Switch Case
 				case HINT_JUDGED_LIT:
 					if(!htn) current_hint.status = HINT_JUDGED;
-					break;
+					break;  // Switch Case
 				default:;
 			}
+
+			dmSpinlock::Unlock(&current_hint.lock);
 		}
 	}
 
-	is_judging = false;
 	return returns;
 }
 static int JudgeArfDesktop(lua_State* L) {

@@ -27,12 +27,16 @@ struct ArPosNode {
 };
 
 struct ArHint {
+	dmSpinlock::Spinlock lock;
 	float c_dx = 0.0f,  c_dy = 0.0f;
 	uint32_t ms = 0;
 /*--------------------------------*/
 	uint32_t judged_ms = 0;
 	uint8_t elstatus = 0;   // To Utilize the Memory Alignment Padding Better
 	uint8_t status = 0;
+/*--------------------------------*/
+	ArHint()	{ dmSpinlock::Create(&lock); }
+	~ArHint()	{ dmSpinlock::Destroy(&lock); }
 };
 
 
@@ -101,13 +105,11 @@ struct ArIndex {
 };
 
 
-// Root Type
-// Scalar vars are saved internally
+// Root Type (Mostly scalar vars are saved internally)
 struct Arf {
-	static ArIndex* index;
-	static ArDeltaNode* d1;   // DeltaNodes in Layer 1
-	static ArDeltaNode* d2;   // DeltaNodes in Layer 2
-	static ArWishGroup* wish;
+	static ArIndex *index;
+	static ArDeltaNode *d1, *d2;   // DeltaNodes
+	static ArWishGroup *wish;
 	static ArHint *hint, *echo;
 
 	static uint16_t d1c, d2c, ic;
@@ -121,8 +123,6 @@ struct Arf {
 	}
 };
 
-// Link Symbols
-ArIndex *Arf::index;			ArDeltaNode *Arf::d1, *Arf::d2;
-ArWishGroup *Arf::wish;			ArHint *Arf::hint, *Arf::echo;
-uint16_t Arf::d1c, Arf::d2c, Arf::ic;
-using namespace std;
+/* Link Symbols */	ArIndex *Arf::index;			ArDeltaNode *Arf::d1, *Arf::d2;
+					ArWishGroup *Arf::wish;			ArHint *Arf::hint, *Arf::echo;
+					uint16_t Arf::d1c, Arf::d2c, Arf::ic;
