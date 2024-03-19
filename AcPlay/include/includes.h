@@ -68,5 +68,5 @@ void InputInit();
 void InputUninit();
 void InputEnqueue(double, double, uint8_t, jud&);
 
-jud JudgeArf(const ab*, uint64_t, uint64_t, uint64_t);
+jud JudgeArf(const ab*, uint8_t, bool, bool);
 #endif

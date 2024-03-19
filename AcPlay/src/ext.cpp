@@ -36,44 +36,38 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 
 // Input Queue
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
-#include <atomic>
-std::atomic<uint64_t> input_queue[256];
 uint8_t eq_idx = 0, dq_idx = 0;
+dmSpinlock::Spinlock input_queue_lock;   // Should be created when enqueuing tasks
+struct { double x,y;  uint8_t p,h,e,l;  bool s; } input_queue[256];
 
 inline int InputBoot(lua_State* L) {
 	input_booted = true;
 	return 0;
 }
 
-inline void InputEnqueue(const double gui_x, const double gui_y, const uint64_t gui_phase, const jud& jrs) {
-	// gui_x(1-18, always non-negative), gui_y(19-36, always non-negative), gui_phase(37-38)
-	// hit(39-46), early(47-54), late(55-62), special_hint_judged(63)
-	input_queue[eq_idx].store(
-		+ ( (uint64_t)(gui_x*128) )
-		+ ( (uint64_t)(gui_y*128) << 18 )
-		+ ( gui_phase << 36)
-		+ ( (uint64_t)jrs.hit << 38 )
-		+ ( (uint64_t)jrs.early << 46 )
-		+ ( (uint64_t)jrs.late << 54 )
-		+ ( (uint64_t)jrs.special_hint_judged << 62 )
-	);
+inline void InputEnqueue(const double gui_x, const double gui_y, const uint8_t gui_phase, const jud& jrs) {
+	dmSpinlock::Lock(&input_queue_lock);
+	input_queue[eq_idx] = {
+		gui_x, gui_y, gui_phase,
+		jrs.hit, jrs.early, jrs.late,
+		jrs.special_hint_judged
+	};
 	eq_idx++;   // Utilized the uint8_t overflowing to let the queue loop. Fast and a little bit dirty.
+	dmSpinlock::Unlock(&input_queue_lock);
 }
 
 inline int InputDequeue(lua_State* L) {
+	dmSpinlock::Lock(&input_queue_lock);
 	while(dq_idx != eq_idx) {
-		const auto s = input_queue[dq_idx].load();
+		const auto& task = input_queue[dq_idx];
 		lua_getglobal(L, "I");
-		lua_pushnumber( L, (s & 0x3ffff) / 128.0 );			// gui_x
-		lua_pushnumber( L, ((s>>18) & 0x3ffff) / 128.0 );		// gui_y
-		lua_pushnumber( L, (s>>36) & 0b11 );					// gui_phase
-		lua_pushnumber( L, (s>>38) & 0xff );					// hit
-		lua_pushnumber( L, (s>>46) & 0xff );					// early
-		lua_pushnumber( L, (s>>54) & 0xff );					// late
-		lua_pushboolean( L, (s>>62) );						// special_hint_judged
+		lua_pushnumber(L, task.x);		lua_pushnumber(L, task.y);		lua_pushnumber(L, task.p);
+		lua_pushnumber(L, task.h);		lua_pushnumber(L, task.e);		lua_pushnumber(L, task.l);
+		lua_pushboolean(L, task.s);
 		lua_call(L, 7, 0);
 		dq_idx++;   // Overflowing
 	}
+	dmSpinlock::Unlock(&input_queue_lock);
 	return 0;
 }
 #endif
@@ -119,6 +113,7 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
 	lua_pushcfunction(L, InputBoot);				lua_setglobal(L, "InputBoot");
 	lua_pushcfunction(L, InputDequeue);				lua_setglobal(L, "InputDequeue");
+	dmSpinlock::Create(&input_queue_lock);
 	InputInit();
 	#endif
 
@@ -188,9 +183,14 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	// Uninit Platform-Specific Stuff
 	// Then Do Return. No further cleranup since it's the finalizer.
 	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+	dmSpinlock::Destroy(&input_queue_lock);
 	InputUninit();
 	#endif
 	return dmExtension::RESULT_OK;
 }
-inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) { return dmExtension::RESULT_OK; }
+
+inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
+	return dmExtension::RESULT_OK;
+}
+
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
