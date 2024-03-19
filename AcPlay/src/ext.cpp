@@ -59,12 +59,11 @@ inline void InputEnqueue(const double gui_x, const double gui_y, const uint8_t g
 inline int InputDequeue(lua_State* L) {
 	dmSpinlock::Lock(&input_queue_lock);
 	while(dq_idx != eq_idx) {
-		const auto& task = input_queue[dq_idx];
 		lua_getglobal(L, "I");
+		const auto& task = input_queue[dq_idx];
 		lua_pushnumber(L, task.x);		lua_pushnumber(L, task.y);		lua_pushnumber(L, task.p);
 		lua_pushnumber(L, task.h);		lua_pushnumber(L, task.e);		lua_pushnumber(L, task.l);
-		lua_pushboolean(L, task.s);
-		lua_call(L, 7, 0);
+		lua_pushboolean(L, task.s);		lua_call(L, 7, 0);
 		dq_idx++;   // Overflowing
 	}
 	dmSpinlock::Unlock(&input_queue_lock);
@@ -183,8 +182,9 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	// Uninit Platform-Specific Stuff
 	// Then Do Return. No further cleranup since it's the finalizer.
 	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
-	dmSpinlock::Destroy(&input_queue_lock);
 	InputUninit();
+	input_booted = false;
+	dmSpinlock::Destroy(&input_queue_lock);
 	#endif
 	return dmExtension::RESULT_OK;
 }
