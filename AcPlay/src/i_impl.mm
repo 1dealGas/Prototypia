@@ -77,6 +77,11 @@ void* FtId = NULL;
 		ArTouches[id].x = 900.0 + (location.x - CenterX) / PosDiv;
 		ArTouches[id].y = 540.0 + (3*CenterY - location.y) / PosDiv;
 		ArTouches[id].phase = 1;
+		if(id == FtId) {
+			FirstTouch.x = ArTouches[id].x;
+			FirstTouch.y = ArTouches[id].y;
+			FirstTouch.phase = 1;
+		}
 	}
 
 	/* Judge & Do Haptics */
