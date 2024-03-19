@@ -59,7 +59,7 @@ struct jud {
 };
 bool haptic_enabled = false;
 
-/* Judge System Platform Specifics*/
+/* Judge System Platform Specifics */
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 bool input_booted = false;
 double PosDiv = 1.0, CenterX = 900.0, CenterY = 540.0;  // Use Lua to manage them on desktop platforms.
