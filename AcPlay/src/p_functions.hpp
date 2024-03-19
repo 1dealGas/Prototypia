@@ -46,7 +46,6 @@ int16_t audio_offset;
 ma_sound* current_audio;
 
 // Settings
-// uint32_t ArfBefore  ->  includes.h
 static uint16_t special_hint;
 static float xscale, yscale, xdelta, ydelta, rotsin, rotcos;
 static bool daymode, allow_anmitsu;
@@ -58,6 +57,7 @@ static uint16_t dt_p1, dt_p2;
 static int8_t mindt = -37, maxdt = 37, idelta = 0;
 static std::unordered_map<uint32_t, uint8_t> last_wgo;
 static std::vector<ArHint*> blocked;
+static bool is_judging;
 
 
 // Init Function
@@ -420,6 +420,8 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	 * and we set the context_ms earlier than the audio mstime.
 	 */
 	if(!ArfBefore) return {0,0,0,false};
+	is_judging = true;
+
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
 	context_ms = (context_ms > 0) ? context_ms : 0;
 	context_ms = (context_ms < ArfBefore) ? context_ms : ArfBefore;
@@ -547,6 +549,7 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 		}
 	}
 
+	is_judging = false;
 	return returns;
 }
 static int JudgeArfLua(lua_State* L) {
@@ -1013,7 +1016,7 @@ static int UpdateArf(lua_State* L) {
 				if (dt < -510) break;
 
 				/* Do Hint Sweeping */
-				if( dt>100 && (hint_c.status==HINT_NONJUDGED || hint_c.status==HINT_NONJUDGED_LIT) ) {
+				if( (dt>100 && !is_judging) && (hint_c.status==HINT_NONJUDGED || hint_c.status==HINT_NONJUDGED_LIT) ) {
 					hint_c.status = HINT_SWEEPED;
 					hint_lost++;
 				}
