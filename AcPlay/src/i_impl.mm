@@ -21,13 +21,13 @@ void* FtId = NULL;
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
 	/* Process touches */
 	for(UITouch *touch in touches) {
-		ArTouch new_touch = {
+		void* id = (__bridge void*)touch;
+		CGPoint location = [touch locationInView:self.view];
+		ArTouch new_touch = {   // On UIKit (0,0) is the Left Top of the View
 			900.0 + (location.x - CenterX) / PosDiv,
 			540.0 + (3*CenterY - location.y) / PosDiv,
 			0
 		};
-
-		void* id = (__bridge void*)touch;
 		if( ArTouch.empty() ) {
 			FirstTouch = new_touch;
 			FtId = id;
@@ -59,13 +59,15 @@ void* FtId = NULL;
 
 	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
-		lua_getglobal(EngineLuaState, "I");
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.x : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.y : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.phase : 2);
-		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
-		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
-		lua_call(EngineLuaState, 5, 0);
+		if(FtId) {
+			lua_getglobal(EngineLuaState, "I");
+			lua_pushnumber(EngineLuaState, FirstTouch.x);
+			lua_pushnumber(EngineLuaState, FirstTouch.y);
+			lua_pushnumber(EngineLuaState, FirstTouch.phase);
+			lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
+			lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
+			lua_call(EngineLuaState, 5, 0);
+		}
 	}
 }
 
@@ -104,9 +106,9 @@ void* FtId = NULL;
 	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.x : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.y : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.phase : 2);
+		lua_pushnumber(EngineLuaState, FirstTouch.x);
+		lua_pushnumber(EngineLuaState, FirstTouch.y);
+		lua_pushnumber(EngineLuaState, FirstTouch.phase);
 		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
 		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
 		lua_call(EngineLuaState, 5, 0);
@@ -116,11 +118,17 @@ void* FtId = NULL;
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
 	/* Process touches */
 	for(UITouch *touch in touches) {
-		ArTouch.erase( (__bridge void*)touch );
-	}
-	if( ArTouch.empty() ) {
-		FirstTouch = {0.0, 0.0, 2};
-		FtId = NULL;
+		void* id = (__bridge void*)touch;
+		if( id == FtId ) {
+			CGPoint location = [touch locationInView:self.view];
+			FirstTouch = {   // On UIKit (0,0) is the Left Top of the View
+				900.0 + (location.x - CenterX) / PosDiv,
+				540.0 + (3*CenterY - location.y) / PosDiv,
+				2
+			};
+			FtId = NULL;
+		}
+		ArTouch.erase(id);
 	}
 
 	/* Judge & Do Haptics */
@@ -148,9 +156,9 @@ void* FtId = NULL;
 	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.x : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.y : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.phase : 2);
+		lua_pushnumber(EngineLuaState, FirstTouch.x);
+		lua_pushnumber(EngineLuaState, FirstTouch.y);
+		lua_pushnumber(EngineLuaState, FirstTouch.phase);
 		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
 		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
 		lua_call(EngineLuaState, 5, 0);
@@ -160,11 +168,17 @@ void* FtId = NULL;
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
 	/* Process touches */
 	for(UITouch *touch in touches) {
-		ArTouch.erase( (__bridge void*)touch );
-	}
-	if( ArTouch.empty() ) {
-		FirstTouch = {0.0, 0.0, 2};
-		FtId = NULL;
+		void* id = (__bridge void*)touch;
+		if( id == FtId ) {
+			CGPoint location = [touch locationInView:self.view];
+			FirstTouch = {   // On UIKit (0,0) is the Left Top of the View
+				900.0 + (location.x - CenterX) / PosDiv,
+				540.0 + (3*CenterY - location.y) / PosDiv,
+				2
+			};
+			FtId = NULL;
+		}
+		ArTouch.erase(id);
 	}
 
 	/* Judge & Do Haptics */
@@ -192,9 +206,9 @@ void* FtId = NULL;
 	/* Do Lua Call: function I(gui_x, gui_y, gui_phase, special_hint_judged, play_hitsound) */
 	if(EngineLuaState) {
 		lua_getglobal(EngineLuaState, "I");
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.x : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.y : 0.0);
-		lua_pushnumber(EngineLuaState, FtId ? FirstTouch.phase : 2);
+		lua_pushnumber(EngineLuaState, FirstTouch.x);
+		lua_pushnumber(EngineLuaState, FirstTouch.y);
+		lua_pushnumber(EngineLuaState, FirstTouch.phase);
 		lua_pushboolean(EngineLuaState, jud_result.special_hint_judged);
 		lua_pushboolean(EngineLuaState, has_obj_judged && hitsound_enabled);
 		lua_call(EngineLuaState, 5, 0);
@@ -267,4 +281,6 @@ void InputUninit() {
 	dmExtension::UnregisteriOSUIApplicationDelegate(D);
 	D = NULL;
 }
+
+
 #endif
