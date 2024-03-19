@@ -50,7 +50,7 @@ inline void InputEnqueue(const double gui_x, const double gui_y, const uint64_t 
 	// gui_phase(61~62), has_obj_judged(63), special_judged(64)
 	const auto s = (uint64_t)(gui_x*1024) + ((uint64_t)(gui_y*1024)<<30) + (gui_phase<<60) + (has_obj_judged<<62) + (special_judged<<63);
 	input_queue[eq_idx].store(s);
-	eq_idx = (eq_idx+1) % 256;
+	eq_idx++;   // Utilized the uint8_t overflowing to let the queue loop. Fast and a little bit dirty.
 }
 
 inline int InputDequeue(lua_State* L) {
@@ -63,7 +63,7 @@ inline int InputDequeue(lua_State* L) {
 		lua_pushboolean( L, (s>>62) & 0b1 );
 		lua_pushboolean( L, (s>>63) );
 		lua_call(L, 5, 0);
-		dq_idx = (dq_idx+1) % 256;
+		dq_idx++;   // Overflowing
 	}
 	return 0;
 }
