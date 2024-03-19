@@ -37,7 +37,6 @@ void* FtId = NULL;
 
 	/* Judge & Do Haptics */
 	jud jud_result;
-	bool has_obj_judged = false;
 	if(ArfBefore) {
 		ab vf[10];
 		uint8_t vfcount = 0;
@@ -48,8 +47,8 @@ void* FtId = NULL;
 				vfcount++;
 			}
 		}
-		jud_result = JudgeArf(vf, vfcount, true, false);
-		has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
+		jud_result = JudgeArf(vf, vfcount, false, true);
+		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
 		if(has_obj_judged && haptic_enabled) {
 			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
 			if([haptic_player prepare])
@@ -59,7 +58,7 @@ void* FtId = NULL;
 
 	/* Do Lua Call */
 	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
 }
 
 - (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
@@ -79,7 +78,6 @@ void* FtId = NULL;
 
 	/* Judge & Do Haptics */
 	jud jud_result;
-	bool has_obj_judged = false;
 	if(ArfBefore) {
 		ab vf[10];
 		uint8_t vfcount = 0;
@@ -90,8 +88,8 @@ void* FtId = NULL;
 				vfcount++;
 			}
 		}
-		jud_result = JudgeArf(vf, vfcount, false, false);
-		has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
+		jud_result = JudgeArf(vf, vfcount, false, true);
+		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
 		if(has_obj_judged && haptic_enabled) {
 			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
 			if([haptic_player prepare])
@@ -101,7 +99,7 @@ void* FtId = NULL;
 
 	/* Do Lua Call */
 	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
 }
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
@@ -122,7 +120,6 @@ void* FtId = NULL;
 
 	/* Judge & Do Haptics */
 	jud jud_result;
-	bool has_obj_judged = false;
 	if(ArfBefore) {
 		ab vf[10];
 		uint8_t vfcount = 0;
@@ -134,7 +131,7 @@ void* FtId = NULL;
 			}
 		}
 		jud_result = JudgeArf(vf, vfcount, false, true);
-		has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
+		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
 		if(has_obj_judged && haptic_enabled) {
 			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
 			if([haptic_player prepare])
@@ -144,7 +141,7 @@ void* FtId = NULL;
 
 	/* Do Lua Call */
 	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
 }
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
@@ -165,7 +162,6 @@ void* FtId = NULL;
 
 	/* Judge & Do Haptics */
 	jud jud_result;
-	bool has_obj_judged = false;
 	if(ArfBefore) {
 		ab vf[10];
 		uint8_t vfcount = 0;
@@ -177,7 +173,7 @@ void* FtId = NULL;
 			}
 		}
 		jud_result = JudgeArf(vf, vfcount, false, true);
-		has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
+		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
 		if(has_obj_judged && haptic_enabled) {
 			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
 			if([haptic_player prepare])
@@ -187,7 +183,7 @@ void* FtId = NULL;
 
 	/* Do Lua Call */
 	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, has_obj_judged, jud_result.special_hint_judged);
+		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
 }
 
 @end
