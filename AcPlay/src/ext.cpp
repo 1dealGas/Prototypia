@@ -182,9 +182,9 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	// Uninit Platform-Specific Stuff
 	// Then Do Return. No further cleranup since it's the finalizer.
 	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
-	InputUninit();
 	input_booted = false;
 	dmSpinlock::Destroy(&input_queue_lock);
+	InputUninit();
 	#endif
 	return dmExtension::RESULT_OK;
 }
