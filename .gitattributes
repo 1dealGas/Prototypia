@@ -1,7 +1,7 @@
 *.script linguist-language=Lua
 *.gui_script linguist-language=Lua
 *.render_script linguist-language=Lua
-AcPlay/src/p_singleton.h linguist-language=cpp
+AcPlay/src/p_singleton.h linguist-language=C++
 
 *.script_api linguist-language=YAML
 *.appmanifest linguist-language=YAML
