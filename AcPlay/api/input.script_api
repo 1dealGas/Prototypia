@@ -1,6 +1,6 @@
 - name: I
   type: function
-  desc: Overwrite this global function to receive GUI inputs.
+  desc: Overwrite this global function to receive GUI inputs. Mobile only.
   parameters:
   - name: gui_x
     type: number
@@ -12,6 +12,10 @@
     type: boolean
   - name: special_hint_judged
     type: boolean
+
+- name: InputBoot
+  type: function
+  desc: Allow the system to append input events into the input queue. Mobile only.
 
 - name: InputDequeue
   type: function

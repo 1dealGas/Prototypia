@@ -61,26 +61,17 @@
     parameters:
     - name: audio_offset
       type: number
+
   - name: SetIDelta
     type: function
     parameters:
     - name: idelta
       type: number
 
-
-  - name: JudgeArf
+  - name: SetHaptic
     type: function
     parameters:
-    - name: table_touch
-      type: table
-    returns:
-    - name: hint_hit
-      type: number
-    - name: hint_early
-      type: number
-    - name: hint_late
-      type: number
-    - name: special_hint_judged
+    - name: haptic_enabled
       type: boolean
 
 
@@ -126,27 +117,26 @@
     - name: is_daymode
       type: boolean
 
-  - name: SetHaptic
-    type: function
-    parameters:
-    - name: haptic_enabled
-      type: boolean
 
-  - name: SetHitsound
+  - name: JudgeArfDesktop
     type: function
+    desc: Arf judge function to be called with the cursor info. Desktop only.
     parameters:
-    - name: hitsound_enabled
+    - name: cursor_x
+      type: number
+    - name: cursor_y
+      type: number
+    - name: cursor_phase
+      type: number
+    returns:
+    - name: hint_hit
+      type: number
+    - name: hint_early
+      type: number
+    - name: hint_late
+      type: number
+    - name: special_hint_judged
       type: boolean
-
-  - name: SetPosDiv
-    type: function
-    parameters:
-    - name: center_x
-      type: number
-    - name: center_y
-      type: number
-    - name: posdiv
-      type: number
 
 
   - name: NewTable
