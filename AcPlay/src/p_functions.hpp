@@ -1121,25 +1121,49 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	 */
 	if(!ArfBefore) return {0,0,0,false};
 	is_judging = true;
+	jud returns;
 
+	// Prepare the Context msTime
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
 	context_ms = (context_ms > 0) ? context_ms : 0;
 	context_ms = (context_ms < ArfBefore) ? context_ms : ArfBefore;
 
 	// Prepare the Iteration Scale
-	uint16_t current_group; {
-		const uint16_t location_group = context_ms >> 9 ;   // floordiv 512
-		current_group = (location_group > 1) ? (location_group - 1) : 0 ;
+	const uint16_t location_group = context_ms >> 9 ;   // floordiv 512
+	const uint16_t init_group = (location_group > 1) ? (location_group - 1) : 0 ;
+	uint16_t beyond_group = init_group + 3;
+			 beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
+
+	// Do Sweeping
+	/* Sweeping is mainly done at UpdateArf(), and the sweeping here is just for robustness concerns. */
+	for( uint8_t current_group=init_group; current_group<beyond_group; current_group++ ) {
+
+		const uint8_t hint_count = Arf::index[current_group].hidx_count;
+		if(!hint_count) continue;
+
+		const auto hint_ids = Arf::index[current_group].hidx;
+		for( uint8_t i=0; i<hint_count; i++ ) {
+			const auto current_hint_id = hint_ids[i];
+			auto& hint_c = Arf::hint[current_hint_id];
+
+			// Jump Judging based on the Sort Assumption
+			const int32_t dt = context_ms - hint_c.ms;
+			if(dt < -510) break;
+			if(dt > 470) continue;
+
+			if( dt>100 && !is_judging && hint_c.status<2 ) {
+				hint_c.status = HINT_SWEEPED;
+				returns.late++;
+			}
+		}
 	}
-	uint16_t beyond_group = current_group + 3;
-	beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
+
 
 	// Start Judging
-	jud returns;
 	if(any_released) blocked.clear();
 	if(any_pressed) {
 		uint32_t min_time = 0;
-		for( ; current_group < beyond_group; current_group++ ) {
+		for( uint8_t current_group=init_group; current_group<beyond_group; current_group++ ) {
 
 			const uint8_t hint_count = Arf::index[current_group].hidx_count;
 			if(!hint_count) continue;
@@ -1219,7 +1243,7 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 		}
 	}
 
-	else for( ; current_group < beyond_group; current_group++ ) {
+	else for( uint8_t current_group=init_group; current_group<beyond_group; current_group++ ) {
 		const uint8_t hint_count = Arf::index[current_group].hidx_count;
 		if(!hint_count) continue;
 
