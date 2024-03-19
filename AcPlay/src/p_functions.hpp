@@ -1120,8 +1120,8 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 	/* Normally, we want the audio_offset to be a positive value,
 	 * and we set the context_ms earlier than the audio mstime.
 	 */
-	if(!ArfBefore) return {0,0,0,false};
 	jud returns;
+	if(!ArfBefore) return returns;
 
 	// Prepare the Context msTime
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
@@ -1259,7 +1259,9 @@ inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pr
 static int JudgeArfDesktop(lua_State* L) {
 	// JudgeArfDesktop(cursor_x, cursor_y, cursor_phase) -> hit, early, late, special_hint_judged
 	if( !ArfBefore ) return 0;
-	const ab cxy = { (float)luaL_checknumber(L,1), (float)luaL_checknumber(L,2) };
+	ab cxy;
+	cxy.a = (float)luaL_checknumber(L,1);
+	cxy.b = (float)luaL_checknumber(L,2);
 	const uint8_t cp = luaL_checknumber(L, 3);
 	const auto returns = JudgeArf(&cxy, 1, cp==0, cp==2);
 	lua_pushnumber(L, returns.hit);			lua_pushnumber(L, returns.early);
