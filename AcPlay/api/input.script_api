@@ -1,0 +1,18 @@
+- name: I
+  type: function
+  desc: Overwrite this global function to receive GUI inputs.
+  parameters:
+  - name: gui_x
+    type: number
+  - name: gui_y
+    type: number
+  - name: gui_phase
+    type: number
+  - name: has_obj_judged
+    type: boolean
+  - name: special_hint_judged
+    type: boolean
+
+- name: InputDequeue
+  type: function
+  desc: Sync input process by calling Lua function "I". Mobile only.
