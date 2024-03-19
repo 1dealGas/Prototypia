@@ -51,7 +51,7 @@ ma_resource_manager player_rm, *PlayerRM;
 std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   // HResource -> CopiedBuffer
 std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
-/* Judge System Configs */
+/* Judge System Exposures */
 uint32_t ArfBefore;
 struct jud {
 	uint8_t hit = 0, early = 0, late = 0;
