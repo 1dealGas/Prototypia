@@ -47,7 +47,7 @@ void* FtId = NULL;
 				vfcount++;
 			}
 		}
-		jud_result = JudgeArf(vf, vfcount, false, true);
+		jud_result = JudgeArf(vf, vfcount, true, false);
 		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
 		if(has_obj_judged && haptic_enabled) {
 			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
@@ -88,7 +88,7 @@ void* FtId = NULL;
 				vfcount++;
 			}
 		}
-		jud_result = JudgeArf(vf, vfcount, false, true);
+		jud_result = JudgeArf(vf, vfcount, false, false);
 		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
 		if(has_obj_judged && haptic_enabled) {
 			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
