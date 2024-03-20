@@ -188,8 +188,8 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
-	InputInit();
 	dmSpinlock::Create(&input_queue_lock);
+	InputInit();
 	return dmExtension::RESULT_OK;
 }
 inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
