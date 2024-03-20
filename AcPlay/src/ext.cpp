@@ -155,6 +155,11 @@ inline void AcPlayOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 }
 
 inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
+	// Do Platform-Specific Stuff
+	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+	input_booted = false;
+	#endif
+
 	// Close Exisiting Units(miniaudio sounds)
 	if(PreviewSound) {
 		ma_sound_stop(PreviewSound);
@@ -174,7 +179,7 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 			ma_resource_manager_data_source_uninit(it.first);
 
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
-	// Then Do Return. No further cleranup since it's the finalizer.
+	// Then Return. No further cleranup since it's the finalizer.
 	ma_engine_uninit(&PreviewEngine);
 	ma_engine_uninit(&PlayerEngine);
 	return dmExtension::RESULT_OK;
@@ -188,9 +193,8 @@ inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
 inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
-	input_booted = false;
-	dmSpinlock::Destroy(&input_queue_lock);
 	InputUninit();
+	dmSpinlock::Destroy(&input_queue_lock);
 	return dmExtension::RESULT_OK;
 }
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, 0, AcPlayOnEvent, AcPlayFinal)
