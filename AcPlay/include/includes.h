@@ -66,7 +66,7 @@ double PosDiv = 1.0, CenterX = 900.0, CenterY = 540.0;  // Use Lua to manage the
 
 void InputInit();
 void InputUninit();
-void InputEnqueue(double, double, uint8_t, jud&);
+void InputEnqueue(double, double, uint8_t, jud);
 
 jud JudgeArf(const ab*, uint8_t, bool, bool);
 #endif

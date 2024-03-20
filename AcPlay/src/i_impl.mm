@@ -93,7 +93,7 @@ double FtX, FtY;		uint8_t FtPhase;
 		else if(ArfBefore) {
 			ab vf[10];
 			uint8_t vfcount = 0;
-			bool any_pressed = false, bool any_released = false;
+			bool any_pressed = false, any_released = false;
 
 			for(UITouch *touch in event.allTouches) {
 				void* tid = (__bridge void*)touch;
@@ -137,6 +137,7 @@ double FtX, FtY;		uint8_t FtPhase;
 				InputEnqueue(0, 0, 3, r);
 		}
 		else {
+			jud empty;
 			for(UITouch *touch in event.allTouches)
 				if( (__bridge void*)touch == FtId ) {
 					CGPoint location = [touch locationInView:nil];
@@ -152,11 +153,11 @@ double FtX, FtY;		uint8_t FtPhase;
 					}
 				}
 			if(FtId) {
-				InputEnqueue( FtX, FtY, FtPhase, {0, 0, 0, false} );
+				InputEnqueue(FtX, FtY, FtPhase, empty);
 				FtId = (FtPhase == 2) ? nullptr : FtId;
 			}
 			else
-				InputEnqueue( 0, 0, 3, {0, 0, 0, false} );
+				InputEnqueue(0, 0, 3, empty);
 		}
 	}
 	HtCount--;
@@ -192,5 +193,4 @@ void InputUninit() {
 	dmExtension::UnregisteriOSUIApplicationDelegate(D);
 	D = NULL;
 }
-
 #endif

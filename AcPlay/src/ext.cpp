@@ -45,7 +45,7 @@ inline int InputBoot(lua_State* L) {
 	return 0;
 }
 
-inline void InputEnqueue(const double gui_x, const double gui_y, const uint8_t gui_phase, const jud& jrs) {
+void InputEnqueue(const double gui_x, const double gui_y, const uint8_t gui_phase, const jud jrs) {
 	if(input_booted) {
 		dmSpinlock::Lock(&input_queue_lock);
 		input_queue[eq_idx] = {

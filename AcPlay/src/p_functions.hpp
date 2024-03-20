@@ -1117,7 +1117,7 @@ inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const ui
 	// Process Detection Failure
 	return false;
 }
-inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
+jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
 
 	jud returns;
 	if(!ArfBefore) return returns;
