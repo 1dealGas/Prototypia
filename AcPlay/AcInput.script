@@ -7,6 +7,7 @@ if (system_name == "Android") or (system_name == "iPhone OS") then
 		-- 0 / Pressed
 		-- 1 / OnScreen
 		-- 2 / Released
+		-- 3 / Invalid
 		--
 	end
 
