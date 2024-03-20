@@ -98,7 +98,9 @@ static int InitArf(lua_State* L) {
 
 	// Detect Audio Handle if Needed
 	const auto is_auto = lua_toboolean(L, 2);
-	if(!is_auto)
+	if(is_auto)
+		current_audio = nullptr;
+	else
 		current_audio = (ma_sound*)lua_touserdata(L, 3);
 
 	// Decode Stuff
@@ -1011,7 +1013,7 @@ static int UpdateArf(lua_State* L) {
 
 
 	/* Clean Up & Do Returns (Echoes Processes NYI) */
-	lua_checkstack(L, 4);			lua_pushnumber(L, hint_lost);
+	lua_checkstack(L, 4);				lua_pushnumber(L, hint_lost);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }
@@ -1116,14 +1118,14 @@ inline bool has_touch_near(const ArHint& hint, const ab* valid_fingers, const ui
 	return false;
 }
 inline jud JudgeArf(const ab* const vf, const uint8_t vfcount, const bool any_pressed, const bool any_released) {
-	// Get msTime & Other Preparations
-	/* Normally, we want the audio_offset to be a positive value,
-	 * and we set the context_ms earlier than the audio mstime.
-	 */
+
 	jud returns;
 	if(!ArfBefore) return returns;
 
 	// Prepare the Context msTime
+	/* Normally, we want the audio_offset to be a positive value,
+	 * and we set the context_ms earlier than the audio mstime.
+	 */
 	int32_t context_ms = ma_sound_get_time_in_milliseconds(current_audio) - audio_offset;
 	context_ms = (context_ms > 0) ? context_ms : 0;
 	context_ms = (context_ms < ArfBefore) ? context_ms : ArfBefore;
