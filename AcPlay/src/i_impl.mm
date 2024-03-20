@@ -3,216 +3,29 @@
 #include <includes.h>
 
 
-/* C++ Data Structure */
-struct ArTouch {
-	double x = 0.0, y = 0.0;
-	uint8_t phase = 2;   // Pressed:0, OnScreen:1, Released:2
-};
-std::unordered_map<void*, ArTouch> ArTouches;
-ArTouch FirstTouch;
-void* FtId = NULL;
+/* Global Vars */
+void* FtId;				uint8_t HtCount;
+double FtX, FtY;		uint8_t FtPhase;
 
 
-/* Create a custom UIView to receive input events */
+/* UIViewController */
 #import <UIKit/UIKit.h>
-@interface ArInputView : UIView @end
-@implementation ArInputView
-
-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-	/* Process touches */
-	for(UITouch *touch in touches) {
-		void* id = (__bridge void*)touch;
-		CGPoint location = [touch locationInView:self.view];
-		ArTouch new_touch = {   // On UIKit (0,0) is the Left Top of the View
-			900.0 + (location.x - CenterX) / PosDiv,
-			540.0 + (3*CenterY - location.y) / PosDiv,
-			0
-		};
-		if( ArTouches.empty() ) {
-			FirstTouch = new_touch;
-			FtId = id;
-		}
-		ArTouches.emplace(id, new_touch);
-	}
-
-	/* Judge & Do Haptics */
-	jud jud_result;
-	if(ArfBefore) {
-		ab vf[10];
-		uint8_t vfcount = 0;
-		for(const auto& it : ArTouches) {
-			if(it.second.phase < 2) {
-				vf[vfcount].a = it.second.x;
-				vf[vfcount].b = it.second.y;
-				vfcount++;
-			}
-		}
-		jud_result = JudgeArf(vf, vfcount, true, false);
-		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
-		if(has_obj_judged && haptic_enabled) {
-			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
-			if([haptic_player prepare])
-				[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
-		}
-	}
-
-	/* Do Lua Call */
-	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
-}
-
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-	/* Process touches */
-	for(UITouch *touch in touches) {
-		void* id = (__bridge void*)touch;
-		CGPoint location = [touch locationInView:self.view];
-		ArTouches[id].x = 900.0 + (location.x - CenterX) / PosDiv;
-		ArTouches[id].y = 540.0 + (3*CenterY - location.y) / PosDiv;
-		ArTouches[id].phase = 1;
-		if(id == FtId) {
-			FirstTouch.x = ArTouches[id].x;
-			FirstTouch.y = ArTouches[id].y;
-			FirstTouch.phase = 1;
-		}
-	}
-
-	/* Judge & Do Haptics */
-	jud jud_result;
-	if(ArfBefore) {
-		ab vf[10];
-		uint8_t vfcount = 0;
-		for(const auto& it : ArTouches) {
-			if(it.second.phase < 2) {
-				vf[vfcount].a = it.second.x;
-				vf[vfcount].b = it.second.y;
-				vfcount++;
-			}
-		}
-		jud_result = JudgeArf(vf, vfcount, false, false);
-		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
-		if(has_obj_judged && haptic_enabled) {
-			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
-			if([haptic_player prepare])
-				[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
-		}
-	}
-
-	/* Do Lua Call */
-	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
-}
-
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-	/* Process touches */
-	for(UITouch *touch in touches) {
-		void* id = (__bridge void*)touch;
-		ArTouches.erase(id);
-		if(id == FtId) {
-			CGPoint location = [touch locationInView:self.view];
-			FirstTouch = {   // On UIKit (0,0) is the Left Top of the View
-				900.0 + (location.x - CenterX) / PosDiv,
-				540.0 + (3*CenterY - location.y) / PosDiv,
-				2
-			};
-			FtId = NULL;
-		}
-	}
-
-	/* Judge & Do Haptics */
-	jud jud_result;
-	if(ArfBefore) {
-		ab vf[10];
-		uint8_t vfcount = 0;
-		for(const auto& it : ArTouches) {
-			if(it.second.phase < 2) {
-				vf[vfcount].a = it.second.x;
-				vf[vfcount].b = it.second.y;
-				vfcount++;
-			}
-		}
-		jud_result = JudgeArf(vf, vfcount, false, true);
-		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
-		if(has_obj_judged && haptic_enabled) {
-			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
-			if([haptic_player prepare])
-				[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
-		}
-	}
-
-	/* Do Lua Call */
-	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
-}
-
-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-	/* Process touches */
-	for(UITouch *touch in touches) {
-		void* id = (__bridge void*)touch;
-		ArTouches.erase(id);
-		if(id == FtId) {
-			CGPoint location = [touch locationInView:self.view];
-			FirstTouch = {   // On UIKit (0,0) is the Left Top of the View
-				900.0 + (location.x - CenterX) / PosDiv,
-				540.0 + (3*CenterY - location.y) / PosDiv,
-				2
-			};
-			FtId = NULL;
-		}
-	}
-
-	/* Judge & Do Haptics */
-	jud jud_result;
-	if(ArfBefore) {
-		ab vf[10];
-		uint8_t vfcount = 0;
-		for(const auto& it : ArTouches) {
-			if(it.second.phase < 2) {
-				vf[vfcount].a = it.second.x;
-				vf[vfcount].b = it.second.y;
-				vfcount++;
-			}
-		}
-		jud_result = JudgeArf(vf, vfcount, false, true);
-		const auto has_obj_judged = (bool)(jud_result.early+jud_result.hit+jud_result.late);
-		if(has_obj_judged && haptic_enabled) {
-			UIImpactFeedbackGenerator *haptic_player = [[UIImpactFeedbackGenerator alloc] init];
-			if([haptic_player prepare])
-				[haptic_player impactOccurredWithStyle:UIImpactFeedbackStyleMedium];
-		}
-	}
-
-	/* Do Lua Call */
-	if(input_booted)
-		InputEnqueue(FirstTouch.x, FirstTouch.y, FirstTouch.phase, jud_result);
-}
-
-@end
-
-
-/* Create a custom UIViewController that applies our custom UIView */
 @interface ArInputViewController : UIViewController @end
 @implementation ArInputViewController
 
-- (void)loadView {
-	ArInputView *v = [[ArInputView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-	v.backgroundColor = [UIColor clearColor];
-	v.userInteractionEnabled = YES;
-	self.view = v;
-}
-
 - (void)viewDidLayoutSubviews {
-	[super viewDidLayoutSubviews];
-	double WindowWthenDiv = self.view.window.bounds.size.width;
-	double WindowHthenDiv = self.view.window.bounds.size.height;
+	double WindowWthenDiv = self.view.bounds.size.width;
+	double WindowHthenDiv = self.view.bounds.size.height;
 	CenterX = WindowWthenDiv * 0.5;		CenterY = WindowHthenDiv * 0.5;
 	WindowWthenDiv /= 1800.0;			WindowHthenDiv /= 1080.0;
 	PosDiv = (WindowWthenDiv < WindowHthenDiv) ? WindowWthenDiv : WindowHthenDiv;
+	[super viewDidLayoutSubviews];
 }
 
 @end
 
 
-/* Create a custom UIWindow class to ban KeyWindow related */
+/* UIWindow */
 @interface ArInputWindow : UIWindow @end
 @implementation ArInputWindow
 
@@ -220,22 +33,149 @@ void* FtId = NULL;
 	return NO;
 }
 
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+	/* We listen touches here, and tell the UIApplication that
+	 * the UIView of this UIWindow can't handle touches.
+	 *
+	 * First-Touch:
+	 *     1 touch on the screen
+	 *         Pressed -> Register
+	 *         OnScreen -> if tid==FtId, Dispatch
+	 *                     else Send (0,0,3)
+	 *         Released -> if tid==FtId, Dispatch & Unregister
+	 *                     else Send (0,0,3)
+	 *
+	 *     Multiple touches on the screen
+	 *     -- for each touch, if tid==FtId, Tracks its status with FtX, FtY, FtPhase
+	 *     -- if First-Touch registered, check FtPhase
+	 *            Pressed -> (Impossible)
+	 *            OnScreen -> Dispatch
+	 *            Released -> Dispatch & Unregister
+	 *     -- else:
+	 *            Send (0,0,3)
+	 *
+	 */
+	if(HtCount == 0) {
+		HtCount = [event.allTouches count];
+		if(HtCount == 1) {
+
+			// Process Position (using parameter "point")
+			ab vf;
+			vf.a = 900.0 + (point.x - CenterX) / PosDiv;
+			vf.b = 540.0 + (3*CenterY - point.y) / PosDiv;
+
+			// Process Phase & Judge
+			UITouch *touch = [event.allTouches anyObject];
+			bool pressed = (touch.phase == UITouchPhaseBegan);
+			bool released = (touch.phase == UITouchPhaseEnded) || (touch.phase == UITouchPhaseCancelled);
+			const jud r = JudgeArf(&vf, 1, pressed, released);
+
+			// Process First-Touch Logics & Enqueue the Lua Call
+			if(pressed) {
+				FtId = (__bridge void*)touch;   // This is the only situation to register the First-Touch
+				InputEnqueue(vf.a, vf.b, 0, r);
+			}
+			else {
+				void* tid = (__bridge void*)touch;
+				if(tid == FtId) {
+					if(released) {
+						InputEnqueue(vf.a, vf.b, 2, r);
+						FtId = nullptr;
+					}
+					else
+						InputEnqueue(vf.a, vf.b, 1, r);
+				}
+				else   // Non-First Touch, Send "Invalid" no matter OnScreen or Released
+					InputEnqueue(0, 0, 3, r);
+			}
+
+		}
+		else if(ArfBefore) {
+			ab vf[10];
+			uint8_t vfcount = 0;
+			bool any_pressed = false, bool any_released = false;
+
+			for(UITouch *touch in event.allTouches) {
+				void* tid = (__bridge void*)touch;
+				CGPoint location = [touch locationInView:nil];
+				switch(touch.phase) {
+					case UITouchPhaseBegan:   // Judge Info & Judge Vf
+						any_pressed = true;
+						vf[vfcount].a = 900.0 + (location.x - CenterX) / PosDiv;
+						vf[vfcount].b = 540.0 + (3*CenterY - location.y) / PosDiv;
+						vfcount++;
+						break;
+
+					case UITouchPhaseEnded:
+					case UITouchPhaseCancelled:   // Judge Info & Ft
+						any_released = true;
+						if(tid == FtId) {
+							FtX = 900.0 + (location.x - CenterX) / PosDiv;
+							FtY = 540.0 + (3*CenterY - location.y) / PosDiv;
+							FtPhase = 2;
+						}
+						break;
+
+					default:   // Judge Vf & Ft
+						vf[vfcount].a = 900.0 + (location.x - CenterX) / PosDiv;
+						vf[vfcount].b = 540.0 + (3*CenterY - location.y) / PosDiv;
+						if(tid == FtId) {
+							FtX = vf[vfcount].a;
+							FtY = vf[vfcount].b;
+							FtPhase = 1;
+						}
+						vfcount++;
+				}
+			}
+
+			const jud r = JudgeArf(vf, vfcount, any_pressed, any_released);
+			if(FtId) {
+				InputEnqueue(FtX, FtY, FtPhase, r);
+				FtId = (FtPhase == 2) ? nullptr : FtId;
+			}
+			else
+				InputEnqueue(0, 0, 3, r);
+		}
+		else {
+			for(UITouch *touch in event.allTouches)
+				if( (__bridge void*)touch == FtId ) {
+					CGPoint location = [touch locationInView:nil];
+					FtX = 900.0 + (location.x - CenterX) / PosDiv;
+					FtY = 540.0 + (3*CenterY - location.y) / PosDiv;
+					switch(touch.phase) {
+						case UITouchPhaseEnded:
+						case UITouchPhaseCancelled:
+							FtPhase = 2;
+							break;
+						default:
+							FtPhase = 1;
+					}
+				}
+			if(FtId) {
+				InputEnqueue(FtX, FtY, FtPhase, r);
+				FtId = (FtPhase == 2) ? nullptr : FtId;
+			}
+			else
+				InputEnqueue(0, 0, 3, r);
+		}
+	}
+	HtCount--;
+	return nil;
+}
+
 @end
 
 
-/* Create a Delegate class that applies our custom UIViewController */
-@interface ArInputDelegate : UIResponder <UIApplicationDelegate>
-@property(strong, nonatomic) ArInputWindow *w;
-@end
-
+/* Delegate */
+@interface ArInputDelegate : NSObject <UIApplicationDelegate> @end
 @implementation ArInputDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-	self.w = [[ArInputWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-	self.w.rootViewController = [[ArInputViewController alloc] init];
-	self.w.backgroundColor = [UIColor clearColor];
-	self.w.windowLevel = UIWindowLevelAlert;
-	self.w.hidden = NO;
+	self.window = [[ArInputWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+	self.window.rootViewController = [[ArInputViewController alloc] init];
+	self.window.backgroundColor = [UIColor clearColor];
+	self.window.windowLevel = UIWindowLevelAlert + 5;
+	self.window.hidden = NO;
 	return YES;
 }
 
