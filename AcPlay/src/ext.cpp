@@ -46,14 +46,16 @@ inline int InputBoot(lua_State* L) {
 }
 
 inline void InputEnqueue(const double gui_x, const double gui_y, const uint8_t gui_phase, const jud& jrs) {
-	dmSpinlock::Lock(&input_queue_lock);
-	input_queue[eq_idx] = {
-		gui_x, gui_y, gui_phase,
-		jrs.hit, jrs.early, jrs.late,
-		jrs.special_hint_judged
-	};
-	eq_idx++;   // Utilized the uint8_t overflowing to let the queue loop. Fast and a little bit dirty.
-	dmSpinlock::Unlock(&input_queue_lock);
+	if(input_booted) {
+		dmSpinlock::Lock(&input_queue_lock);
+		input_queue[eq_idx] = {
+			gui_x, gui_y, gui_phase,
+			jrs.hit, jrs.early, jrs.late,
+			jrs.special_hint_judged
+		};
+		eq_idx++;   // Utilized the uint8_t overflowing to let the queue loop. Fast and a little bit dirty.
+		dmSpinlock::Unlock(&input_queue_lock);
+	}
 }
 
 inline int InputDequeue(lua_State* L) {
