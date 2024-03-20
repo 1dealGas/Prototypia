@@ -179,7 +179,7 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 			ma_resource_manager_data_source_uninit(it.first);
 
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
-	// Then Return. No further cleranup since it's the finalizer.
+	// Then Do Return. No further cleranup since it's the finalizer.
 	ma_engine_uninit(&PreviewEngine);
 	ma_engine_uninit(&PlayerEngine);
 	return dmExtension::RESULT_OK;
