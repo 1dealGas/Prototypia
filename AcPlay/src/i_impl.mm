@@ -152,11 +152,11 @@ double FtX, FtY;		uint8_t FtPhase;
 					}
 				}
 			if(FtId) {
-				InputEnqueue(FtX, FtY, FtPhase, r);
+				InputEnqueue( FtX, FtY, FtPhase, {0, 0, 0, false} );
 				FtId = (FtPhase == 2) ? nullptr : FtId;
 			}
 			else
-				InputEnqueue(0, 0, 3, r);
+				InputEnqueue( 0, 0, 3, {0, 0, 0, false} );
 		}
 	}
 	HtCount--;
