@@ -112,8 +112,6 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
 	lua_pushcfunction(L, InputBoot);				lua_setglobal(L, "InputBoot");
 	lua_pushcfunction(L, InputDequeue);				lua_setglobal(L, "InputDequeue");
-	dmSpinlock::Create(&input_queue_lock);
-	InputInit();
 	#endif
 
 	return dmExtension::RESULT_OK;
@@ -176,21 +174,31 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 			ma_resource_manager_data_source_uninit(it.first);
 
 	// Uninit (miniaudio)Engines; resource managers will be uninitialized automatically here.
+	// Then Do Return. No further cleranup since it's the finalizer.
 	ma_engine_uninit(&PreviewEngine);
 	ma_engine_uninit(&PlayerEngine);
+	return dmExtension::RESULT_OK;
+}
 
-	// Uninit Platform-Specific Stuff
-	// Then Do Return. No further cleranup since it's the finalizer.
-	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
+	InputInit();
+	dmSpinlock::Create(&input_queue_lock);
+	return dmExtension::RESULT_OK;
+}
+inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 	input_booted = false;
 	dmSpinlock::Destroy(&input_queue_lock);
 	InputUninit();
-	#endif
 	return dmExtension::RESULT_OK;
 }
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, 0, AcPlayOnEvent, AcPlayFinal)
 
+#else
 inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
-
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
+
+#endif
