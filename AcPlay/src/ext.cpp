@@ -34,7 +34,8 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 };
 
 
-// Input Queue
+// Input Related
+#include "i_impl.cpp"
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 uint8_t eq_idx = 0, dq_idx = 0;
 dmSpinlock::Spinlock input_queue_lock;   // Should be created when enqueuing tasks
@@ -211,4 +212,5 @@ inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
+
 #endif
