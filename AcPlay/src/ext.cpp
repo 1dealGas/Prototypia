@@ -1,6 +1,6 @@
 // Defold Binding Related Stuff for Aerials
 #pragma once
-
+#include "i_impl.cpp"
 
 // Module "AcAudio"
 #include "m_functions.hpp"
