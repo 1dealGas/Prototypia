@@ -1,5 +1,6 @@
 // Aerials Input System Implementation for Android
 #ifdef DM_PLATFORM_ANDROID
+
 #pragma once
 #include <includes.h>
 #include <dmsdk/dlib/android.h>   // jni.h included
@@ -31,4 +32,5 @@ void InputInit() {
 	APP->onInputEvent = ArInputEvent;
 }
 void InputUninit() {}
+
 #endif

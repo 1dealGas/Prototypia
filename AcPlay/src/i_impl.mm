@@ -18,7 +18,7 @@ double FtX, FtY;		uint8_t FtPhase;
 	double WindowHthenDiv = self.view.bounds.size.height;
 	CenterX = WindowWthenDiv * 0.5;		CenterY = WindowHthenDiv * 0.5;
 	WindowWthenDiv /= 1800.0;			WindowHthenDiv /= 1080.0;
-	PosDiv = (WindowWthenDiv < WindowHthenDiv) ? WindowWthenDiv : WindowHthenDiv;
+	PosDnm = 1.0 / ( (WindowWthenDiv < WindowHthenDiv) ? WindowWthenDiv : WindowHthenDiv );
 	[super viewDidLayoutSubviews];
 }
 
@@ -70,8 +70,8 @@ double FtX, FtY;		uint8_t FtPhase;
 
 			// Judge
 			ab vf;
-			vf.a = 900.0 + (location.x - CenterX) / PosDiv;
-			vf.b = 540.0 + (3*CenterY - location.y) / PosDiv;
+			vf.a = 900.0 + (location.x - CenterX) * PosDnm;
+			vf.b = 540.0 + (3*CenterY - location.y) * PosDnm;
 			bool pressed = (touch.phase == UITouchPhaseBegan);
 			bool released = (touch.phase == UITouchPhaseEnded) || (touch.phase == UITouchPhaseCancelled);
 			const jud r = JudgeArf(&vf, 1, pressed, released);
@@ -107,8 +107,8 @@ double FtX, FtY;		uint8_t FtPhase;
 				switch(touch.phase) {
 					case UITouchPhaseBegan:   // Judge Info & Judge Vf
 						any_pressed = true;
-						vf[vfcount].a = 900.0 + (location.x - CenterX) / PosDiv;
-						vf[vfcount].b = 540.0 + (3*CenterY - location.y) / PosDiv;
+						vf[vfcount].a = 900.0 + (location.x - CenterX) * PosDnm;
+						vf[vfcount].b = 540.0 + (3*CenterY - location.y) * PosDnm;
 						vfcount++;
 						break;
 
@@ -116,15 +116,15 @@ double FtX, FtY;		uint8_t FtPhase;
 					case UITouchPhaseCancelled:   // Judge Info & Ft
 						any_released = true;
 						if(tid == FtId) {
-							FtX = 900.0 + (location.x - CenterX) / PosDiv;
-							FtY = 540.0 + (3*CenterY - location.y) / PosDiv;
+							FtX = 900.0 + (location.x - CenterX) * PosDnm;
+							FtY = 540.0 + (3*CenterY - location.y) * PosDnm;
 							FtPhase = 2;
 						}
 						break;
 
 					default:   // Judge Vf & Ft
-						vf[vfcount].a = 900.0 + (location.x - CenterX) / PosDiv;
-						vf[vfcount].b = 540.0 + (3*CenterY - location.y) / PosDiv;
+						vf[vfcount].a = 900.0 + (location.x - CenterX) * PosDnm;
+						vf[vfcount].b = 540.0 + (3*CenterY - location.y) * PosDnm;
 						if(tid == FtId) {
 							FtX = vf[vfcount].a;
 							FtY = vf[vfcount].b;
@@ -147,8 +147,8 @@ double FtX, FtY;		uint8_t FtPhase;
 			for(UITouch *touch in event.allTouches)
 				if( (__bridge void*)touch == FtId ) {
 					CGPoint location = [touch locationInView:nil];
-					FtX = 900.0 + (location.x - CenterX) / PosDiv;
-					FtY = 540.0 + (3*CenterY - location.y) / PosDiv;
+					FtX = 900.0 + (location.x - CenterX) * PosDnm;
+					FtY = 540.0 + (3*CenterY - location.y) * PosDnm;
 					switch(touch.phase) {
 						case UITouchPhaseEnded:
 						case UITouchPhaseCancelled:
