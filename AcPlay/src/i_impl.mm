@@ -34,10 +34,15 @@ double FtX, FtY;		uint8_t FtPhase;
 }
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
-	/* We listen touches here, and tell the UIApplication that
-	 * the UIView of this UIWindow can't handle touches.
-	 *
-	 * First-Touch:
+	/* Owing to reports that for a single touch the hitTest method might be
+	 *   called for multiple times, we switched to let the hitTest return the
+	 *   UIWindow itself, and process our touches in the sendEvent method.
+	 */
+	return self;
+}
+
+- (void)sendEvent:(UIEvent *)event {
+	/* First-Touch:
 	 *     1 touch on the screen
 	 *         Pressed -> Register
 	 *         OnScreen -> if tid==FtId, Dispatch
@@ -55,17 +60,18 @@ double FtX, FtY;		uint8_t FtPhase;
 	 *            Send (0,0,3)
 	 *
 	 */
-	if(HtCount == 0) {
-		HtCount = [event.allTouches count];
+	if(event.type == UIEventTypeTouches) {
+		uint8_t HtCount = [event.allTouches count];
 		if(HtCount == 1) {
 
-			// Process Position (using parameter "point")
-			ab vf;
-			vf.a = 900.0 + (point.x - CenterX) / PosDiv;
-			vf.b = 540.0 + (3*CenterY - point.y) / PosDiv;
-
-			// Process Phase & Judge
+			// Process Touch
 			UITouch *touch = [event.allTouches anyObject];
+			CGPoint location = [touch locationInView:nil];
+
+			// Judge
+			ab vf;
+			vf.a = 900.0 + (location.x - CenterX) / PosDiv;
+			vf.b = 540.0 + (3*CenterY - location.y) / PosDiv;
 			bool pressed = (touch.phase == UITouchPhaseBegan);
 			bool released = (touch.phase == UITouchPhaseEnded) || (touch.phase == UITouchPhaseCancelled);
 			const jud r = JudgeArf(&vf, 1, pressed, released);
@@ -160,8 +166,6 @@ double FtX, FtY;		uint8_t FtPhase;
 				InputEnqueue(0, 0, 3, empty);
 		}
 	}
-	HtCount--;
-	return nil;
 }
 
 @end
