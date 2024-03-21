@@ -4,7 +4,7 @@
 
 
 /* Global Vars */
-void* FtId;				uint8_t HtCount;
+void* FtId;
 double FtX, FtY;		uint8_t FtPhase;
 
 
