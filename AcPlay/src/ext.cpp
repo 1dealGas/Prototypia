@@ -114,6 +114,9 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
 	lua_pushcfunction(L, InputBoot);				lua_setglobal(L, "InputBoot");
 	lua_pushcfunction(L, InputDequeue);				lua_setglobal(L, "InputDequeue");
+	#ifdef DM_PLATFORM_ANDROID
+	InputInit();
+	#endif
 	#endif
 
 	return dmExtension::RESULT_OK;
@@ -191,7 +194,9 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
 	dmSpinlock::Create(&input_queue_lock);
+	#ifdef DM_PLATFORM_IOS
 	InputInit();
+	#endif
 	return dmExtension::RESULT_OK;
 }
 inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
@@ -206,5 +211,4 @@ inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
-
 #endif
