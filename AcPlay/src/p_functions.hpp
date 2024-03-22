@@ -59,7 +59,7 @@ static std::unordered_map<uint32_t, uint8_t> last_wgo;
 
 
 // Init & Final Functions
-static int InitArf(lua_State* L) {
+static int InitArf(lua_State* L) {   // No data race here, no lock needed
 
 	/* Viewer Usage
 	 * InitArf(buf, true) -> before, total_hints, wgo_required, hgo_required
@@ -831,7 +831,7 @@ static int UpdateArf(lua_State* L) {
 					}
 				}
 
-				/* WishChild Iteration */
+				/* WishChild Iteration (EchoChild NYI) */
 				const uint16_t child_count = wish_c.cc;
 				if(child_count) {   // current_dt < dt <= current_dt + mvb
 					const auto childs = wish_c.childs;
@@ -967,7 +967,6 @@ static int UpdateArf(lua_State* L) {
 						}
 					}
 				}
-				/* EchoChild Iteration */   // NYI
 			}
 		}
 	}
@@ -1220,14 +1219,13 @@ static int UpdateArf(lua_State* L) {
 
 
 	/* Clean Up & Do Returns */
-	dmSpinlock::Unlock(&hLock);
-	lua_checkstack(L, 4);			lua_pushnumber(L, Sweep.late);
+	lua_checkstack(L, 4);			lua_pushnumber(L, Sweep.late);		dmSpinlock::Unlock(&hLock);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }
 
 
-// Setting & Util Functions
+// Setting Functions
 static int SetAudioOffset(lua_State *L) {
 	const int32_t _ofs = luaL_checknumber(L, 1);
 	if( _ofs>=-1000 && _ofs<=1000 )
@@ -1281,8 +1279,10 @@ static int SetAnmitsu(lua_State *L) {
 	allow_anmitsu = lua_toboolean(L, 1);
 	return 0;
 }
+
+
+// Util
 static int NewTable(lua_State *L) {
-	lua_checkstack(L, 1);
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
 	return 1;
 }

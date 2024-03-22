@@ -8,8 +8,8 @@
 #include <dmsdk/dlib/vmath.h>
 #include <dmsdk/dlib/buffer.h>
 #include <dmsdk/dlib/spinlock.h>
-#include <dmsdk/script/script.h>
 #include <dmsdk/gameobject/gameobject.h>
+#include <dmsdk/script/script.h>
 #include <unordered_map>
 #include <miniaudio.h>
 
@@ -52,7 +52,7 @@ std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   /
 std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 
-// Judge System Related
+// Judge System Exposures
 std::vector<ab> Motions;
 std::vector<void*> BlockedHints;   // <ArHint*>
 dmSpinlock::Spinlock mLock, hLock, bhLock;
@@ -63,8 +63,11 @@ struct jud {
 bool haptic_enabled = false;
 uint32_t ArfBefore;
 
-/* Judge System Platform Specifics */
+
+// Judge System Platform Specifics
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+
+jud JudgeArf(bool);
 bool input_booted = false;
 double PosDnm = 1.0, CenterX = 900.0, CenterY = 540.0;  // Use Lua to manage them on desktop platforms.
 
@@ -72,5 +75,4 @@ void InputInit();
 void InputUninit();
 void InputEnqueue(double, double, uint8_t, jud);
 
-jud JudgeArf(bool);
 #endif
