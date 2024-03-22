@@ -27,16 +27,12 @@ struct ArPosNode {
 };
 
 struct ArHint {
-	dmSpinlock::Spinlock lock;
 	float c_dx = 0.0f,  c_dy = 0.0f;
 	uint32_t ms = 0;
 /*--------------------------------*/
 	uint32_t judged_ms = 0;
 	uint8_t elstatus = 0;   // To Utilize the Memory Alignment Padding Better
 	uint8_t status = 0;
-/*--------------------------------*/
-	ArHint()	{ dmSpinlock::Create(&lock); }
-	~ArHint()	{ dmSpinlock::Destroy(&lock); }
 };
 
 
@@ -123,6 +119,10 @@ struct Arf {
 	}
 };
 
-/* Link Symbols */	ArIndex *Arf::index;			ArDeltaNode *Arf::d1, *Arf::d2;
-					ArWishGroup *Arf::wish;			ArHint *Arf::hint, *Arf::echo;
-					uint16_t Arf::d1c, Arf::d2c, Arf::ic;
+/* Link Symbols */
+ArIndex* Arf::index;
+ArDeltaNode* Arf::d1;
+ArDeltaNode* Arf::d2;
+ArWishGroup* Arf::wish;
+ArHint *Arf::hint, *Arf::echo;
+uint16_t Arf::d1c, Arf::d2c, Arf::ic;

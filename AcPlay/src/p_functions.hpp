@@ -354,7 +354,8 @@ static int InitArf(lua_State* L) {
 	return 4;
 }
 static int FinalArf(lua_State *L) {
-	ArfBefore = 0;		Arf::clear();
+	ArfBefore = 0;
+	dmSpinlock::Lock(&hLock);		Arf::clear();		dmSpinlock::Unlock(&hLock);
 	return 0;
 }
 
@@ -410,6 +411,7 @@ jud JudgeArf(const bool any_pressed) {
 
 	jud returns;
 	if(!ArfBefore) return returns;
+	dmSpinlock::Lock(&hLock);
 
 	// Prepare the Context msTime
 	/* Normally, we want the audio_offset to be a positive value,
@@ -437,12 +439,11 @@ jud JudgeArf(const bool any_pressed) {
 			for( uint8_t i=0; i<hint_count; i++ ) {
 				const auto current_hint_id = hint_ids[i];
 				auto& current_hint = Arf::hint[current_hint_id];
-				dmSpinlock::Lock(&current_hint.lock);
 
 				// Jump Judging based on the Sort Assumption
 				const int32_t dt = context_ms - current_hint.ms;
-				if(dt < -510)	{ dmSpinlock::Unlock(&current_hint.lock); break; }   // Hint For Loop
-				if(dt > 470)	{ dmSpinlock::Unlock(&current_hint.lock); continue; }   // Hint For Loop
+				if(dt < -510)	break;		// Hint For Loop
+				if(dt > 470)	continue;	// Hint For Loop
 
 				// Hint Status Manipulation
 				const bool htn = has_touch_near(current_hint);
@@ -505,8 +506,6 @@ jud JudgeArf(const bool any_pressed) {
 
 					default:;
 				}
-
-				dmSpinlock::Unlock(&current_hint.lock);
 			}
 		}
 	}
@@ -519,31 +518,35 @@ jud JudgeArf(const bool any_pressed) {
 		for( uint8_t i=0; i<hint_count; i++ ) {
 			const auto current_hint_id = hint_ids[i];
 			auto& current_hint = Arf::hint[current_hint_id];
-			dmSpinlock::Lock(&current_hint.lock);
 
 			// Jump Judging based on the Sort Assumption
 			const int32_t dt = context_ms - current_hint.ms;
-			if(dt < -510)	{ dmSpinlock::Unlock(&current_hint.lock); break; }   // Hint For Loop
-			if(dt > 470)	{ dmSpinlock::Unlock(&current_hint.lock); continue; }   // Hint For Loop
+			if(dt < -510)	break;		// Hint For Loop
+			if(dt > 470)	continue;	// Hint For Loop
 
-			// Hint Status Manipulation
-			const bool htn = has_touch_near(current_hint);
-			switch(current_hint.status) {
-				case HINT_NONJUDGED:   // No break here
-				case HINT_NONJUDGED_LIT:
-					if(htn) current_hint.status = HINT_NONJUDGED_LIT;
-					else current_hint.status = HINT_NONJUDGED;
-					break;   // Switch Case
-				case HINT_JUDGED_LIT:
-					if(!htn) current_hint.status = HINT_JUDGED;
-					break;  // Switch Case
-				default:;
+			// Sweep & Hint Status Manipulation
+			if( dt > 100  &&  current_hint.status < 2 ) {
+				current_hint.status = HINT_SWEEPED;
+				returns.late++;
 			}
-
-			dmSpinlock::Unlock(&current_hint.lock);
+			else {
+				const bool htn = has_touch_near(current_hint);
+				switch(current_hint.status) {
+					case HINT_NONJUDGED:   // No break here
+					case HINT_NONJUDGED_LIT:
+						if(htn) current_hint.status = HINT_NONJUDGED_LIT;
+						else current_hint.status = HINT_NONJUDGED;
+					break;   // Switch Case
+					case HINT_JUDGED_LIT:
+						if(!htn) current_hint.status = HINT_JUDGED;
+					break;  // Switch Case
+					default:;
+				}
+			}
 		}
 	}
 
+	dmSpinlock::Unlock(&hLock);
 	return returns;
 }
 static int JudgeArfDesktop(lua_State* L) {
@@ -613,12 +616,12 @@ static int UpdateArf(lua_State* L) {
 
 	/* We still let Lua pass the mstime,
 	 * to keep the extension compatible with the Viewer. */
+	jud Sweep;
 	if( !ArfBefore )		return 0;
-	if( current_audio )		JudgeArf(false);   //  To make the NONJUDGED_LIT behavior better
+	if( current_audio )		Sweep = JudgeArf(false);   // To make the NONJUDGED behavior better
 
 	/* Prepare Returns & Process msTime */
 	// Z Distribution: Wish{0.07,0.08,0.09,0.10}  Hint(-0.06,0)
-	uint16_t hint_lost = 0;
 	uint8_t wgo_used = 0, hgo_used = 0, ago_used = 0;
 	auto mstime = (uint32_t)luaL_checknumber(L, 1); {
 		if(mstime < 2)					mstime = 2;
@@ -695,7 +698,7 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Process Wish(es) */ {
+	/* Process Wish[es] */ {
 		const uint16_t wish_count = Arf::index[location_group].widx_count;
 		if(wish_count) {
 
@@ -970,7 +973,7 @@ static int UpdateArf(lua_State* L) {
 	}
 
 
-	/* Process Hint(s) */ {
+	/* Process Hint[s] (Echo[es] NYI) */ {
 
 		// Prepare the Iteration Scale
 		uint16_t current_group = (location_group > 1) ? (location_group - 1) : 0 ;
@@ -978,6 +981,7 @@ static int UpdateArf(lua_State* L) {
 		beyond_group = (beyond_group < Arf::ic) ? beyond_group : Arf::ic ;
 
 		// Group Iteration
+		dmSpinlock::Lock(&hLock);
 		for( ; current_group < beyond_group; current_group++ ) {
 			const uint8_t hint_count = Arf::index[current_group].hidx_count;
 			if(!hint_count) continue;   // Index For Loop
@@ -987,19 +991,12 @@ static int UpdateArf(lua_State* L) {
 			for(uint8_t i=0; i<hint_count; i++) {
 				const auto hint_cid = hint_ids[i];
 				auto& hint_c = Arf::hint[hint_cid];
-				dmSpinlock::Lock(&hint_c.lock);
 
 				/* Calculate Dt & Jump Judging based on the Sort Assumption */
 				const auto dt = (int32_t)mstime - (int32_t)hint_c.ms;
 				const auto jdt = (int32_t)mstime - (int32_t)hint_c.judged_ms;
-				if (dt > 470)	{ dmSpinlock::Unlock(&hint_c.lock); continue; }   // Hint For Loop
-				if (dt < -510)	{ dmSpinlock::Unlock(&hint_c.lock); break; }   // Hint For Loop
-
-				/* Do Hint Sweeping */
-				if( dt>100  && hint_c.status<2 ) {
-					hint_c.status = HINT_SWEEPED;
-					hint_lost++;
-				}
+				if (dt < -510)	break;		// Hint For Loop
+				if (dt > 470)	continue;	// Hint For Loop
 
 				/* Calculate the Real Position & Prepare Rennder Elements */
 				using namespace dmScript;
@@ -1217,22 +1214,20 @@ static int UpdateArf(lua_State* L) {
 						SetScale( agor, 1.0 + 0.637 * anim_calculate );
 					}
 				}
-
-				dmSpinlock::Unlock(&hint_c.lock);
 			}
 		}
 	}
 
-	// Echoes Processes NYI
 
 	/* Clean Up & Do Returns */
-	lua_checkstack(L, 4);			lua_pushnumber(L, hint_lost);
+	dmSpinlock::Unlock(&hLock);
+	lua_checkstack(L, 4);			lua_pushnumber(L, Sweep.late);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }
 
 
-// Setting Functions
+// Setting & Util Functions
 static int SetAudioOffset(lua_State *L) {
 	const int32_t _ofs = luaL_checknumber(L, 1);
 	if( _ofs>=-1000 && _ofs<=1000 )
@@ -1286,9 +1281,6 @@ static int SetAnmitsu(lua_State *L) {
 	allow_anmitsu = lua_toboolean(L, 1);
 	return 0;
 }
-
-
-// Util
 static int NewTable(lua_State *L) {
 	lua_checkstack(L, 1);
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
