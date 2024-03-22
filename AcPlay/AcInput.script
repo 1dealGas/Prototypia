@@ -13,9 +13,9 @@ if (system_name == "Android") or (system_name == "iPhone OS") then
 		--
 	end
 
-	local function i_boot(a, b, c, d, e, f, g)
+	local function i_boot(a, b, c)
 		if c == 1 then c = 0 end
-		i(a, b, c, d, e, f, g)
+		i(a, b, c)
 		I = i
 	end
 

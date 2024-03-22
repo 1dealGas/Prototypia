@@ -1,6 +1,6 @@
 - name: I
   type: function
-  desc: Overwrite this global function to receive GUI inputs. Mobile only.
+  desc: Override this global function to receive GUI inputs. Mobile only.
   parameters:
   - name: gui_x
     type: number
@@ -8,19 +8,20 @@
     type: number
   - name: gui_phase
     type: number
-  - name: hit
-    type: number
-  - name: early
-    type: number
-  - name: late
-    type: number
-  - name: special_hint_judged
-    type: boolean
+
+- name: T
+  type: function
+  desc: Override this global function to receive Hint Judge Results caused by Tapping. Mobile only.
+  parameters:
+    - name: hit
+      type: number
+    - name: early
+      type: number
+    - name: late
+      type: number
+    - name: special_hint_judged
+      type: boolean
 
 - name: InputBoot
   type: function
-  desc: Allow the system to append input events into the input queue. Mobile only.
-
-- name: InputDequeue
-  type: function
-  desc: Sync input process by calling Lua function "I". Mobile only.
+  desc: Tell the system to Enqueue and Dequeue Input Events. Mobile only.
