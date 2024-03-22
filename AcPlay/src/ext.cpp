@@ -37,39 +37,31 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 // Input Related
 #include "i_impl.cpp"
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
-uint8_t eq_idx = 0, dq_idx = 0;
-dmSpinlock::Spinlock input_queue_lock;   // Should be created when enqueuing tasks
-struct { double x,y;  uint8_t p,h,e,l;  bool s; } input_queue[256];
+uint8_t eq_idx_judge = 0, dq_idx_judge = 0;
+uint8_t eq_idx_gui = 0, dq_idx_gui = 0;
+
+jud qJudge[256];
+struct{double x,y; uint8_t p;} qGui[256];
+dmSpinlock::SpinLock qJudgeLock, qGuiLock;
+
+void JudgeEnqueue(jud result) {
+	dmSpinlock::Lock(&qJudgeLock);
+	qJudge[eq_idx_judge] = result;
+	eq_idx_judge++;
+	dmSpinlock::Unlock(&qJudgeLock);
+}
+
+void GUIEnqueue(const double x, const double y, const uint8_t p) {
+	dmSpinlock::Lock(&qGuiLock);
+	qGui[eq_idx_gui].x = x;
+	qGui[eq_idx_gui].y = y;
+	qGui[eq_idx_gui].p = p;
+	eq_idx_gui++;
+	dmSpinlock::Unlock(&qGuiLock);
+}
 
 inline int InputBoot(lua_State* L) {
 	input_booted = true;
-	return 0;
-}
-
-void InputEnqueue(const double gui_x, const double gui_y, const uint8_t gui_phase, const jud jrs) {
-	if(input_booted) {
-		dmSpinlock::Lock(&input_queue_lock);
-		input_queue[eq_idx] = {
-			gui_x, gui_y, gui_phase,
-			jrs.hit, jrs.early, jrs.late,
-			jrs.special_hint_judged
-		};
-		eq_idx++;   // Utilized the uint8_t overflowing to let the queue loop. Fast and a little bit dirty.
-		dmSpinlock::Unlock(&input_queue_lock);
-	}
-}
-
-inline int InputDequeue(lua_State* L) {
-	dmSpinlock::Lock(&input_queue_lock);
-	while(dq_idx != eq_idx) {
-		lua_getglobal(L, "I");
-		const auto& task = input_queue[dq_idx];
-		lua_pushnumber(L, task.x);		lua_pushnumber(L, task.y);		lua_pushnumber(L, task.p);
-		lua_pushnumber(L, task.h);		lua_pushnumber(L, task.e);		lua_pushnumber(L, task.l);
-		lua_pushboolean(L, task.s);		lua_call(L, 7, 0);
-		dq_idx++;   // Overflowing
-	}
-	dmSpinlock::Unlock(&input_queue_lock);
 	return 0;
 }
 #endif
@@ -113,8 +105,8 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	// Register Platform-Specific Stuff
 	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
+	luaL_loadstring(L, "return");					lua_setglobal(L, "T");
 	lua_pushcfunction(L, InputBoot);				lua_setglobal(L, "InputBoot");
-	lua_pushcfunction(L, InputDequeue);				lua_setglobal(L, "InputDequeue");
 	#ifdef DM_PLATFORM_ANDROID
 	InputInit();
 	#endif
@@ -197,7 +189,8 @@ inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
 	dmSpinlock::Create(&mLock);
 	dmSpinlock::Create(&hLock);
 	dmSpinlock::Create(&bhLock);
-	dmSpinlock::Create(&input_queue_lock);
+	dmSpinlock::Create(&qJudgeLock);
+	dmSpinlock::Create(&qGuiLock);
 	#ifdef DM_PLATFORM_IOS
 	InputInit();
 	#endif
@@ -208,9 +201,40 @@ inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 	dmSpinlock::Destroy(&mLock);
 	dmSpinlock::Destroy(&hLock);
 	dmSpinlock::Destroy(&bhLock);
-	dmSpinlock::Destroy(&input_queue_lock);
+	dmSpinlock::Destroy(&qJudgeLock);
+	dmSpinlock::Destroy(&qGuiLock);
 	return dmExtension::RESULT_OK;
 }
+inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
+	if(input_booted) {
+
+		dmSpinlock::Lock(&qJudgeLock);
+		while(dq_idx_judge != eq_idx_judge) {
+			lua_getglobal(L, "J");
+			lua_pushnumber(L, qJudge[dq_idx_judge].hit);
+			lua_pushnumber(L, qJudge[dq_idx_judge].early);
+			lua_pushnumber(L, qJudge[dq_idx_judge].late);
+			lua_pushboolean(L, qJudge[dq_idx_judge].special_hint_judged);
+			lua_call(L, 4, 0);
+			dq_idx_judge++;
+		}
+		dmSpinlock::Unlock(&qJudgeLock);
+
+		dmSpinlock::Lock(&qGuiLock);
+		while(dq_idx_gui != eq_idx_gui) {
+			lua_getglobal(L, "I");
+			lua_pushnumber(L, qGui[dq_idx_gui].x);
+			lua_pushnumber(L, qGui[dq_idx_gui].y);
+			lua_pushnumber(L, qGui[dq_idx_gui].p);
+			lua_call(L, 3, 0);
+			dq_idx_gui++;
+		}
+		dmSpinlock::Unlock(&qGuiLock);
+
+	}
+	return dmExtension::RESULT_OK;
+}
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, AcUpdate, AcPlayOnEvent, AcPlayFinal)
 
 #else
 inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
@@ -227,7 +251,6 @@ inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 	dmSpinlock::Destroy(&bhLock);
 	return dmExtension::RESULT_OK;
 }
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
 
 #endif
-
-DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, 0, AcPlayOnEvent, AcPlayFinal)

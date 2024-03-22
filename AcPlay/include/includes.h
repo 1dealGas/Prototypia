@@ -66,13 +66,13 @@ bool haptic_enabled = false;
 
 // Judge System Platform Specifics
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
-
 jud JudgeArf(bool);
 bool input_booted = false;
 double PosDnm = 1.0, CenterX = 900.0, CenterY = 540.0;  // Use Lua to manage them on desktop platforms.
 
+void JudgeEnqueue(jud);
+void GUIEnqueue(double, double, uint8_t);
+
 void InputInit();
 void InputUninit();
-void InputEnqueue(double, double, uint8_t, jud);
-
 #endif

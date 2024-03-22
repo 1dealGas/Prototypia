@@ -1,13 +1,15 @@
 local system_name = sys.get_sys_info().system_name
 if (system_name == "Android") or (system_name == "iPhone OS") then
 
-	local function i(gui_x, gui_y, gui_phase, hit, early, late, special_hint_judged)
+	local function t(hit, early, late, special_hint_judged)
+	end
+
+	local function i(gui_x, gui_y, gui_phase)
 		--
 		-- GUI Phases:
 		-- 0 / Pressed
 		-- 1 / OnScreen
 		-- 2 / Released
-		-- 3 / Invalid
 		--
 	end
 
@@ -17,9 +19,9 @@ if (system_name == "Android") or (system_name == "iPhone OS") then
 		I = i
 	end
 
+	T = t
 	I = i_boot
 	init = InputBoot
-	update = InputDequeue
 
 else
 	-- Do Window Management and Input Updates with Defold Lua APIs
