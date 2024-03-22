@@ -240,7 +240,6 @@ DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, AcUpda
 
 #else
 inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
-	Motions.push_back( {0,0} );
 	dmSpinlock::Create(&mLock);
 	dmSpinlock::Create(&hLock);
 	dmSpinlock::Create(&bhLock);
@@ -252,5 +251,6 @@ inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 	dmSpinlock::Destroy(&bhLock);
 	return dmExtension::RESULT_OK;
 }
-DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, 0, AcPlayOnEvent, AcPlayFinal)
+
 #endif

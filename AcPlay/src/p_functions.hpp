@@ -395,7 +395,8 @@ inline bool has_touch_near(const ArHint& hint) {
 
 	// Detect Touches
 	dmSpinlock::Lock(&mLock);
-	for(const auto m : Motions) {
+	for(const auto mp : Motions) {
+		const auto& m = mp.second;
 		if( m.a>=hl && m.a<=hr )
 			if( m.b>=hd && m.b<=hu ) {
 				dmSpinlock::Unlock(&mLock);
@@ -553,15 +554,15 @@ static int JudgeArfDesktop(lua_State* L) {
 	// JudgeArfDesktop(cursor_x, cursor_y, cursor_phase) -> hit, early, late, special_hint_judged
 	if( !ArfBefore ) return 0;
 
-	// Set Cursor Positions
+	// Process the Cursor Event
 	// No data race here, no lock needed
-	Motions[0].a = luaL_checknumber(L,1);
-	Motions[0].b = luaL_checknumber(L,2);
-
-	// Manage Cursor Phase
 	const uint8_t cursor_phase = luaL_checknumber(L, 3);
-	if(cursor_phase == 2)   // No data race here, no lock needed
+	if(cursor_phase == 2) {
 		BlockedHints.clear();
+		Motions.clear();
+	}
+	else
+		Motions[nullptr] = { (float)luaL_checknumber(L,1), (float)luaL_checknumber(L,2) };
 
 	// Judge & Do Returns
 	const auto returns = JudgeArf(cursor_phase == 0);
@@ -1249,7 +1250,7 @@ static int SetHaptic(lua_State *L) {
 }
 
 
-// Script Functions
+// Script & Util Functions
 static int SetXS(lua_State *L) {
 	xscale = luaL_checknumber(L, 1);
 	return 0;
@@ -1280,9 +1281,8 @@ static int SetAnmitsu(lua_State *L) {
 	return 0;
 }
 
-
-// Util
 static int NewTable(lua_State *L) {
+	lua_checkstack(L, 1);
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
 	return 1;
 }
