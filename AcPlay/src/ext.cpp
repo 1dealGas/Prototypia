@@ -42,7 +42,7 @@ uint8_t eq_idx_gui = 0, dq_idx_gui = 0;
 
 jud qJudge[256];
 struct{double x,y; uint8_t p;} qGui[256];
-dmSpinlock::SpinLock qJudgeLock, qGuiLock;
+dmSpinlock::Spinlock qJudgeLock, qGuiLock;
 
 void JudgeEnqueue(jud result) {
 	if(input_booted) {
@@ -209,6 +209,8 @@ inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 }
 inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
 	if(input_booted) {
+		lua_State* L = p->m_L;
+		
 		dmSpinlock::Lock(&qJudgeLock);
 		while(dq_idx_judge != eq_idx_judge) {
 			lua_getglobal(L, "J");
@@ -238,11 +240,10 @@ DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, AcUpda
 
 #else
 inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
+	Motions.push_back( {0,0} );
 	dmSpinlock::Create(&mLock);
 	dmSpinlock::Create(&hLock);
 	dmSpinlock::Create(&bhLock);
-
-	Motions.push_back( {0,0} );
 	return dmExtension::RESULT_OK;
 }
 inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
@@ -252,5 +253,4 @@ inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 	return dmExtension::RESULT_OK;
 }
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
-
 #endif
