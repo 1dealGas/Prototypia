@@ -195,6 +195,8 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
 	dmSpinlock::Create(&input_queue_lock);
+	dmSpinlock::Create(&bhLock);
+	dmSpinlock::Create(&mLock);
 	#ifdef DM_PLATFORM_IOS
 	InputInit();
 	#endif
@@ -202,15 +204,25 @@ inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
 }
 inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 	InputUninit();
+	dmSpinlock::Destroy(&mLock);
+	dmSpinlock::Destroy(&bhLock);
 	dmSpinlock::Destroy(&input_queue_lock);
 	return dmExtension::RESULT_OK;
 }
-DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, 0, AcPlayOnEvent, AcPlayFinal)
 
 #else
-inline dmExtension::Result AcPlayOK(dmExtension::AppParams* params) {
+inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
+	dmSpinlock::Create(&mLock);
+	dmSpinlock::Create(&bhLock);
+	Motions.push_back({0,0});
 	return dmExtension::RESULT_OK;
 }
-DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcPlayOK, AcPlayOK, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
+inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
+	dmSpinlock::Destroy(&mLock);
+	dmSpinlock::Destroy(&bhLock);
+	return dmExtension::RESULT_OK;
+}
 
 #endif
+
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, 0, AcPlayOnEvent, AcPlayFinal)

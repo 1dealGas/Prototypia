@@ -34,7 +34,7 @@ enum {
 };
 
 
-// Audio & Judge Related
+// miniaudio Related
 /* We put our miniaudio-related global variables here,
  * for they are used both in the Defold Lifecycle, and the Judge Func of Aerials Player. */
 
@@ -51,13 +51,17 @@ ma_resource_manager player_rm, *PlayerRM;
 std::unordered_map<ma_resource_manager_data_source*, void*> PlayerResources;   // HResource -> CopiedBuffer
 std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
-/* Judge System Exposures */
-uint32_t ArfBefore;
+
+// Judge System Related
+std::vector<ab> Motions;
+std::vector<void*> BlockedHints;   // <ArHint*>
+dmSpinlock::Spinlock mLock, bhLock;
 struct jud {
 	uint8_t hit = 0, early = 0, late = 0;
 	bool special_hint_judged = false;
 };
 bool haptic_enabled = false;
+uint32_t ArfBefore;
 
 /* Judge System Platform Specifics */
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
@@ -68,5 +72,5 @@ void InputInit();
 void InputUninit();
 void InputEnqueue(double, double, uint8_t, jud);
 
-jud JudgeArf(const ab*, uint8_t, bool, bool);
+jud JudgeArf(bool);
 #endif
