@@ -53,6 +53,7 @@ std::unordered_map<ma_sound*, bool> PlayerUnits;   // HSound -> IsPlaying
 
 
 // Judge System Exposures
+uint32_t ArfBefore;
 std::vector<ab> Motions;
 std::vector<void*> BlockedHints;   // <ArHint*>
 dmSpinlock::Spinlock mLock, hLock, bhLock;
@@ -61,7 +62,6 @@ struct jud {
 	bool special_hint_judged = false;
 };
 bool haptic_enabled = false;
-uint32_t ArfBefore;
 
 
 // Judge System Platform Specifics
