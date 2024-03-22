@@ -45,21 +45,23 @@ struct{double x,y; uint8_t p;} qGui[256];
 dmSpinlock::SpinLock qJudgeLock, qGuiLock;
 
 void JudgeEnqueue(jud result) {
-	dmSpinlock::Lock(&qJudgeLock);
-	qJudge[eq_idx_judge] = result;
-	eq_idx_judge++;
-	dmSpinlock::Unlock(&qJudgeLock);
+	if(input_booted) {
+		dmSpinlock::Lock(&qJudgeLock);
+		qJudge[eq_idx_judge] = result;
+		eq_idx_judge++;
+		dmSpinlock::Unlock(&qJudgeLock);
+	}
 }
-
 void GUIEnqueue(const double x, const double y, const uint8_t p) {
-	dmSpinlock::Lock(&qGuiLock);
-	qGui[eq_idx_gui].x = x;
-	qGui[eq_idx_gui].y = y;
-	qGui[eq_idx_gui].p = p;
-	eq_idx_gui++;
-	dmSpinlock::Unlock(&qGuiLock);
+	if(input_booted) {
+		dmSpinlock::Lock(&qGuiLock);
+		qGui[eq_idx_gui].x = x;
+		qGui[eq_idx_gui].y = y;
+		qGui[eq_idx_gui].p = p;
+		eq_idx_gui++;
+		dmSpinlock::Unlock(&qGuiLock);
+	}
 }
-
 inline int InputBoot(lua_State* L) {
 	input_booted = true;
 	return 0;
@@ -207,7 +209,6 @@ inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
 }
 inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
 	if(input_booted) {
-
 		dmSpinlock::Lock(&qJudgeLock);
 		while(dq_idx_judge != eq_idx_judge) {
 			lua_getglobal(L, "J");
@@ -230,7 +231,6 @@ inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
 			dq_idx_gui++;
 		}
 		dmSpinlock::Unlock(&qGuiLock);
-
 	}
 	return dmExtension::RESULT_OK;
 }
