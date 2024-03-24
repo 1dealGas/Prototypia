@@ -12,7 +12,7 @@ uint8_t PendingPressed;
 inline void DoReleasedArf() {   // Must do this with mLock & bhLock unlocked
 	if(ArfBefore) {
 		dmSpinlock::Lock(&bhLock);		BlockedHints.clear();
-		dmSpinlock::Unock(&bhLock);		JudgeEnqueue( JudgeArf(false) );
+		dmSpinlock::Unlock(&bhLock);	JudgeEnqueue( JudgeArf(false) );
 	}
 }
 
