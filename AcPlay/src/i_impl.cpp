@@ -67,8 +67,8 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 		/* When PendingPressed > 0, it's reasonable to suppose that the event dispatching for the current
 		 *      touch sample hasn't been done, and we don't need to update Motions in this situation.
 		 */
-		int32_t		idx_and_phase	= AMotionEvent_getAction(E);		/* Higher 8bits -> Pointer index */
-		const auto	pointer_id		= (void*)AMotionEvent_getPointerId( E, (idx_and_phase & 0xff00) >> 8 );
+		const auto idx_and_phase	= AMotionEvent_getAction(E);		/* Higher 8bits -> Pointer index */
+		const auto pointer_id		= (void*)AMotionEvent_getPointerId( E, (idx_and_phase & 0xff00) >> 8 );
 		switch(id_and_phase & 0xff) {   /* Lower 8bits -> Phase */
 			case AMOTION_EVENT_ACTION_DOWN:				// No break here
 				dmSpinlock::Lock(&mLock);
