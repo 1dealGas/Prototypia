@@ -1246,10 +1246,6 @@ static int SetIDelta(lua_State *L) {
 	{ idelta = 0;		mindt = -JUDGE_RANGE;			maxdt = JUDGE_RANGE; }
 	return 0;
 }
-static int SetHaptic(lua_State *L) {
-	haptic_enabled = lua_toboolean(L, 1);
-	return 0;
-}
 
 
 // Script & Util Functions

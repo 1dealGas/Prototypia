@@ -60,7 +60,7 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 
 			dmSpinlock::Unlock(&mLock);
 			if( PendingPressed > 0  &&  ArfBefore )
-				JudgeEnqueue( JudgeArf(true) );
+				JudgeEnqueue( JudgeArf(true) );   // Now we decided to let Lua to call Haptic Feedbacks.
 		}
 
 		// Do Phase-Related Stuff
@@ -129,7 +129,7 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 			default:;   // break omitted here
 		}
 	}
-	return 1;   // Return 1 if handled the event, 0 for any default dispatching)
+	return 0;   // Return 1 if handled the event, 0 for any default dispatching
 }
 
 
