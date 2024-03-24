@@ -129,7 +129,7 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 			default:;   // break omitted here
 		}
 	}
-	return 0;   // Return 1 if handled the event, 0 for any default dispatching
+	return 1;   // Return 1 if handled the event, 0 for any default dispatching
 }
 
 

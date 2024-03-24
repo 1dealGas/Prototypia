@@ -550,6 +550,8 @@ jud JudgeArf(const bool any_pressed) {
 	dmSpinlock::Unlock(&hLock);
 	return returns;
 }
+
+#if !( defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID) )
 static int JudgeArfDesktop(lua_State* L) {
 	// JudgeArfDesktop(cursor_x, cursor_y, cursor_phase) -> hit, early, late, special_hint_judged
 	if( !ArfBefore ) return 0;
@@ -572,6 +574,7 @@ static int JudgeArfDesktop(lua_State* L) {
 	lua_pushnumber(L, returns.late);			lua_pushnumber(L, returns.swept);
 	lua_pushboolean(L, returns.special_hint_judged);			return 5;
 }
+#endif
 
 
 // Update Functions
@@ -1279,6 +1282,7 @@ static int SetAnmitsu(lua_State *L) {
 	return 0;
 }
 static int NewTable(lua_State *L) {
+	lua_checkstack(L, 1);
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
 	return 1;
 }
