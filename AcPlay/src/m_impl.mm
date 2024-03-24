@@ -63568,6 +63568,10 @@ MA_API ma_result ma_engine_init(const ma_engine_config* pConfig, ma_engine* pEng
             deviceConfig.noPreSilencedOutputBuffer = MA_TRUE;    /* We'll always be outputting to every frame in the callback so there's no need for a pre-silenced buffer. */
             deviceConfig.noClip                    = MA_TRUE;    /* The engine will do clipping itself. */
 
+            ///
+            deviceConfig.performanceProfile        = ma_performance_profile_low_latency;
+            ///
+
             if (engineConfig.pContext == NULL) {
                 ma_context_config contextConfig = ma_context_config_init();
                 contextConfig.allocationCallbacks = pEngine->allocationCallbacks;
