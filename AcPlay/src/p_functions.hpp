@@ -1220,7 +1220,7 @@ static int UpdateArf(lua_State* L) {
 
 
 	/* Clean Up & Do Returns */
-	lua_checkstack(L, 4);			lua_pushnumber(L, Sweep.late);		dmSpinlock::Unlock(&hLock);
+	lua_checkstack(L, 4);				lua_pushnumber(L, Sweep.late);		dmSpinlock::Unlock(&hLock);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }
