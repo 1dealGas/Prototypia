@@ -558,8 +558,8 @@ static int JudgeArfDesktop(lua_State* L) {
 	// No data race here, no lock needed
 	const uint8_t cursor_phase = luaL_checknumber(L, 3);
 	if(cursor_phase == 2) {
-		BlockedHints.clear();
 		Motions.clear();
+		BlockedHints.clear();
 	}
 	else
 		Motions[nullptr] = { (float)luaL_checknumber(L,1), (float)luaL_checknumber(L,2) };

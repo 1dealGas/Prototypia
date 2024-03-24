@@ -29,8 +29,7 @@ constexpr luaL_reg Arf2[] =   // Considering Adding a "JudgeArfController" Funct
 	{"JudgeArfDesktop", JudgeArfDesktop},
 	#endif
 
-	{"NewTable", NewTable},
-	{nullptr, nullptr}
+	{"NewTable", NewTable}, {nullptr, nullptr}
 };
 
 
@@ -62,6 +61,35 @@ void GUIEnqueue(const double x, const double y, const uint8_t p) {
 		dmSpinlock::Unlock(&qGuiLock);
 	}
 }
+inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
+	if(input_booted) {
+		lua_State* L = p->m_L;
+
+		dmSpinlock::Lock(&qJudgeLock);
+		while(dq_idx_judge != eq_idx_judge) {
+			lua_getglobal(L, "J");
+			lua_pushnumber(L, qJudge[dq_idx_judge].hit);
+			lua_pushnumber(L, qJudge[dq_idx_judge].early);
+			lua_pushnumber(L, qJudge[dq_idx_judge].late);
+			lua_pushboolean(L, qJudge[dq_idx_judge].special_hint_judged);
+			lua_call(L, 4, 0);
+			dq_idx_judge++;
+		}
+		dmSpinlock::Unlock(&qJudgeLock);
+
+		dmSpinlock::Lock(&qGuiLock);
+		while(dq_idx_gui != eq_idx_gui) {
+			lua_getglobal(L, "I");
+			lua_pushnumber(L, qGui[dq_idx_gui].x);
+			lua_pushnumber(L, qGui[dq_idx_gui].y);
+			lua_pushnumber(L, qGui[dq_idx_gui].p);
+			lua_call(L, 3, 0);
+			dq_idx_gui++;
+		}
+		dmSpinlock::Unlock(&qGuiLock);
+	}
+	return dmExtension::RESULT_OK;
+}
 inline int InputBoot(lua_State* L) {
 	input_booted = true;
 	return 0;
@@ -70,6 +98,21 @@ inline int InputBoot(lua_State* L) {
 
 
 /* Binding Stuff */
+inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
+	dmSpinlock::Create(&mLock);
+	dmSpinlock::Create(&hLock);
+	dmSpinlock::Create(&bhLock);
+#if defined(DM_PLATFORM_IOS)
+	dmSpinlock::Create(&qJudgeLock);
+	dmSpinlock::Create(&qGuiLock);
+	InputInit();
+#elif defined(DM_PLATFORM_ANDROID)
+	dmSpinlock::Create(&qJudgeLock);
+	dmSpinlock::Create(&qGuiLock);
+#endif
+	return dmExtension::RESULT_OK;
+}
+
 inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	// Init the Preview Engine, with Default Behaviors
 	if( ma_engine_init(nullptr, &PreviewEngine) != MA_SUCCESS ) {
@@ -81,9 +124,9 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	// Init the Player Engine: a custom resource manager
 	const auto device = ma_engine_get_device(&PreviewEngine);   // The default device info
 	auto rm_config	= ma_resource_manager_config_init();
-	rm_config.decodedFormat					= device -> playback.format;
-	rm_config.decodedChannels				= device -> playback.channels;
-	rm_config.decodedSampleRate				= device -> sampleRate;
+	rm_config.decodedFormat				= device -> playback.format;
+	rm_config.decodedChannels			= device -> playback.channels;
+	rm_config.decodedSampleRate			= device -> sampleRate;
 	if( ma_resource_manager_init(&rm_config, &player_rm) != MA_SUCCESS) {
 		dmLogFatal("Failed to Init the miniaudio Resource Manager \"PlayerRM\".");
 		return dmExtension::RESULT_INIT_ERROR;
@@ -91,7 +134,7 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	PlayerRM = &player_rm;
 
 	// Init the Player Engine: a custom engine config
-	auto engine_config	= ma_engine_config_init();
+	auto engine_config		= ma_engine_config_init();
 	engine_config.pResourceManager		= PlayerRM;
 	if( ma_engine_init(&engine_config, &PlayerEngine) != MA_SUCCESS ) {
 		dmLogFatal("Failed to Init the miniaudio Engine \"Player\".");
@@ -105,14 +148,14 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 	lua_pop(L, 2);
 
 	// Register Platform-Specific Stuff
-	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
 	luaL_loadstring(L, "return");					lua_setglobal(L, "T");
 	lua_pushcfunction(L, InputBoot);				lua_setglobal(L, "InputBoot");
-	#ifdef DM_PLATFORM_ANDROID
+#ifdef DM_PLATFORM_ANDROID
 	InputInit();
-	#endif
-	#endif
+#endif
+#endif
 
 	return dmExtension::RESULT_OK;
 }
@@ -155,10 +198,12 @@ inline void AcPlayOnEvent(dmExtension::Params* p, const dmExtension::Event* e) {
 }
 
 inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
-	// Do Platform-Specific Stuff
-	#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
+#if defined(DM_PLATFORM_IOS)   // Do Platform-Specific Stuff
 	input_booted = false;
-	#endif
+	InputUninit();
+#elif defined(DM_PLATFORM_ANDROID)
+	input_booted = false;
+#endif
 
 	// Close Exisiting Units(miniaudio sounds)
 	if(PreviewSound) {
@@ -185,72 +230,19 @@ inline dmExtension::Result AcPlayFinal(dmExtension::Params* p) {
 	return dmExtension::RESULT_OK;
 }
 
-
-#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
-inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
-	dmSpinlock::Create(&mLock);
-	dmSpinlock::Create(&hLock);
-	dmSpinlock::Create(&bhLock);
-	dmSpinlock::Create(&qJudgeLock);
-	dmSpinlock::Create(&qGuiLock);
-	#ifdef DM_PLATFORM_IOS
-	InputInit();
-	#endif
-	return dmExtension::RESULT_OK;
-}
 inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
-	InputUninit();
 	dmSpinlock::Destroy(&mLock);
 	dmSpinlock::Destroy(&hLock);
 	dmSpinlock::Destroy(&bhLock);
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 	dmSpinlock::Destroy(&qJudgeLock);
 	dmSpinlock::Destroy(&qGuiLock);
+#endif
 	return dmExtension::RESULT_OK;
 }
-inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
-	if(input_booted) {
-		lua_State* L = p->m_L;
-		
-		dmSpinlock::Lock(&qJudgeLock);
-		while(dq_idx_judge != eq_idx_judge) {
-			lua_getglobal(L, "J");
-			lua_pushnumber(L, qJudge[dq_idx_judge].hit);
-			lua_pushnumber(L, qJudge[dq_idx_judge].early);
-			lua_pushnumber(L, qJudge[dq_idx_judge].late);
-			lua_pushboolean(L, qJudge[dq_idx_judge].special_hint_judged);
-			lua_call(L, 4, 0);
-			dq_idx_judge++;
-		}
-		dmSpinlock::Unlock(&qJudgeLock);
 
-		dmSpinlock::Lock(&qGuiLock);
-		while(dq_idx_gui != eq_idx_gui) {
-			lua_getglobal(L, "I");
-			lua_pushnumber(L, qGui[dq_idx_gui].x);
-			lua_pushnumber(L, qGui[dq_idx_gui].y);
-			lua_pushnumber(L, qGui[dq_idx_gui].p);
-			lua_call(L, 3, 0);
-			dq_idx_gui++;
-		}
-		dmSpinlock::Unlock(&qGuiLock);
-	}
-	return dmExtension::RESULT_OK;
-}
+#if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, AcUpdate, AcPlayOnEvent, AcPlayFinal)
-
 #else
-inline dmExtension::Result AcAppInit(dmExtension::AppParams* params) {
-	dmSpinlock::Create(&mLock);
-	dmSpinlock::Create(&hLock);
-	dmSpinlock::Create(&bhLock);
-	return dmExtension::RESULT_OK;
-}
-inline dmExtension::Result AcAppFinal(dmExtension::AppParams* params) {
-	dmSpinlock::Destroy(&mLock);
-	dmSpinlock::Destroy(&hLock);
-	dmSpinlock::Destroy(&bhLock);
-	return dmExtension::RESULT_OK;
-}
-DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, 0, AcPlayOnEvent, AcPlayFinal)
-
+DM_DECLARE_EXTENSION(AcPlay, "AcPlay", AcAppInit, AcAppFinal, AcPlayInit, nullptr, AcPlayOnEvent, AcPlayFinal)
 #endif
