@@ -58,7 +58,7 @@ std::vector<void*> BlockedHints;   // <ArHint*>
 std::unordered_map<void*, ab> Motions;
 dmSpinlock::Spinlock mLock, hLock, bhLock;
 struct jud {
-	uint8_t hit = 0, early = 0, late = 0;
+	uint8_t hit = 0, early = 0, late = 0, swept = 0;
 	bool special_hint_judged = false;
 };
 

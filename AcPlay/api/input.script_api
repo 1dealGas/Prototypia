@@ -19,8 +19,11 @@
       type: number
     - name: late
       type: number
+    - name: swept
+      type: number
     - name: special_hint_judged
       type: boolean
+
 
 - name: InputBoot
   type: function

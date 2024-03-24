@@ -64,15 +64,15 @@ void GUIEnqueue(const double x, const double y, const uint8_t p) {
 inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
 	if(input_booted) {
 		lua_State* L = p->m_L;
-
 		dmSpinlock::Lock(&qJudgeLock);
 		while(dq_idx_judge != eq_idx_judge) {
 			lua_getglobal(L, "J");
 			lua_pushnumber(L, qJudge[dq_idx_judge].hit);
 			lua_pushnumber(L, qJudge[dq_idx_judge].early);
 			lua_pushnumber(L, qJudge[dq_idx_judge].late);
+			lua_pushnumber(L, qJudge[dq_idx_judge].swept);
 			lua_pushboolean(L, qJudge[dq_idx_judge].special_hint_judged);
-			lua_call(L, 4, 0);
+			lua_call(L, 5, 0);
 			dq_idx_judge++;
 		}
 		dmSpinlock::Unlock(&qJudgeLock);

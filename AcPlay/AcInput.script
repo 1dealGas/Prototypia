@@ -1,7 +1,7 @@
 local system_name = sys.get_sys_info().system_name
 if (system_name == "Android") or (system_name == "iPhone OS") then
 
-	local function t(hit, early, late, special_hint_judged)
+	local function t(hit, early, late, swept, special_hint_judged)
 	end
 
 	local function i(gui_x, gui_y, gui_phase)

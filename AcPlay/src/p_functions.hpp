@@ -528,7 +528,7 @@ jud JudgeArf(const bool any_pressed) {
 			// Sweep & Hint Status Manipulation
 			if( dt > 100  &&  current_hint.status < 2 ) {
 				current_hint.status = HINT_SWEEPED;
-				returns.late++;
+				returns.swept++;
 			}
 			else {
 				const bool htn = has_touch_near(current_hint);
@@ -568,9 +568,9 @@ static int JudgeArfDesktop(lua_State* L) {
 
 	// Judge & Do Returns
 	const auto returns = JudgeArf(cursor_phase == 0);
-	lua_pushnumber(L, returns.hit);			lua_pushnumber(L, returns.early);
-	lua_pushnumber(L, returns.late);		lua_pushboolean(L, returns.special_hint_judged);
-	return 4;
+	lua_pushnumber(L, returns.hit);				lua_pushnumber(L, returns.early);
+	lua_pushnumber(L, returns.late);			lua_pushnumber(L, returns.swept);
+	lua_pushboolean(L, returns.special_hint_judged);			return 5;
 }
 
 
@@ -1222,7 +1222,7 @@ static int UpdateArf(lua_State* L) {
 
 
 	/* Clean Up & Do Returns */
-	lua_checkstack(L, 4);				lua_pushnumber(L, Sweep.late);		dmSpinlock::Unlock(&hLock);
+	lua_checkstack(L, 4);				lua_pushnumber(L, Sweep.swept);		dmSpinlock::Unlock(&hLock);
 	lua_pushnumber(L, wgo_used);		lua_pushnumber(L, hgo_used);		lua_pushnumber(L, ago_used);
 	last_ms = mstime;					last_wgo.clear();					return 4;
 }
