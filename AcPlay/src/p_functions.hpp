@@ -558,11 +558,13 @@ static int JudgeArfDesktop(lua_State* L) {
 	// No data race here, no lock needed
 	const uint8_t cursor_phase = luaL_checknumber(L, 3);
 	if(cursor_phase == 2) {
-		Motions.clear();
-		BlockedHints.clear();
+		Motions.clear();		BlockedHints.clear();
 	}
-	else
-		Motions[nullptr] = { (float)luaL_checknumber(L,1), (float)luaL_checknumber(L,2) };
+	else {
+		ab cursor_xy;
+		cursor_xy.a = luaL_checknumber(L,1);		cursor_xy.b = luaL_checknumber(L,2);
+		Motions[nullptr] = cursor_xy;
+	}
 
 	// Judge & Do Returns
 	const auto returns = JudgeArf(cursor_phase == 0);
@@ -1280,9 +1282,7 @@ static int SetAnmitsu(lua_State *L) {
 	allow_anmitsu = lua_toboolean(L, 1);
 	return 0;
 }
-
 static int NewTable(lua_State *L) {
-	lua_checkstack(L, 1);
 	lua_createtable( L, (int)luaL_checknumber(L, 1), (int)luaL_checknumber(L, 2) );
 	return 1;
 }

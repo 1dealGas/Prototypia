@@ -45,7 +45,7 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 
 			// Loop I: Diff Pointers
 			for( uint8_t i = 0; i < pointer_count; i++ )
-				if( Motions.count( AMotionEvent_getPointerId(E,i) ) == 0 )
+				if( Motions.count( (void*)AMotionEvent_getPointerId(E,i) ) == 0 )
 					PendingPressed++;
 
 			// Loop II: Modify Pointers
@@ -69,11 +69,13 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 		 */
 		const auto idx_and_phase	= AMotionEvent_getAction(E);		/* Higher 8bits -> Pointer index */
 		const auto pointer_id		= (void*)AMotionEvent_getPointerId( E, (idx_and_phase & 0xff00) >> 8 );
-		switch(id_and_phase & 0xff) {   /* Lower 8bits -> Phase */
+		switch(idx_and_phase & 0xff) {   /* Lower 8bits -> Phase */
 			case AMOTION_EVENT_ACTION_DOWN:				// No break here
 				dmSpinlock::Lock(&mLock);
-				const auto& motion_xy = Motions[pointer_id];
-				GUIEnqueue(motion_xy.a, motion_xy.b, 0);
+				{
+					const auto& motion_xy = Motions[pointer_id];
+					GUIEnqueue(motion_xy.a, motion_xy.b, 0);
+				}
 				dmSpinlock::Unlock(&mLock);
 				FtId = pointer_id;
 
@@ -92,7 +94,10 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 
 			case AMOTION_EVENT_ACTION_UP:
 				dmSpinlock::Lock(&mLock);
-				const auto& motion_xy = Motions[pointer_id];	GUIEnqueue(motion_xy.a, motion_xy.b, 2);
+				{
+					const auto& motion_xy = Motions[pointer_id];
+					GUIEnqueue(motion_xy.a, motion_xy.b, 2);
+				}
 				Motions.erase(pointer_id);
 				dmSpinlock::Unlock(&mLock);
 
@@ -130,16 +135,17 @@ static int32_t ArInputHandle(struct android_app* A, AInputEvent* E) {
 
 /* Defold Binding */
 void InputInit() {
-	// Listener Setting
 	auto APP = (struct android_app*)dmGraphics::GetNativeAndroidApp();
 	OriginalListener = APP -> activity -> callbacks -> onNativeWindowResized;
 	APP -> activity -> callbacks -> onNativeWindowResized = ArNativeWindowResized;
 	APP -> onInputEvent = ArInputHandle;
 
-	// Initial Window Adaptation
+	// Window Params Acquisition
 	const auto Window = APP -> window;
 	double WindowWthenDiv = ANativeWindow_getWidth(Window);
 	double WindowHthenDiv = ANativeWindow_getHeight(Window);
+
+	// Initial Window Adaptation
 	CenterX = WindowWthenDiv * 0.5;		CenterY = WindowHthenDiv * 0.5;
 	WindowWthenDiv /= 1800.0;			WindowHthenDiv /= 1080.0;
 	PosDnm = 1.0 / ( (WindowWthenDiv < WindowHthenDiv) ? WindowWthenDiv : WindowHthenDiv );
