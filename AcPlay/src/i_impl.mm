@@ -1,15 +1,22 @@
 // Aerials Input System Implementation for iOS
 #ifdef DM_PLATFORM_IOS
+
+#pragma once
 #include <includes.h>
+#import <UIKit/UIKit.h>
 
 
 /* Global Vars */
 void* FtId;
-double FtX, FtY;		uint8_t FtPhase;
+inline void DoReleasedArf() {   // Must do this with mLock & bhLock unlocked
+	if(ArfBefore) {
+		dmSpinlock::Lock(&bhLock);		BlockedHints.clear();
+		dmSpinlock::Unlock(&bhLock);	JudgeEnqueue( JudgeArf(false) );
+	}
+}
 
 
-/* UIViewController */
-#import <UIKit/UIKit.h>
+/* Window Size Listener */
 @interface ArInputViewController : UIViewController @end
 @implementation ArInputViewController
 
@@ -25,7 +32,7 @@ double FtX, FtY;		uint8_t FtPhase;
 @end
 
 
-/* UIWindow */
+/* Input Handler */
 @interface ArInputWindow : UIWindow @end
 @implementation ArInputWindow
 
@@ -36,142 +43,95 @@ double FtX, FtY;		uint8_t FtPhase;
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
 	/* Owing to reports that for a single touch the hitTest method might be
 	 *   called for multiple times, we switched to let the hitTest return the
-	 *   UIWindow itself, and process our touches in the sendEvent method.
+	 *   UIWindow itself, and process our touches in other methods.
 	 */
 	return self;
 }
 
-- (void)sendEvent:(UIEvent *)event {
-	/* First-Touch:
-	 *     1 touch on the screen
-	 *         Pressed -> Register
-	 *         OnScreen -> if tid==FtId, Dispatch
-	 *                     else Send (0,0,3)
-	 *         Released -> if tid==FtId, Dispatch & Unregister
-	 *                     else Send (0,0,3)
-	 *
-	 *     Multiple touches on the screen
-	 *     -- for each touch, if tid==FtId, Tracks its status with FtX, FtY, FtPhase
-	 *     -- if First-Touch registered, check FtPhase
-	 *            Pressed -> (Impossible)
-	 *            OnScreen -> Dispatch
-	 *            Released -> Dispatch & Unregister
-	 *     -- else:
-	 *            Send (0,0,3)
-	 *
+- (void)touchesBegan:(NSSet*)touches withEvent:(UIEvent*)event {
+	/* In iOS, multiple "Pressed" touches in a single touch sample will only result
+	 * to 1 touchBegan:withevent: call, so we don't need to filter duplicated Pressed
+	 * event[s] here.
 	 */
-	if(event.type == UIEventTypeTouches) {
-		uint8_t HtCount = [event.allTouches count];
-		if(HtCount == 1) {
+	dmSpinlock::Lock(&mLock);
+	for(UITouch* t in touches) {
+		const void* touch_id = (__bridge void*)t;
+		CGPoint location = [t locationInView:nil];
+		ab current_motion;
+		   current_motion.a = 900.0 + ( location.x - CenterX ) * PosDnm;
+		   current_motion.b = 540.0 + ( location.y - CenterY ) * PosDnm;
+		Motions[touch_id] = current_motion;
 
-			// Process Touch
-			UITouch *touch = [event.allTouches anyObject];
-			CGPoint location = [touch locationInView:nil];
-
-			// Judge
-			ab vf;
-			vf.a = 900.0 + (location.x - CenterX) * PosDnm;
-			vf.b = 540.0 + (3*CenterY - location.y) * PosDnm;
-			bool pressed = (touch.phase == UITouchPhaseBegan);
-			bool released = (touch.phase == UITouchPhaseEnded) || (touch.phase == UITouchPhaseCancelled);
-			const jud r = JudgeArf(&vf, 1, pressed, released);
-
-			// Process First-Touch Logics & Enqueue the Lua Call
-			if(pressed) {
-				FtId = (__bridge void*)touch;   // This is the only situation to register the First-Touch
-				InputEnqueue(vf.a, vf.b, 0, r);
-			}
-			else {
-				void* tid = (__bridge void*)touch;
-				if(tid == FtId) {
-					if(released) {
-						InputEnqueue(vf.a, vf.b, 2, r);
-						FtId = nullptr;
-					}
-					else
-						InputEnqueue(vf.a, vf.b, 1, r);
-				}
-				else   // Non-First Touch, Send "Invalid" no matter OnScreen or Released
-					InputEnqueue(0, 0, 3, r);
-			}
-
-		}
-		else if(ArfBefore) {
-			ab vf[10];
-			uint8_t vfcount = 0;
-			bool any_pressed = false, any_released = false;
-
-			for(UITouch *touch in event.allTouches) {
-				void* tid = (__bridge void*)touch;
-				CGPoint location = [touch locationInView:nil];
-				switch(touch.phase) {
-					case UITouchPhaseBegan:   // Judge Info & Judge Vf
-						any_pressed = true;
-						vf[vfcount].a = 900.0 + (location.x - CenterX) * PosDnm;
-						vf[vfcount].b = 540.0 + (3*CenterY - location.y) * PosDnm;
-						vfcount++;
-						break;
-
-					case UITouchPhaseEnded:
-					case UITouchPhaseCancelled:   // Judge Info & Ft
-						any_released = true;
-						if(tid == FtId) {
-							FtX = 900.0 + (location.x - CenterX) * PosDnm;
-							FtY = 540.0 + (3*CenterY - location.y) * PosDnm;
-							FtPhase = 2;
-						}
-						break;
-
-					default:   // Judge Vf & Ft
-						vf[vfcount].a = 900.0 + (location.x - CenterX) * PosDnm;
-						vf[vfcount].b = 540.0 + (3*CenterY - location.y) * PosDnm;
-						if(tid == FtId) {
-							FtX = vf[vfcount].a;
-							FtY = vf[vfcount].b;
-							FtPhase = 1;
-						}
-						vfcount++;
-				}
-			}
-
-			const jud r = JudgeArf(vf, vfcount, any_pressed, any_released);
-			if(FtId) {
-				InputEnqueue(FtX, FtY, FtPhase, r);
-				FtId = (FtPhase == 2) ? nullptr : FtId;
-			}
-			else
-				InputEnqueue(0, 0, 3, r);
-		}
-		else {
-			jud empty;
-			for(UITouch *touch in event.allTouches)
-				if( (__bridge void*)touch == FtId ) {
-					CGPoint location = [touch locationInView:nil];
-					FtX = 900.0 + (location.x - CenterX) * PosDnm;
-					FtY = 540.0 + (3*CenterY - location.y) * PosDnm;
-					switch(touch.phase) {
-						case UITouchPhaseEnded:
-						case UITouchPhaseCancelled:
-							FtPhase = 2;
-							break;
-						default:
-							FtPhase = 1;
-					}
-				}
-			if(FtId) {
-				InputEnqueue(FtX, FtY, FtPhase, empty);
-				FtId = (FtPhase == 2) ? nullptr : FtId;
-			}
-			else
-				InputEnqueue(0, 0, 3, empty);
+		if(FtId == nullptr) {
+			GUIEnqueue(current_motion.a, current_motion.b, 0);
+			FtId = touch_id;
 		}
 	}
+	dmSpinlock::Unlock(&mLock);
+
+	if(ArfBefore)
+		JudgeEnqueue( JudgeArf(true) );   // Now we decided to let Lua to call Haptic Feedbacks.
+}
+
+- (void)touchesMoved:(NSSet*)touches withEvent:(UIEvent*)event {
+	dmSpinlock::Lock(&mLock);
+	for(UITouch* t in touches) {
+		const void* touch_id = (__bridge void*)t;
+		CGPoint location = [t locationInView:nil];
+		ab current_motion;
+		   current_motion.a = 900.0 + ( location.x - CenterX ) * PosDnm;
+		   current_motion.b = 540.0 + ( location.y - CenterY ) * PosDnm;
+		Motions[touch_id] = current_motion;
+
+		if(touch_id == FtId)
+			GUIEnqueue(current_motion.a, current_motion.b, 1);
+	}
+	dmSpinlock::Unlock(&mLock);
+}
+
+- (void)touchesEnded:(NSSet*)touches withEvent:(UIEvent*)event {
+	dmSpinlock::Lock(&mLock);
+	for(UITouch* t in touches) {
+		const void* touch_id = (__bridge void*)t;
+		if( Motions.count(touch_id) )
+			Motions.erase(touch_id);
+
+		if(touch_id == FtId) {
+			FtId = nullptr;
+			CGPoint location = [t locationInView:nil];
+
+			ab current_motion;
+			   current_motion.a = 900.0 + ( location.x - CenterX ) * PosDnm;
+			   current_motion.b = 540.0 + ( location.y - CenterY ) * PosDnm;
+			GUIEnqueue(current_motion.a, current_motion.b, 2);
+		}
+	}
+	dmSpinlock::Unlock(&mLock);
+	DoReleasedArf();
+}
+
+- (void)touchesCancelled:(NSSet*)touches withEvent:(UIEvent*)event {
+	dmSpinlock::Lock(&mLock);
+	for(UITouch* t in touches) {
+		if( FtId == (__bridge void*)t ) {
+			CGPoint location = [t locationInView:nil];
+			ab current_motion;
+			   current_motion.a = 900.0 + ( location.x - CenterX ) * PosDnm;
+			   current_motion.b = 540.0 + ( location.y - CenterY ) * PosDnm;
+			GUIEnqueue(current_motion.a, current_motion.b, 2);
+		}
+	}
+	Motions.clear();
+	dmSpinlock::Unlock(&mLock);
+
+	DoReleasedArf();
+	FtId = nullptr;
 }
 
 @end
 
 
-/* Delegate */
+/* Defold Binding */
 @interface ArInputDelegate : NSObject <UIApplicationDelegate> @end
 @implementation ArInputDelegate
 
@@ -187,7 +147,6 @@ double FtX, FtY;		uint8_t FtPhase;
 @end
 
 
-/* Defold Binding */
 ArInputDelegate* D = NULL;
 void InputInit() {
 	D = [[ArInputDelegate alloc] init];
@@ -197,4 +156,5 @@ void InputUninit() {
 	dmExtension::UnregisteriOSUIApplicationDelegate(D);
 	D = NULL;
 }
+
 #endif
