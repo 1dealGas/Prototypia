@@ -10,8 +10,8 @@
 void* FtId;
 inline void DoReleasedArf() {   // Must do this with mLock & bhLock unlocked
 	if(ArfBefore) {
-		dmSpinlock::Lock(&bhLock);		BlockedHints.clear();
-		dmSpinlock::Unlock(&bhLock);	JudgeEnqueue( JudgeArf(false) );
+		JudgeEnqueue( JudgeArf(false) );	dmSpinlock::Lock(&bhLock);
+		BlockedHints.clear();				dmSpinlock::Unlock(&bhLock);
 	}
 }
 
