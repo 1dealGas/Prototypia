@@ -25,6 +25,9 @@
       type: boolean
 
 
-- name: InputBoot
+- name: SetInputBoot
   type: function
   desc: Tell the system to Enqueue and Dequeue Input Events. Mobile only.
+  parameters:
+    - name: input_booted
+      type: boolean

@@ -90,8 +90,8 @@ inline dmExtension::Result AcUpdate(dmExtension::Params* p) {
 	}
 	return dmExtension::RESULT_OK;
 }
-inline int InputBoot(lua_State* L) {
-	input_booted = true;
+inline int SetInputBoot(lua_State* L) {
+	input_booted = lua_toboolean(L, 1);
 	return 0;
 }
 #endif
@@ -151,7 +151,7 @@ inline dmExtension::Result AcPlayInit(dmExtension::Params* p) {
 #if defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID)
 	luaL_loadstring(L, "return");					lua_setglobal(L, "I");
 	luaL_loadstring(L, "return");					lua_setglobal(L, "T");
-	lua_pushcfunction(L, InputBoot);				lua_setglobal(L, "InputBoot");
+	lua_pushcfunction(L, SetInputBoot);				lua_setglobal(L, "SetInputBoot");
 #ifdef DM_PLATFORM_ANDROID
 	InputInit();
 #endif
