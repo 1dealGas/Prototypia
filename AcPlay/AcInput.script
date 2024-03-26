@@ -23,6 +23,7 @@ if (system_name == "Android") or (system_name == "iPhone OS") then
 	I = i_boot
 	
 	function init(self)
+		SetInputBoot(true)
 	end
 
 else
