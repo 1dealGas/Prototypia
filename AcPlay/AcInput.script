@@ -21,7 +21,9 @@ if (system_name == "Android") or (system_name == "iPhone OS") then
 
 	T = t
 	I = i_boot
-	init = InputBoot
+	
+	function init(self)
+	end
 
 else
 	-- Do Window Management and Input Updates with Defold Lua APIs
