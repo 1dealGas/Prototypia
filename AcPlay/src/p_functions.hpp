@@ -88,7 +88,6 @@ static int InitArf(lua_State* L) {   // No data race here, no lock needed
 	xdelta = ydelta = rotsin = 0.0f;
 	xscale = yscale = rotcos = 1.0f;
 	last_ms = dt_p1 = dt_p2 = 0;
-	current_audio = nullptr;
 
 	// Get the Chart[Fumen] Buffer
 	void* ArfBuf = nullptr; {
@@ -411,7 +410,8 @@ inline bool has_touch_near(const ArHint& hint) {
 jud JudgeArf(const bool any_pressed) {
 
 	jud returns;
-	if(!ArfBefore) return returns;
+	if( !(ArfBefore && current_audio) )
+		return returns;
 	dmSpinlock::Lock(&hLock);
 
 	// Prepare the Context msTime
