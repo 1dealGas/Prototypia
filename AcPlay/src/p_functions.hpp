@@ -553,7 +553,7 @@ jud JudgeArf(const bool any_pressed) {
 
 #if !( defined(DM_PLATFORM_IOS) || defined(DM_PLATFORM_ANDROID) )
 static int JudgeArfDesktop(lua_State* L) {
-	// JudgeArfDesktop(cursor_x, cursor_y, cursor_phase) -> hit, early, late, special_hint_judged
+	// JudgeArfDesktop(cursor_x, cursor_y, cursor_phase) -> hit, early, late, swept, special_hint_judged
 	if( !ArfBefore ) return 0;
 
 	// Process the Cursor Event
