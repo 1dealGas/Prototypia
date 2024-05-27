@@ -1,0 +1,16 @@
+/.internal
+/.vscode
+/.idea
+
+/build
+/cmake-build-debug
+
+Thumbs.db
+.DS_Store
+
+manifest.private.der
+manifest.public.der
+
+CMakeLists.txt
+README.md
+LICENSE
