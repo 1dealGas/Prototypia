@@ -1,0 +1,20 @@
+name: "AcArf3"
+
+platforms:
+    x86_64-win32:
+        context:
+            flags: ["-std=c++14", "-Ofast", "-ffunction-sections", "-fdata-sections"]
+            linkFlags: ["-flto"]
+            defines: ["AR_BUILD_VIEWER"]
+
+    x86_64-osx:
+        context:
+            flags: ["-std=c++11", "-Ofast", "-ffunction-sections", "-fdata-sections", "-flto"]
+            linkFlags: ["-flto"]
+            defines: ["AR_BUILD_VIEWER"]
+
+    arm64-osx:
+        context:
+            flags: ["-std=c++11", "-Ofast", "-ffunction-sections", "-fdata-sections", "-flto"]
+            linkFlags: ["-flto"]
+            defines: ["AR_BUILD_VIEWER"]
