@@ -14,6 +14,6 @@ Aerials Chart[Fumen] viewer made with `Defold` and `Aerials Player v3` .
 
 ## Complying with Licenses
 
-When you run `Prototypia Viewer` , a license file named `LICENSE.viewer` will be written in the "Works Volume", and **all source codes maintained by 1dealGas are in this repo**.
+When you run `Prototypia Viewer` , a license file named `Viewer.license` will be written in the "Works Volume", and **all source codes maintained by 1dealGas are in this repo**.
 
 *You may also refer to the `LICENSE.viewer` file in this volume.*
