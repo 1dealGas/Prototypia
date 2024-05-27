@@ -1,25 +1,30 @@
 *.script linguist-language=Lua
 *.gui_script linguist-language=Lua
 *.render_script linguist-language=Lua
-AcPlay/src/p_singleton.h linguist-language=C++
+game.project linguist-language=editor-config
 
+ext.manifest linguist-language=YAML
 *.script_api linguist-language=YAML
 *.appmanifest linguist-language=YAML
-ext.manifest linguist-language=YAML
-*.go linguist-documentation
 
-AcPlay/include/arf2_generated.h linguist-generated
-AcPlay/include/ease_constants.h linguist-generated
-Python/Prototypia/Arf2Fb.py linguist-generated
-Python/Prototypia/Arf2Index.py linguist-generated
-Python/Prototypia/WishChild.py linguist-generated
-Python/Prototypia/WishGroup.py linguist-generated
+*.go linguist-language=text proto
+*.gui linguist-language=text proto
+*.font linguist-language=text proto
+*.atlas linguist-language=text proto
+*.render linguist-language=text proto
+*.gamepads linguist-language=text proto
+*.material linguist-language=text proto
+*.collection linguist-language=text proto
+*.input_binding linguist-language=text proto
+*.texture_profiles linguist-language=text proto
 
-AcPlay/include/flatbuffers/** linguist-vendored
-AcPlay/include/miniaudio.h linguist-vendored
-AcPlay/src/m_impl.cpp linguist-vendored
-AcPlay/src/m_impl.mm linguist-vendored
-
-Viewer/AcDefOS/** linguist-vendored
-Viewer/AcLFS/** linguist-vendored
-Viewer/AeDirtyLarry/** linguist-vendored
+AcArf3/include/bitsery/** linguist-vendored
+AcArf3/include/flatbuffers/** linguist-vendored
+AcArf3/include/ease_constants.h linguist-generated
+AcAudio/src/miniaudio.cpp linguist-vendored
+AcAudio/src/miniaudio.mm linguist-vendored
+AcAudio/src/opusfile/** linguist-vendored
+AcAudio/include/** linguist-vendored
+AeDirtyLarry/** linguist-vendored
+AcDefOS/** linguist-vendored
+AcLFS/** linguist-vendored
