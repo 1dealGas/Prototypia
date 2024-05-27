@@ -14,13 +14,13 @@ input_method = HiddenInputField
 
 [project]
 title = Prototypia Viewer
-version = 0.4.0
+version = 1.0.0
 publisher = 1dealGas
 developer = 1dealGas
-custom_resources = LICENSE.viewer
+custom_resources = Viewer.license
 
 [sprite]
-max_count = 1276
+max_count = 3072
 
 [tilemap]
 max_count = 0
@@ -70,6 +70,7 @@ app_icon = /System/Viewer.icns
 
 [collection]
 max_input_stack_entries = 2
+max_instances = 3072
 
 [graphics]
 verify_graphics_calls = 0
