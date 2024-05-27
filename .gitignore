@@ -5,13 +5,10 @@
 /build
 /cmake-build-debug
 
+.DS_Store
 Thumbs.db
 MSVCRT.lib
-.DS_Store
-
-manifest.private.der
-manifest.public.der
 
 CMakeLists.txt
-README.md
-LICENSE
+manifest.private.der
+manifest.public.der
