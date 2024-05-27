@@ -6,6 +6,7 @@
 /cmake-build-debug
 
 Thumbs.db
+MSVCRT.lib
 .DS_Store
 
 manifest.private.der
