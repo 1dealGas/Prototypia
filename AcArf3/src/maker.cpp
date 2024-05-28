@@ -176,14 +176,9 @@ Arf3_API MakeArf(lua_State* L) {
 											xfce = yfce = (node_a->ce) * (node_a->ce);
 											break;
 										case OUTQUAD:
-											ratio = 1.0f - ratio;
-											xfr = yfr = (1.0f - ratio * ratio);
-										{
-											const auto one_minus_ci = 1.0f-node_a->ci,
-													   one_minus_ce = 1.0f-node_a->ce;
-											xfci = yfci = 1.0f - one_minus_ci * one_minus_ci;
-											xfce = yfce = 1.0f - one_minus_ce * one_minus_ce;
-										}
+											xfr = yfr = ( ratio * (2.0f-ratio) );
+											xfci = yfci = ( node_a->ci * (2.0f - node_a->ci) );
+											xfce = yfce = ( node_a->ce * (2.0f - node_a->ce) );
 										default:;   // break omitted
 									}
 									const auto fdx = (xfce - xfr) * node_a->c_dx + (xfr - xfci) * node_b->c_dx;
@@ -205,8 +200,7 @@ Arf3_API MakeArf(lua_State* L) {
 											xfr = yfr = (ratio * ratio);
 											break;
 										case OUTQUAD:
-											ratio = 1.0f - ratio;
-											xfr = yfr = (1.0f - ratio * ratio);
+											xfr = yfr = ( ratio * (2.0f-ratio) );
 										default:;   // break omitted
 									}
 									const auto dx = node_b->c_dx - node_a->c_dx;
@@ -260,9 +254,8 @@ Arf3_API MakeArf(lua_State* L) {
 								current_node.x_dnm = current_node.y_dnm = (float)( 1.0 / (current_node.x_fce - current_node.x_fci) );
 								break;
 							case OUTQUAD:
-								ci = 1.0f-ci, ce = 1.0f-ce;
-								current_node.x_fci = current_node.y_fci = (1.0f - ci*ci);
-								current_node.x_fce = current_node.y_fce = (1.0f - ce*ce);
+								current_node.x_fci = current_node.y_fci = ( ci * (2.0f-ci) );
+								current_node.x_fce = current_node.y_fce = ( ce * (2.0f-ce) );
 								current_node.x_dnm = current_node.y_dnm = (float)( 1.0 / (current_node.x_fce - current_node.x_fci) );
 							default:;   // break omitted
 						}
@@ -490,6 +483,7 @@ Arf3_API MakeArf(lua_State* L) {
 		if( current_hidx_size > Arf->hgo_required )
 			Arf->hgo_required = current_hidx_size;
 	}
+
 
 	// Do Returns.
 	Arf->wgo_required = ( lua_rawget(L, WGOREQUIRED), lua_tonumber(L, -1) );

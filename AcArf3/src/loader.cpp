@@ -60,9 +60,8 @@ Arf3_API InitArf3(lua_State* L) {
 							pobj.x_dnm = pobj.y_dnm = (float)( 1.0 / (pobj.x_fce - pobj.x_fci) );
 							break;
 						case OUTQUAD:
-							ci = 1.0f-ci, ce = 1.0f-ce;
-							pobj.x_fci = pobj.y_fci = (1.0f - ci*ci);
-							pobj.x_fce = pobj.y_fce = (1.0f - ce*ce);
+							pobj.x_fci = pobj.y_fci = ( ci * (2.0f-ci) );
+							pobj.x_fce = pobj.y_fce = ( ce * (2.0f-ce) );
 							pobj.x_dnm = pobj.y_dnm = (float)( 1.0 / (pobj.x_fce - pobj.x_fci) );
 						default:;   // break omitted
 					}
@@ -116,6 +115,7 @@ Arf3_API FinalArf(lua_State *L) {
 	return (delete Arf, Arf = nullptr, 0);
 }
 
+
 #if defined(AR_BUILD_VIEWER) || defined(AR_WITH_EXPORTER)
 Arf3_API DumpArf(lua_State* L) {
 	// Preparation
@@ -142,6 +142,7 @@ Arf3_API DumpArf(lua_State* L) {
 	return 0;
 }
 #endif
+
 
 #if defined(AR_BUILD_VIEWER) || defined(AR_COMPATIBILITY)
 #include <arf2.h>
@@ -299,9 +300,8 @@ Arf3_API InitArf2(lua_State* L) {
 							pobj.easetype = OUTQUAD;
 
 							if( ce != 0.0f  ||  ci != 1.0f ) {   // Reversed
-								ci = 1.0f-ci, ce = 1.0f-ce;
-								pobj.x_fci = pobj.y_fci = (1.0f - ce*ce);   // Reversed
-								pobj.x_fce = pobj.y_fce = (1.0f - ci*ci);   // Reversed
+								pobj.x_fci = pobj.y_fci = ( ce * (2.0f-ce) );   // Reversed
+								pobj.x_fce = pobj.y_fce = ( ci * (2.0f-ci) );   // Reversed
 								pobj.x_dnm = pobj.y_dnm = (float)( 1.0 / (pobj.x_fce - pobj.x_fci) );
 							}
 						}

@@ -517,13 +517,11 @@ local __interpolate__ = {
 
 	[5] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- OUTQUAD
 		if curve_init==0 and curve_end==1 then
-			real_ratio = 1 - real_ratio
-			real_ratio = 1 - real_ratio * real_ratio
+			real_ratio = real_ratio * (2-real_ratio)
 			return current_value + (next_value - current_value) * real_ratio
 		else
 			local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
-				  fci, fce, fcr = 1-curve_init, 1-curve_end, 1-fcr
-				  fci, fce, fcr = 1-fci*fci, 1-fce*fce, 1-fcr*fcr
+				  fci, fce, fcr = curve_init * (2-curve_init), curve_end * (2-curve_end), fcr * (2-fcr)
 			return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
 		end
 	end
@@ -1483,8 +1481,7 @@ function NemesisCompile(path)
 					-- WishChilds / EchoChilds: Unpack AngleNodes; Convert bartimes into mstimes / DTimes
 					--
 					do
-						local new_wishchilds, nwcl = {}, 1
-						local wishchilds = wish_c.wishchilds
+						local wishchilds, new_wishchilds, nwcl = wish_c.wishchilds, {}, 1
 						for b=1, wish_c.wcl do   -- AngleNode: {time, degree, easetype}
 							local current_wishchild_g = wishchilds[b]
 							local template_anodes, tal = current_wishchild_g.angle, current_wishchild_g.al
@@ -1522,8 +1519,7 @@ function NemesisCompile(path)
 					end
 
 					do
-						local new_echochilds, necl = {}, 1
-						local echochilds = wish_c.echochilds
+						local echochilds, new_echochilds, necl = wish_c.echochilds, {}, 1
 						for b=1, wish_c.ecl do   -- AngleNode: {time, degree, easetype}
 							local current_echochild_g = echochilds[b]
 							local template_anodes, tal = current_echochild_g.angle, current_echochild_g.al
