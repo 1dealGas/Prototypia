@@ -10,57 +10,63 @@ local gui_set_text = gui.set_text
 
 -- Node & Message Caches
 --
-local Message, PlayPause, MainScript
-local text, enter = hash("text"), hash("enter")
-
-local GUPDATE, SHOW_PAUSE, SHOW_PLAY = hash("GUPDATE"), hash("SHOW_PAUSE"), hash("SHOW_PLAY")
-local GUI_LOAD, GUI_SEEK = hash("GUI_LOAD"), hash("GUI_SEEK")
-local GUI_PLAY, GUI_OWV = hash("GUI_PLAY"), hash("GUI_OWV")
+local MessageNode, PlayPause, MainScript
+local GUI_NEW_MSG, GUI_SHOW_PLAY, GUI_SHOW_PAUSE = hash("GUI_NEW_MSG"), hash("GUI_SHOW_PLAY"), hash("GUI_SHOW_PAUSE")
+local GUI_LOAD, GUI_SEEK_BAR, GUI_SEEK_MS = hash("GUI_LOAD"), hash("GUI_SEEK_BAR"), hash("GUI_SEEK_MS")
+local GUI_XD, GUI_YD, GUI_XS, GUI_YS = hash("GUI_XD"), hash("GUI_YD"), hash("GUI_XS"), hash("GUI_YS")
+local GUI_DEG, GUI_EXPORT = hash("GUI_DEG"), hash("GUI_EXPORT")
+local GUI_OWV, GUI_PLAY = hash("GUI_OWV"), hash("GUI_PLAY")
 
 -- Dirty Larry Callbacks
 --
 local dl = require("AeDirtyLarry.dirtylarry")
-local function W() msg_post(MainScript, GUI_OWV) end
-local function P() msg_post(MainScript, GUI_PLAY) end
+local dl_input = dl.input
+local dl_button = dl.button
+local function SendLoad()		msg_post(MainScript, GUI_LOAD)		end
+local function SendSeekBar()	msg_post(MainScript, GUI_SEEK_BAR)	end
+local function SendSeekMs()		msg_post(MainScript, GUI_SEEK_MS)	end
+local function SendXd()			msg_post(MainScript, GUI_XD)		end
+local function SendYd()			msg_post(MainScript, GUI_YD)		end
+local function SendXs()			msg_post(MainScript, GUI_XS)		end
+local function SendYs()			msg_post(MainScript, GUI_YS)		end
+local function SendDeg()		msg_post(MainScript, GUI_DEG)		end
+local function SendExport()		msg_post(MainScript, GUI_EXPORT)	end
+local function SendOWV()		msg_post(MainScript, GUI_OWV)		end
+local function SendPlayPause()	msg_post(MainScript, GUI_PLAY)		end
 
 
 -- Script Callbacks
 --
 function init(self)
-	Message = gui.get_node("Message")
+	MessageNode = gui.get_node("Message")
 	PlayPause = gui.get_node("Play/larrylabel")
 	MainScript = msg.url("Prototypia:/Viewer#Logics")
 	msg_post(".", "acquire_input_focus")
 end
 
-local load_input, seek_input
-function on_input(self, action_id, action)
-	-- Dirty Larry Callbacks
-	--
-	local li = dl:input("Load", action_id, action, 0, "Load")
-	local si = dl:input("Seek", action_id, action, 0, "Seek")
-	dl:button("Works", action_id, action, W)
-	dl:button("Play", action_id, action, P)
-
-	-- Actions when the "Enter" Key Pressed
-	--
-	if action_id == enter and action.pressed and dl.active_node then
-		if li ~= "" then
-			msg_post(MainScript, GUI_LOAD, {li})
-		elseif si ~= "" then
-			msg_post(MainScript, GUI_SEEK, {si})
-		end
-	end
+function on_input(self, action_id, action)   -- All Are Dirty Larry Callbacks.
+	UserInput = dl_input(dl, "Input", action_id, action, 0, "Args Input")   -- Global
+	dl_button(dl, "Load", action_id, action, SendLoad)
+	dl_button(dl, "Bar", action_id, action, SendSeekBar)
+	dl_button(dl, "ms", action_id, action, SendSeekMs)
+	dl_button(dl, "Xd", action_id, action, SendXd)
+	dl_button(dl, "Yd", action_id, action, SendYd)
+	dl_button(dl, "Xs", action_id, action, SendXs)
+	dl_button(dl, "Ys", action_id, action, SendYs)
+	dl_button(dl, "Deg", action_id, action, SendDeg)
+	dl_button(dl, "Export", action_id, action, SendExport)
+	dl_button(dl, "Works", action_id, action, SendOWV)
+	dl_button(dl, "Play", action_id, action, SendPlayPause)
 end
 
 function on_message(self, message_id, message, sender)
 	-- Change Messages, or Switch Play / Pause
 	--
-	if message_id == GUPDATE then
-		gui_set_text(Message, message[1])
-	elseif message_id == SHOW_PLAY then
+	if message_id == GUI_NEW_MSG then
+		gui_set_text(MessageNode, Message)   -- Global
+	elseif message_id == GUI_SHOW_PLAY then
 		gui_set_text(PlayPause, "Play")
-	elseif message_id == SHOW_PAUSE then
+	elseif message_id == GUI_SHOW_PAUSE then
 		gui_set_text(PlayPause, "Pause")
 	end
 end
