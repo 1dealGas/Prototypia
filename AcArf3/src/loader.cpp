@@ -40,7 +40,7 @@ Arf3_API InitArf3(lua_State* L) {
 			// PosNodes
 			for( auto& pobj : wish.nodes )
 				if( pobj.easetype > LINEAR  &&  (pobj.ci != 0.0f  ||  pobj.ce != 1.0f) ) {
-					float ci = pobj.ci,  ce = pobj.ce;
+					const float ci = pobj.ci,  ce = pobj.ce;
 					switch(pobj.easetype) {
 						case LCIRC:   /*  x -> ESIN   y -> ECOS  */
 							pobj.x_fci = ESIN[ (uint16_t)(1000*ci) ], pobj.y_fci = ECOS[ (uint16_t)(1000*ci) ];
@@ -84,7 +84,7 @@ Arf3_API InitArf3(lua_State* L) {
 				}
 				ec.status = current_status, ec.judged_ms = 0, wish.echochilds_ms_order.push_back(&ec);
 			}
-			std::stable_sort(wish.echochilds_ms_order.cbegin(), wish.echochilds_ms_order.cend(), EMSRT);
+			std::stable_sort(wish.echochilds_ms_order.begin(), wish.echochilds_ms_order.end(), EMSRT);
 		}
 		for( auto& hint: Arf->hint )
 			hint.status = current_status, hint.elstatus = hint.judged_ms = 0;
@@ -357,7 +357,7 @@ Arf3_API InitArf2(lua_State* L) {
 							aobj.easetype = aobj.easetype>LINEAR ? aobj.easetype+2 : aobj.easetype;
 						}
 
-						std::stable_sort(cobj.anodes.cbegin(), cobj.anodes.cend(), DTSRT);
+						std::stable_sort(cobj.anodes.begin(), cobj.anodes.end(), DTSRT);
 						for(uint64_t ai = ac-1; ai > 0; ai--) {
 							cobj.anodes[ai-1].rcp = 1.0 / (cobj.anodes[ai].dt - cobj.anodes[ai-1].dt);
 						}

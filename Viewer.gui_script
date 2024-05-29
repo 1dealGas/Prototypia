@@ -40,7 +40,7 @@ local function SendPlayPause()	msg_post(MainScript, GUI_PLAY)		end
 function init(self)
 	MessageNode = gui.get_node("Message")
 	PlayPause = gui.get_node("Play/larrylabel")
-	MainScript = msg.url("Prototypia:/Viewer#Logics")
+	MainScript = msg.url("Prototypia:/Viewer#ViewerUI")
 	msg_post(".", "acquire_input_focus")
 end
 

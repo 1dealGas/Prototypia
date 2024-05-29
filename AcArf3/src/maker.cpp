@@ -139,7 +139,7 @@ Arf3_API MakeArf(lua_State* L) {
 					while( node_a->ms < 0 )
 						++node_a;   // node_a points to the 1st Node with ms>=0 here
 					if( node_a->ms != 0 ) {
-						nodes.erase( nodes.cbegin(), --node_a );   // The range is the f*cking [first,last)
+						nodes.erase( nodes.begin(), --node_a );   // The range is the f*cking [first,last)
 
 						// Do some interpolation here
 						// node_a: the last Node with ms<0; node_b: the 1st Node with ms>=0
@@ -220,7 +220,7 @@ Arf3_API MakeArf(lua_State* L) {
 						node_a->ms = 0;
 					}
 					else
-						nodes.erase( nodes.cbegin(), node_a );
+						nodes.erase( nodes.begin(), node_a );
 				}
 
 				/* Before Tracker: Nodes */ {
@@ -351,9 +351,9 @@ Arf3_API MakeArf(lua_State* L) {
 					lua_pop(L, 4);   // 3 Params + CURRENT_ECHOCHILD
 				}
 
-				std::stable_sort(echochilds_ms_order.cbegin(), echochilds_ms_order.cend(), EMSRT);
+				std::stable_sort(echochilds_ms_order.begin(), echochilds_ms_order.end(), EMSRT);
 				/* Before Tracker: EchoChilds */ {
-					uint64_t ec_max_ms = ( *echochilds_ms_order.cend() )->ms + 470;
+					uint64_t ec_max_ms = ( *echochilds_ms_order.end() )->ms + 470;
 					if(Arf->before < ec_max_ms)
 						Arf->before = ec_max_ms;
 				}
@@ -453,7 +453,7 @@ Arf3_API MakeArf(lua_State* L) {
 	// Index: Insert
 	for(uint64_t i=0; i<wishes_size; i++) {
 		const auto& nodes = wishes[i].nodes;
-		const auto init_group = nodes.cbegin()->ms >> 9, last_group = nodes.cend()->ms >> 9;
+		const auto init_group = nodes.begin()->ms >> 9, last_group = nodes.end()->ms >> 9;
 		for(uint64_t j=init_group; j<=last_group; j++)
 			index[j].widx.push_back(i);
 	}
@@ -476,9 +476,9 @@ Arf3_API MakeArf(lua_State* L) {
 
 	// Index: Sort & Determine hgo_required
 	for(auto& idx : index) {
-		std::sort( idx.widx.cbegin(), idx.widx.cend() );
-		std::sort( idx.hidx.cbegin(), idx.hidx.cend() );
-		std::sort( idx.eidx.cbegin(), idx.eidx.cend() );
+		std::sort( idx.widx.begin(), idx.widx.end() );
+		std::sort( idx.hidx.begin(), idx.hidx.end() );
+		std::sort( idx.eidx.begin(), idx.eidx.end() );
 		const auto current_hidx_size = idx.hidx.size();
 		if( current_hidx_size > Arf->hgo_required )
 			Arf->hgo_required = current_hidx_size;

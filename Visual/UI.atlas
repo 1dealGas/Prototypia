@@ -1,9 +1,13 @@
 images {
+  image: "/Visual/Hint.png"
+  sprite_trim_mode: SPRITE_TRIM_MODE_OFF
+}
+images {
   image: "/Visual/Anim.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 images {
-  image: "/Visual/Hint.png"
+  image: "/Visual/Icon.png"
   sprite_trim_mode: SPRITE_TRIM_MODE_OFF
 }
 margin: 0
