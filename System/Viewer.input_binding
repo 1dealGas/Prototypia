@@ -3,22 +3,6 @@ key_trigger {
   action: "backspace"
 }
 key_trigger {
-  input: KEY_P
-  action: "BUTTON_P"
-}
-key_trigger {
-  input: KEY_SPACE
-  action: "BUTTON_SP"
-}
-key_trigger {
-  input: KEY_UP
-  action: "BUTTON_UP"
-}
-key_trigger {
-  input: KEY_DOWN
-  action: "BUTTON_DOWN"
-}
-key_trigger {
   input: KEY_LCTRL
   action: "BUTTON_C"
 }

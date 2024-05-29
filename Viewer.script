@@ -1,0 +1,13 @@
+-- Prototypia Viewer[1.x Branch] Main Logics
+-- Copyright(c) 2024- 1dealGas, under the Apache 2.0 License.
+
+------------------------------------
+-- Stuff to Manage:
+--    Audio Context
+--    Chart[Fumen] Context
+--    Fumen File(*.lua/*.arf/*.ar) Listening
+--    Message / PlayPause Button
+--    Nemesis Context
+------------------------------------
+
+-- "[*] Nemesis Compiler Error:\n"

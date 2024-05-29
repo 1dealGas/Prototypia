@@ -6,12 +6,12 @@
 
 
 function NemesisInitialize()
-	-- L0 Script Utils
+	-- L0: Script Utils
 	   -- Notice that Nemesis is NOT a standalone module, hence this is a global Table.
 	   -- This file will be loaded each time we glue and execute a user Lua script file.
 	   -- Dependency "Arf3" to be integrated into Prototypia Viewer 1.x.
 	--
-	Nemesis = {}
+	local Nemesis = {}
 	local HALF_PI = math.pi * 0.5
 	local type, next, assert = type, next, assert
 	local math_sin, math_cos, math_ceil, math_sqrt = math.sin, math.cos, math.ceil, math.sqrt
@@ -60,8 +60,6 @@ function NemesisInitialize()
 	local FAIL_GET_Y = "Failed to get the Y-Axis position from the specified Wish / Echo."
 	local MX_OUT_OF_RANGE = "X-Axis position after moving out of range."
 	local MY_OUT_OF_RANGE = "Y-Axis position after moving out of range."
-	local NEMESIS_FAIL_OPEN = "[*] Nemesis Compiler: Failed to open the *.lua file."
-	local NEMESIS_LUA_ERROR = "[*] Nemesis Compiler: Lua Error Occurred:\n"
 	local PROHIBIT_DUPLICATE_BARS = "Nemesis prohibits duplicated bartime(s) within a Wish."
 	local SPEED_0_NON_NEG = "The speed scale at bar 0 MUST be non-negative."
 	local SPEED_L_NON_NEG = "The last speed scale MUST be non-negative."
@@ -1432,169 +1430,167 @@ function NemesisInitialize()
 	--- @return boolean  Compiling successful or not
 	--- @return string|number  Error message string, or args returned by Arf3.MakeArf() if compiling succeeded
 	function NemesisCompile(path)
+		-- Execute the Lua Script provided by the user.
+		--
 		local file = io.open(path, "r")
-		if file then
-			-- Execute the Lua Script provided by the user.
-			--
-			local compile_func_with_header = loadstring( table.concat{header, file:read("*a"), " end"} ), file:close()
-			local ok, err = pcall( setfenv(compile_func_with_header, Nemesis)() )   -- pcall(compile_func)
-			if ok then
-				-- Do Wish Related.
+		assert( file, "Failed to open the *.lua file." )
+
+		local compile_func_str = table.concat{header, file:read("*a"), " end"}
+		local compile_func = loadstring(compile_func_str)       -- Header included here
+			  compile_func = setfenv(compile_func, Nemesis)()   -- Alter the Env, and then expose the compile function with no header.
+			  compile_func = compile_func()                     -- Execute the compile function, and then discard it.
+		file:close()
+
+		-- Do Wish Related.
+		--
+		local bar_of_ms0 = bpm_list[3]<0 and ms_to_bar(0) or false
+		for a=1, wl do
+			local wish_c = Wishes[a]
+			local of_layer2 = wish_c.of_layer2
+			if not wish_c.temporary then
+				-- Nodes: Interpolate; Convert bartimes into mstimes; Do assertions
 				--
-				local bar_of_ms0 = bpm_list[3]<0 and ms_to_bar(0) or false
-				for a=1, wl do
-					local wish_c = Wishes[a]
-					local of_layer2 = wish_c.of_layer2
-					if not wish_c.temporary then
-						-- Nodes: Interpolate; Convert bartimes into mstimes; Do assertions
-						--
-						if bar_of_ms0 then	try_interpolate(wish_c, bar_of_ms0)			end
-						for b=2, bl do		try_interpolate(wish_c, bpm_list[b*3-2])	end
+				if bar_of_ms0 then	try_interpolate(wish_c, bar_of_ms0)			end
+				for b=2, bl do		try_interpolate(wish_c, bpm_list[b*3-2])	end
 
-						local nodes, nl = wish_c.nodes, wish_c.nl
-						for b=1, nl do
-							local current_node_bar = nodes[b][1]
-							nodes[b][1] = bar_to_ms(current_node_bar)
-						end
+				local nodes, nl = wish_c.nodes, wish_c.nl
+				for b=1, nl do
+					local current_node_bar = nodes[b][1]
+					nodes[b][1] = bar_to_ms(current_node_bar)
+				end
 
-						local first_ms, last_ms = nodes[1][1], nodes[nl][1]
-						assert( last_ms>0 and last_ms<=512000, "Mstime of Wish Node(s) out of range." )   -- Yes. Last ms.
+				local first_ms, last_ms = nodes[1][1], nodes[nl][1]
+				assert( last_ms>0 and last_ms<=512000, "Mstime of Wish Node(s) out of range." )   -- Yes. Last ms.
 
-						-- Hints: Convert bartimes into mstimes; Get X/Y
-						--
-						local hints = wish_c.hints
-						for b=1, wish_c.hl do
-							local current_hint_bar = hints[b]
-							local current_x = get_x(wish_c, current_hint_bar)
-							if current_x then
-								hints[b] = {bar_to_ms(current_hint_bar), current_x, get_y(current_wish,current_hint_bar)}
-							else
-								hints[b] = false
-							end
-						end
-						wish_c.hl = table_sort(hints, SortHints)   -- nil
-
-						local sh_bar = wish_c.special_hint
-						if sh_bar then
-							wish_c.special_hint = {bar_to_ms(sh_bar), get_x(wish_c, sh_bar), get_y(wish_c, sh_bar)}
-						end
-
-						-- WishChilds / EchoChilds: Unpack AngleNodes; Convert bartimes into mstimes / DTimes
-						--
-						do
-							local wishchilds, new_wishchilds, nwcl = wish_c.wishchilds, {}, 1
-							for b=1, wish_c.wcl do   -- AngleNode: {time, degree, easetype}
-								local current_wishchild_g = wishchilds[b]
-								local template_anodes, tal = current_wishchild_g.angle, current_wishchild_g.al
-								if template_anodes[1][1] > 0 then   -- Absolute
-									for c=1, tal do
-										local current_anode_bar = template_anodes[c][1]
-										template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
-									end
-									table_sort(template_anodes, SortBy1)
-
-									for c=1, current_wishchild_g.bl do
-										nwcl = nwcl + 1
-										local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
-										new_wishchilds[nwcl] = {current_dt, template_anodes}
-									end
-								else   -- Relative
-									for c=1, current_wishchild_g.bl do
-										local current_wc_bar, anodes = current_wishchild_g[c], NewTable(tal,0)
-										for d=1, tal do
-											local current_tanode = template_anodes[d]
-											local current_anode_bar = current_wc_bar + current_tanode[1]
-											anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
-										end
-										table_sort(anodes, SortBy1)
-
-										nwcl = nwcl + 1
-										local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
-										new_wishchilds[nwcl] = {current_dt, anodes}
-									end
-								end
-							end
-
-							wish_c.wishchilds, wish_c.wcl = new_wishchilds, table_sort(new_wishchilds, SortBy1)   -- Table, Nil
-						end
-
-						do
-							local echochilds, new_echochilds, necl = wish_c.echochilds, {}, 1
-							for b=1, wish_c.ecl do   -- AngleNode: {time, degree, easetype}
-								local current_echochild_g = echochilds[b]
-								local template_anodes, tal = current_echochild_g.angle, current_echochild_g.al
-								if template_anodes[1][1] > 0 then   -- Absolute
-									for c=1, tal do
-										local current_anode_bar = template_anodes[c][1]
-										template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
-									end
-									table_sort(template_anodes, SortBy1)
-
-									for c=1, current_echochild_g.bl do
-										local current_ms = bar_to_ms(current_echochild_g[c])
-										assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
-
-										necl = necl + 1
-										local current_dt = ms_to_dt(current_ms, of_layer2)
-										new_echochilds[necl] = {current_dt, template_anodes, current_ms}
-									end
-								else   -- Relative
-									for c=1, current_echochild_g.bl do
-										local current_wc_bar, anodes = current_echochild_g[c], NewTable(tal,0)
-										for d=1, tal do
-											local current_tanode = template_anodes[d]
-											local current_anode_bar = current_wc_bar + current_tanode[1]
-											anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
-										end
-										table_sort(anodes, SortBy1)
-
-										local current_ms = bar_to_ms(current_echochild_g[c])
-										assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
-
-										necl = necl + 1
-										local current_dt = ms_to_dt(current_ms, of_layer2)
-										new_echochilds[necl] = {current_dt, anodes, current_ms}
-									end
-								end
-							end
-
-							wish_c.echochilds, wish_c.ecl = new_echochilds, table_sort(new_echochilds, SortBy1)   -- Table, Nil
-						end
+				-- Hints: Convert bartimes into mstimes; Get X/Y
+				--
+				local hints = wish_c.hints
+				for b=1, wish_c.hl do
+					local current_hint_bar = hints[b]
+					local current_x = get_x(wish_c, current_hint_bar)
+					if current_x then
+						hints[b] = {bar_to_ms(current_hint_bar), current_x, get_y(current_wish,current_hint_bar)}
 					else
-						Wishes[a] = false
+						hints[b] = false
 					end
 				end
+				wish_c.hl = table_sort(hints, SortHints)   -- nil
 
-				-- Discard Temporary Wishes.
+				local sh_bar = wish_c.special_hint
+				if sh_bar then
+					wish_c.special_hint = {bar_to_ms(sh_bar), get_x(wish_c, sh_bar), get_y(wish_c, sh_bar)}
+				end
+
+				-- WishChilds / EchoChilds: Unpack AngleNodes; Convert bartimes into mstimes / DTimes
 				--
-				table_sort(Wishes, SortWishes)
-				for i=wl, 1, -1 do
-					if not Wishes[i] then
-						Wishes[i] = nil
-					else
-						break
+				do
+					local wishchilds, new_wishchilds, nwcl = wish_c.wishchilds, {}, 1
+					for b=1, wish_c.wcl do   -- AngleNode: {time, degree, easetype}
+						local current_wishchild_g = wishchilds[b]
+						local template_anodes, tal = current_wishchild_g.angle, current_wishchild_g.al
+						if template_anodes[1][1] > 0 then   -- Absolute
+							for c=1, tal do
+								local current_anode_bar = template_anodes[c][1]
+								template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
+							end
+							table_sort(template_anodes, SortBy1)
+
+							for c=1, current_wishchild_g.bl do
+								nwcl = nwcl + 1
+								local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
+								new_wishchilds[nwcl] = {current_dt, template_anodes}
+							end
+						else   -- Relative
+							for c=1, current_wishchild_g.bl do
+								local current_wc_bar, anodes = current_wishchild_g[c], NewTable(tal,0)
+								for d=1, tal do
+									local current_tanode = template_anodes[d]
+									local current_anode_bar = current_wc_bar + current_tanode[1]
+									anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
+								end
+								table_sort(anodes, SortBy1)
+
+								nwcl = nwcl + 1
+								local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
+								new_wishchilds[nwcl] = {current_dt, anodes}
+							end
+						end
 					end
+
+					wish_c.wishchilds, wish_c.wcl = new_wishchilds, table_sort(new_wishchilds, SortBy1)   -- Table, Nil
 				end
 
-				-- Echoes: Convert bartimes into mstimes
-				--
-				for i=1, el do
-					local current_echo_bar = Echoes[i][1]
-					Echoes[i][1] = bar_to_ms(current_echo_bar)
-				end
+				do
+					local echochilds, new_echochilds, necl = wish_c.echochilds, {}, 1
+					for b=1, wish_c.ecl do   -- AngleNode: {time, degree, easetype}
+						local current_echochild_g = echochilds[b]
+						local template_anodes, tal = current_echochild_g.angle, current_echochild_g.al
+						if template_anodes[1][1] > 0 then   -- Absolute
+							for c=1, tal do
+								local current_anode_bar = template_anodes[c][1]
+								template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
+							end
+							table_sort(template_anodes, SortBy1)
 
-				-- Let Arf3.MakeArf() handle other work.
-				--
-				local Before, ObjectCount, HgoRequired = 0, 0, 0
-				if Arf3 then
-					Before, ObjectCount, HgoRequired = Arf3.MakeArf(MergedTime1, MergedTime2, WgoRequired, EgoRequired, Wishes, Echoes)
+							for c=1, current_echochild_g.bl do
+								local current_ms = bar_to_ms(current_echochild_g[c])
+								assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
+
+								necl = necl + 1
+								local current_dt = ms_to_dt(current_ms, of_layer2)
+								new_echochilds[necl] = {current_dt, template_anodes, current_ms}
+							end
+						else   -- Relative
+							for c=1, current_echochild_g.bl do
+								local current_wc_bar, anodes = current_echochild_g[c], NewTable(tal,0)
+								for d=1, tal do
+									local current_tanode = template_anodes[d]
+									local current_anode_bar = current_wc_bar + current_tanode[1]
+									anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
+								end
+								table_sort(anodes, SortBy1)
+
+								local current_ms = bar_to_ms(current_echochild_g[c])
+								assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
+
+								necl = necl + 1
+								local current_dt = ms_to_dt(current_ms, of_layer2)
+								new_echochilds[necl] = {current_dt, anodes, current_ms}
+							end
+						end
+					end
+
+					wish_c.echochilds, wish_c.ecl = new_echochilds, table_sort(new_echochilds, SortBy1)   -- Table, Nil
 				end
-				return true, Before, ObjectCount, WgoRequired, HgoRequired, EgoRequired
 			else
-				return false, NEMESIS_LUA_ERROR..err
+				Wishes[a] = false
 			end
-		else
-			return false, NEMESIS_FAIL_OPEN
 		end
+
+		-- Discard Temporary Wishes.
+		--
+		table_sort(Wishes, SortWishes)
+		for i=wl, 1, -1 do
+			if not Wishes[i] then
+				Wishes[i] = nil
+			else
+				break
+			end
+		end
+
+		-- Echoes: Convert bartimes into mstimes
+		--
+		for i=1, el do
+			local current_echo_bar = Echoes[i][1]
+			Echoes[i][1] = bar_to_ms(current_echo_bar)
+		end
+
+		-- Let Arf3.MakeArf() handle other work.
+		--
+		local Before, ObjectCount, HgoRequired = 0, 0, 0
+		if Arf3 then
+			Before, ObjectCount, HgoRequired = Arf3.MakeArf(MergedTime1, MergedTime2, WgoRequired, EgoRequired, Wishes, Echoes)
+		end
+		return true, Before, ObjectCount, WgoRequired, HgoRequired, EgoRequired
 	end
 end
