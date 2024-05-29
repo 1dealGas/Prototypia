@@ -17,7 +17,7 @@ function NemesisInitialize()
 	local math_sin, math_cos, math_ceil, math_sqrt = math.sin, math.cos, math.ceil, math.sqrt
 	local table_sort, table_insert, setmetatable = table.sort, table.insert, setmetatable
 
-	local NewTable = Arf3 and Arf3.NewTable or function() return {} end   --- @type fun(narr:number, nrec:number):table
+	local NewTable = Arf3.NewTable  --- @type fun(narr:number, nrec:number):table
 	local SortBy1 = function(a,b)		return a[1]<b[1] end
 	local SortBy3 = function(a,b)		return a[3]<b[3] end
 	local SortNodes = function(a,b)
@@ -1427,8 +1427,11 @@ function NemesisInitialize()
 
 	--- Compiling Function called by the Viewer.
 	--- @param path string  The path of the user Lua script
-	--- @return boolean  Compiling successful or not
-	--- @return string|number  Error message string, or args returned by Arf3.MakeArf() if compiling succeeded
+	--- @return number  Max mstime
+	--- @return number  Object(Hint, Echo & EchoChild) Count
+	--- @return number  How many Wish GOs are required
+	--- @return number  How many Hint GOs are required
+	--- @return number  How many Echo GOs are required
 	function NemesisCompile(path)
 		-- Execute the Lua Script provided by the user.
 		--
@@ -1568,29 +1571,18 @@ function NemesisInitialize()
 		end
 
 		-- Discard Temporary Wishes.
+		-- Echoes: Convert bartimes into mstimes.
+		-- Let Arf3.MakeArf() handle other work.
 		--
 		table_sort(Wishes, SortWishes)
 		for i=wl, 1, -1 do
-			if not Wishes[i] then
-				Wishes[i] = nil
-			else
-				break
+			if not Wishes[i] then	Wishes[i] = nil
+			else					break
 			end
 		end
 
-		-- Echoes: Convert bartimes into mstimes
-		--
-		for i=1, el do
-			local current_echo_bar = Echoes[i][1]
-			Echoes[i][1] = bar_to_ms(current_echo_bar)
-		end
-
-		-- Let Arf3.MakeArf() handle other work.
-		--
-		local Before, ObjectCount, HgoRequired = 0, 0, 0
-		if Arf3 then
-			Before, ObjectCount, HgoRequired = Arf3.MakeArf(MergedTime1, MergedTime2, WgoRequired, EgoRequired, Wishes, Echoes)
-		end
-		return true, Before, ObjectCount, WgoRequired, HgoRequired, EgoRequired
+		for i=1, el do				Echoes[i][1] = bar_to_ms( Echoes[i][1] )	end
+		local Before, ObjectCount, HgoRequired = Arf3.MakeArf(MergedTime1, MergedTime2, WgoRequired, EgoRequired, Wishes, Echoes)
+		return Before, ObjectCount, WgoRequired, HgoRequired, EgoRequired
 	end
 end
