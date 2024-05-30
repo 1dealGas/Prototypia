@@ -1437,9 +1437,9 @@ function NemesisCompile(path)
 	Wishes, Echoes = {}, {}
 	WgoRequired, EgoRequired = 1024, 1024
 	current_verse, current_wish, pushed_wish = {}
+	bpm_set, bpm_list, bar_to_ms, ms_to_bar, ms_to_dt, dt_to_ms = nil   -- So everything is nil in this line.
 	MergedTime1, MergedTime2 = {0,0,1}, {0,0,1}
 	bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0
-	bpm_set, bpm_list = nil, nil
 	bp, m1p, m2p = 1, 1, 1
 
 	-- Execute the Lua Script provided by the user.
