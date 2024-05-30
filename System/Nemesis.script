@@ -103,11 +103,11 @@ end
 --
 local bpm_set										--- @type table<number,number>|nil   bpm_set[bar] == bpm
 local bpm_list										--- @type number[]|nil
-local bp, m1p, m2p = 1, 1, 1						--- @type number  Iteration Progress Value
-local bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0	--- @type number  Length Value
+local bp, m1p, m2p									--- @type number  Iteration Progress Value
+local bl, m1l, m2l, wl, el, vl						--- @type number  Length Value
 local current_wish, pushed_wish						--- @type Wish|nil
 local current_verse									--- @type (Wish|Echo)[]
-local obar, nmr										--- @type number
+local obar, nmr										--- @type number  Bartime Offset, Numerator of Relative Bartime
 
 -- Local vars for special usages.
 --
@@ -1466,7 +1466,7 @@ function NemesisCompile(path)
 	MergedTime1, MergedTime2 = {0,0,1}, {0,0,1}
 	bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0
 	bp, m1p, m2p = 1, 1, 1
-	obar, nmr = 0, 1
+	obar, nmr = 0, 0
 
 	-- Execute the Lua Script provided by the user.
 	--
