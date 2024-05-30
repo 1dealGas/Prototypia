@@ -477,15 +477,17 @@ function Nemesis.ScLayer2(t)
 end
 
 --- Set the bar offset to avoid duplicated bartime inputs.
---- Examples after calling Bar(10):
----     #1/16            -> 10.0625
----     Bar(12) + #1/4   -> 12.25
+--- Example:
+---     Bar(10)			-> 10
+---     #1/16			-> 10.0625
+---     Bar(12) + 1/4	-> 12.25
+---     #1/2			-> 12.5
 --- @param bar number
 --- @return number  A zero value for some convenience.
 function Nemesis.Bar(bar)
 	assert( bar>=0, BAR_NON_NEG )
 	obar = bar
-	return 0
+	return bar
 end
 debug.setmetatable(1, {
 	__len = function(lennum)
