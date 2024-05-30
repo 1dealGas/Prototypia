@@ -1450,8 +1450,7 @@ function NemesisCompile(path)
 	local compile_func_str = table.concat{header, file:read("*a"), " end"}
 	local compile_func = loadstring(compile_func_str)       -- Header included here
 		  compile_func = setfenv(compile_func, Nemesis)()   -- Alter the Env, and then expose the compile function with no header.
-		  compile_func = compile_func()                     -- Execute the compile function, and then discard it.
-	file:close()
+		  compile_func = file:close(), compile_func()       -- Close the file, and then execute & discard the compile function.
 
 	-- Do Wish Related.
 	--
@@ -1528,7 +1527,6 @@ function NemesisCompile(path)
 						end
 					end
 				end
-
 				wish_c.wishchilds, wish_c.wcl = new_wishchilds, table_sort(new_wishchilds, SortBy1)   -- Table, Nil
 			end
 
@@ -1571,7 +1569,6 @@ function NemesisCompile(path)
 						end
 					end
 				end
-
 				wish_c.echochilds, wish_c.ecl = new_echochilds, table_sort(new_echochilds, SortBy1)   -- Table, Nil
 			end
 		else
@@ -1580,17 +1577,24 @@ function NemesisCompile(path)
 	end
 
 	-- Discard Temporary Wishes.
-	-- Echoes: Convert bartimes into mstimes.
-	-- Let Arf3.MakeArf() handle other work.
 	--
 	table_sort(Wishes, SortWishes)
 	for i=wl, 1, -1 do
-		if not Wishes[i] then	Wishes[i] = nil
-		else					break
+		if not Wishes[i] then
+			Wishes[i] = nil
+		else
+			break
 		end
 	end
 
-	for i=1, el do				Echoes[i][1] = bar_to_ms( Echoes[i][1] )	end
+	-- Echoes: Convert bartimes into mstimes.
+	--
+	for i=1, el do
+		Echoes[i][1] = bar_to_ms( Echoes[i][1] )
+	end
+
+	-- Let Arf3.MakeArf() handle other work.
+	--
 	local Before, ObjectCount, HgoRequired = Arf3.MakeArf(MergedTime1, MergedTime2, WgoRequired, EgoRequired, Wishes, Echoes)
 	return Before, ObjectCount, WgoRequired, HgoRequired, EgoRequired
 end
