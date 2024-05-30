@@ -5,607 +5,537 @@
 -- ]]
 
 
-function NemesisInitialize()
-	-- L0: Script Utils
-	   -- Notice that Nemesis is NOT a standalone module, hence this is a global Table.
-	   -- This file will be loaded each time we glue and execute a user Lua script file.
-	   -- Dependency "Arf3" to be integrated into Prototypia Viewer 1.x.
-	--
-	local Nemesis = {}
-	local HALF_PI = math.pi * 0.5
-	local type, next, assert = type, next, assert
-	local math_sin, math_cos, math_ceil, math_sqrt = math.sin, math.cos, math.ceil, math.sqrt
-	local table_sort, table_insert, setmetatable = table.sort, table.insert, setmetatable
+-- L0: Script Utils
+   -- Notice that Nemesis is NOT a standalone module, hence this is a global Table.
+   -- This file will be loaded each time we glue and execute a user Lua script file.
+   -- Dependency "Arf3" to be integrated into Prototypia Viewer 1.x.
+--
+local Nemesis = {}
+local HALF_PI = math.pi * 0.5
+local type, next, assert = type, next, assert
+local math_sin, math_cos, math_ceil, math_sqrt = math.sin, math.cos, math.ceil, math.sqrt
+local table_sort, table_insert, setmetatable = table.sort, table.insert, setmetatable
 
-	local NewTable = Arf3.NewTable  --- @type fun(narr:number, nrec:number):table
-	local SortBy1 = function(a,b)		return a[1]<b[1] end
-	local SortBy3 = function(a,b)		return a[3]<b[3] end
-	local SortNodes = function(a,b)
-		if a[1] == b[1] then			return a[7]<b[7]   -- {bar, x, y, easetype, curve_init, curve_end, insert_order}
-		else							return a[1]<b[1]
-		end
+local NewTable = Arf3.NewTable  --- @type fun(narr:number, nrec:number):table
+local SortBy1 = function(a,b)		return a[1]<b[1] end
+local SortBy3 = function(a,b)		return a[3]<b[3] end
+local SortNodes = function(a,b)
+	if a[1] == b[1] then			return a[7]<b[7]   -- {bar, x, y, easetype, curve_init, curve_end, insert_order}
+	else							return a[1]<b[1]
 	end
-	local SortHints = function(a,b)   -- Won't sort by time
-		if not a then					return (not b) and true
-		else							return true
-		end
+end
+local SortHints = function(a,b)   -- Won't sort by time
+	if not a then					return (not b) and true
+	else							return true
 	end
-	local SortWishes = function(a,b)
-		if not a then					return (not b) and true
-		elseif not b then				return true
-		else
-			local first_node_a, first_node_b = a.nodes[1], b.nodes[1]
-			if first_node_a[1] == first_node_b[1] then
-				if first_node_b[2] == first_node_b[2] then		return first_node_a[3]<first_node_b[3]
-				else 											return first_node_a[2]<first_node_b[2]
-				end
-			else												return first_node_a[1]<first_node_b[1]
+end
+local SortWishes = function(a,b)
+	if not a then					return (not b) and true
+	elseif not b then				return true
+	else
+		local first_node_a, first_node_b = a.nodes[1], b.nodes[1]
+		if first_node_a[1] == first_node_b[1] then
+			if first_node_b[2] == first_node_b[2] then		return first_node_a[3]<first_node_b[3]
+			else 											return first_node_a[2]<first_node_b[2]
 			end
+		else												return first_node_a[1]<first_node_b[1]
 		end
 	end
+end
 
-	-- Cache assertions longer than 40 chars to avoid some GC cost.
-	--
-	local AT_LEAST_2_NODES_REQUIRED = "At least 2 Nodes are required to create a Wish."
-	local BAR_NON_NEG = "Bartime(s) after moving MUST be non-negative."
-	local BAR_BPM_ALT = "Please put bartimes and BPMs alternatively."
-	local BAR_RAT_ALT = "Please put bartimes and ratios alternatively."
-	local BAR_DEG_ET_ALT = "Please put bartimes, degrees and easetypes alternatively."
-	local BAR_X_Y_ALT = "Please put bartimes, x values and y values alternatively."
-	local BAR_X_Y_ET_ALT = "Please put bartimes, x values, y values and easetypes alternatively."
-	local BAR_RAD_DEG_ET_ALT = "Please put bartimes, radius values, degrees and easetypes alternatively."
-	local CI_SMALLER_THAN_CE = "Curve Init Ratio must be smaller than Curve End Ratio."
-	local DONT_ABS_REL_SIM = "Don't use absolute bartime(s) and relative bartime(s) simultaneously."
-	local FAIL_GET_X = "Failed to get the X-Axis position from the specified Wish / Echo."
-	local FAIL_GET_Y = "Failed to get the Y-Axis position from the specified Wish / Echo."
-	local MX_OUT_OF_RANGE = "X-Axis position after moving out of range."
-	local MY_OUT_OF_RANGE = "Y-Axis position after moving out of range."
-	local PROHIBIT_DUPLICATE_BARS = "Nemesis prohibits duplicated bartime(s) within a Wish."
-	local SPEED_0_NON_NEG = "The speed scale at bar 0 MUST be non-negative."
-	local SPEED_L_NON_NEG = "The last speed scale MUST be non-negative."
-	local STATE_A_WISH_WC = "State a Wish before calling \"WishChild {}\"."
-	local STATE_A_WISH_EC = "State a Wish before calling \"EchoChild {}\"."
-	local STATE_A_WISH_MH = "State a Wish before calling \"ManualHint {}\"."
-	local USE_MAP_CLAUSE = "Use the \"Map {}\" clause to do transformations to all Wishes of the last Verse."
-	local USE_SC_CLAUSE = "Please use the \"ScLayer1 {}\" clause to state Layer1 SCs of your chart[fumen]."
-	local USE_SC2_CLAUSE = "Please use the \"ScLayer2 {}\" clause to state Layer2 SCs of your chart[fumen]."
-	local USE_WISH_CLAUSE = "Please use the \"Wish {}\" clause to create a Wish."
-	local USE_TIME_CLAUSE = "Please use the \"Time {}\" clause to state BPMs of your chart[fumen]."
+-- Cache assertions longer than 40 chars to avoid some GC cost.
+--
+local AT_LEAST_2_NODES_REQUIRED = "At least 2 Nodes are required to create a Wish."
+local BAR_NON_NEG = "Bartime(s) after moving MUST be non-negative."
+local BAR_BPM_ALT = "Please put bartimes and BPMs alternatively."
+local BAR_RAT_ALT = "Please put bartimes and ratios alternatively."
+local BAR_DEG_ET_ALT = "Please put bartimes, degrees and easetypes alternatively."
+local BAR_X_Y_ALT = "Please put bartimes, x values and y values alternatively."
+local BAR_X_Y_ET_ALT = "Please put bartimes, x values, y values and easetypes alternatively."
+local BAR_RAD_DEG_ET_ALT = "Please put bartimes, radius values, degrees and easetypes alternatively."
+local CI_SMALLER_THAN_CE = "Curve Init Ratio must be smaller than Curve End Ratio."
+local DONT_ABS_REL_SIM = "Don't use absolute bartime(s) and relative bartime(s) simultaneously."
+local FAIL_GET_X = "Failed to get the X-Axis position from the specified Wish / Echo."
+local FAIL_GET_Y = "Failed to get the Y-Axis position from the specified Wish / Echo."
+local MX_OUT_OF_RANGE = "X-Axis position after moving out of range."
+local MY_OUT_OF_RANGE = "Y-Axis position after moving out of range."
+local PROHIBIT_DUPLICATE_BARS = "Nemesis prohibits duplicated bartime(s) within a Wish."
+local SPEED_0_NON_NEG = "The speed scale at bar 0 MUST be non-negative."
+local SPEED_L_NON_NEG = "The last speed scale MUST be non-negative."
+local STATE_A_WISH_WC = "State a Wish before calling \"WishChild {}\"."
+local STATE_A_WISH_EC = "State a Wish before calling \"EchoChild {}\"."
+local STATE_A_WISH_MH = "State a Wish before calling \"ManualHint {}\"."
+local USE_MAP_CLAUSE = "Use the \"Map {}\" clause to do transformations to all Wishes of the last Verse."
+local USE_SC_CLAUSE = "Please use the \"ScLayer1 {}\" clause to state Layer1 SCs of your chart[fumen]."
+local USE_SC2_CLAUSE = "Please use the \"ScLayer2 {}\" clause to state Layer2 SCs of your chart[fumen]."
+local USE_WISH_CLAUSE = "Please use the \"Wish {}\" clause to create a Wish."
+local USE_TIME_CLAUSE = "Please use the \"Time {}\" clause to state BPMs of your chart[fumen]."
 
 
-	-- L1: Arf3 Prototype to Upload (CamelCase for keys, snake_case for values)
-	   -- MergedTime*: {··, init_ms, base_dt, ratio, ··}
-	   -- Wishes: {wish1, ··}
-		  -- hints: {bar1, bar2, ···}  --(CompileTime)->  ···{ms, x, y}···
-		  -- nodes: {··, bar, x, y, e, ··}  --(Immediate)->  ···{bar, x, y, easetype, curve_init, curve_end, insert_order}···
-			 -- x/y -> xvalue or wish
-			 -- e -> easetype or {easetype, curve_init, curve_end}
-		  -- wishchilds / echochilds: {Angle, Al, Bl, bar1, bar2, ··}   --(CompileTime)->  ··{dt, anodes, al, ms}··
-			 -- Angle: degree or ···{bar, degree, easetype}···          --(CompileTime)->  ··{dt, degree, easetype}··
-		  --- @see Wish for other members.
-		-- Echoes: {··, bar, x, y, ··}  --(Immediate)->  ···{bar, x, y}···
-	--
-	local MergedTime1, MergedTime2 = {0,0,1}, {0,0,1}   --- @type number[]
-	local WgoRequired, EgoRequired = 1024, 1024         --- @type number
-	local Wishes = {}   --- @type Wish[]
-	local Echoes = {}   --- @type Echo[]
+-- L1: Arf3 Prototype to Upload (CamelCase for keys, snake_case for values)
+   -- MergedTime*: {··, init_ms, base_dt, ratio, ··}
+   -- Wishes: {wish1, ··}
+	  -- hints: {bar1, bar2, ···}  --(CompileTime)->  ···{ms, x, y}···
+	  -- nodes: {··, bar, x, y, e, ··}  --(Immediate)->  ···{bar, x, y, easetype, curve_init, curve_end, insert_order}···
+		 -- x/y -> xvalue or wish
+		 -- e -> easetype or {easetype, curve_init, curve_end}
+	  -- wishchilds / echochilds: {Angle, Al, Bl, bar1, bar2, ··}   --(CompileTime)->  ··{dt, anodes, al, ms}··
+		 -- Angle: degree or ···{bar, degree, easetype}···          --(CompileTime)->  ··{dt, degree, easetype}··
+	  --- @see Wish for other members.
+	-- Echoes: {··, bar, x, y, ··}  --(Immediate)->  ···{bar, x, y}···
+--
+local MergedTime1, MergedTime2   --- @type number[]
+local WgoRequired, EgoRequired   --- @type number
+local Wishes   --- @type Wish[]
+local Echoes   --- @type Echo[]
 
-	--- Adjust the Game Object(s) allocation Strategy.
-	--- For those 2 args, try 1024 as a default value, and then switch it to the value indicated by the Viewer.
-	--- @param wgo_required number  How many WishGOs should be pre-allocated to render this chart(fumen).
-	--- @param ego_required number  How many EchoGOs should be pre-allocated to render this chart(fumen).
-	function Nemesis.REQUIRE(wgo_required, ego_required)
-		WgoRequired = wgo_required+0
-		EgoRequired = ego_required+0
+--- Adjust the Game Object(s) allocation Strategy.
+--- For those 2 args, try 1024 as a default value, and then switch it to the value indicated by the Viewer.
+--- @param wgo_required number  How many WishGOs should be pre-allocated to render this chart(fumen).
+--- @param ego_required number  How many EchoGOs should be pre-allocated to render this chart(fumen).
+function Nemesis.REQUIRE(wgo_required, ego_required)
+	WgoRequired = wgo_required+0
+	EgoRequired = ego_required+0
+end
+
+
+-- L2: Environment Vars
+--
+local bpm_set										--- @type table<number,number>|nil   bpm_set[bar] == bpm
+local bpm_list										--- @type number[]|nil
+local bp, m1p, m2p = 1, 1, 1						--- @type number  Iteration Progress Value
+local bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0	--- @type number  Length Value
+local current_wish, pushed_wish						--- @type Wish|nil
+local current_verse									--- @type (Wish|Echo)[]
+
+--- Will be binded after the "Time {}" call, to reduce some assertions.
+local bar_to_ms, ms_to_bar, ms_to_dt, dt_to_ms
+
+--- Push (max 1) Wish into the cache. Used to prevent breaking the ref of the last Wish stated by the user.
+local function push_wish()
+	if current_wish and current_wish.is_wish then
+		pushed_wish = current_wish
+	end
+end
+
+--- Pop the Wish in the cache. Used to prevent breaking the ref of the last Wish stated by the user.
+local function pop_wish()
+	if pushed_wish and pushed_wish.is_wish then
+		current_wish = pushed_wish
+	end
+end
+
+--- Transfer a bartime to a mstime.
+--- @param bartime number
+--- @return number|nil  The mstime, or nil when querying failed
+local function __bar_to_ms__(bartime)   -- Won't assert anything
+	local blx3 = bl*3
+	if bartime >= bpm_list[blx3-2] then
+		return bpm_list[blx3] + (240000 / bpm_list[blx3-1]) * (bartime - bpm_list[blx3-2])
+	elseif bartime <= 0 then
+		return bpm_list[3]
 	end
 
-
-	-- L2: Environment Vars
-	--
-	local bpm_set                                       --- @type table<number,number>|nil   bpm_set[bar] == bpm
-	local bpm_list                                      --- @type number[]|nil
-	local bp, m1p, m2p = 1, 1, 1                        --- @type number  Iteration Progress Value
-	local bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0   --- @type number  Length Value
-	local current_wish, pushed_wish                     --- @type Wish|nil
-	local current_verse = {}                            --- @type (Wish|Echo)[]
-
-	--- Will be binded after the "Time {}" call, to reduce some assertions.
-	local bar_to_ms, ms_to_bar, ms_to_dt, dt_to_ms
-
-	--- Push (max 1) Wish into the cache. Used to prevent breaking the ref of the last Wish stated by the user.
-	local function push_wish()
-		if current_wish and current_wish.is_wish then
-			pushed_wish = current_wish
-		end
+	-- Regressive Iterating
+	-- ··{last_bar, last_bpm44, last_base, bar, bpm44, base}··
+	while (bp > 1) and (bartime < bpm_list[bp*3-2]) do
+		bp = bp - 1
 	end
 
-	--- Pop the Wish in the cache. Used to prevent breaking the ref of the last Wish stated by the user.
-	local function pop_wish()
-		if pushed_wish and pushed_wish.is_wish then
-			current_wish = pushed_wish
+	-- Forward Iterating
+	-- ··{bar, bpm44, base, next_bar, next_bpm44, next_base}··
+	while bp < bl do
+		local bpx3 = bp*3
+		if bpm_list[bpx3+1] > bartime then
+			return bpm_list[bpx3] + (240000 / bpm_list[blx3-1]) * (bartime - bpm_list[bpx3-2])
 		end
+		bp = bp + 1
+	end
+end
+
+--- Transfer a mstime to a bartime.
+--- @param mstime number
+--- @return number|nil  The mstime, or nil when querying failed
+local function __ms_to_bar__(mstime)   -- Won't assert anything
+	local blx3 = bl*3
+	if mstime >= bpm_list[blx3] then
+		return bpm_list[blx3-2] + (mstime-bpm_list[blx3]) * bpm_list[blx3-1] / 240000
+	elseif mstime <= bpm_list[3] then
+		return 0
 	end
 
-	--- Transfer a bartime to a mstime.
-	--- @param bartime number
-	--- @return number|nil  The mstime, or nil when querying failed
-	local function __bar_to_ms__(bartime)   -- Won't assert anything
-		local blx3 = bl*3
-		if bartime >= bpm_list[blx3-2] then
-			return bpm_list[blx3] + (240000 / bpm_list[blx3-1]) * (bartime - bpm_list[blx3-2])
-		elseif bartime <= 0 then
-			return bpm_list[3]
-		end
-
-		-- Regressive Iterating
-		-- ··{last_bar, last_bpm44, last_base, bar, bpm44, base}··
-		while (bp > 1) and (bartime < bpm_list[bp*3-2]) do
-			bp = bp - 1
-		end
-
-		-- Forward Iterating
-		-- ··{bar, bpm44, base, next_bar, next_bpm44, next_base}··
-		while bp < bl do
-			local bpx3 = bp*3
-			if bpm_list[bpx3+1] > bartime then
-				return bpm_list[bpx3] + (240000 / bpm_list[blx3-1]) * (bartime - bpm_list[bpx3-2])
-			end
-			bp = bp + 1
-		end
+	-- Regressive Iterating
+	-- ··{last_bar, last_bpm44, last_base, bar, bpm44, base}··
+	while (bp > 1) and (mstime < bpm_list[bp*3]) do
+		bp = bp - 1
 	end
 
-	--- Transfer a mstime to a bartime.
-	--- @param mstime number
-	--- @return number|nil  The mstime, or nil when querying failed
-	local function __ms_to_bar__(mstime)   -- Won't assert anything
-		local blx3 = bl*3
-		if mstime >= bpm_list[blx3] then
-			return bpm_list[blx3-2] + (mstime-bpm_list[blx3]) * bpm_list[blx3-1] / 240000
-		elseif mstime <= bpm_list[3] then
+	-- Forward Iterating
+	-- ··{bar, bpm44, base, next_bar, next_bpm44, next_base}··
+	while bp < bl do
+		local bpx3 = bp * 3
+		if bpm_list[bpx3+3] > mstime then
+			return bpm_list[bpx3-2] + (mstime-bpm_list[bpx3]) * bpm_list[bpx3-1] / 240000
+		end
+		bp = bp + 1
+	end
+end
+
+--- Transfer a mstime to a dtime.
+--- @param time number
+--- @param of_layer2 boolean
+--- @return number|nil  The dtime, or nil when querying failed
+local function __ms_to_dt__(time, of_layer2)   -- Won't assert anything
+	if of_layer2 then   -- MergedTime*: {··, init_ms, base_dt, ratio, ··}
+		local m2lx3 = m2l*3
+		if time >= MergedTime2[m2lx3-2] then
+			return MergedTime2[m2lx3-1] + (time-MergedTime2[m2lx3-2]) * MergedTime2[m2lx3]
+		elseif time <= 0 then
 			return 0
 		end
 
-		-- Regressive Iterating
-		-- ··{last_bar, last_bpm44, last_base, bar, bpm44, base}··
-		while (bp > 1) and (mstime < bpm_list[bp*3]) do
-			bp = bp - 1
+		while (m2p > 1) and (time < MergedTime2[m2p*3 - 2]) do   -- Regressive Iterating
+			m2p = m2p - 1
 		end
 
-		-- Forward Iterating
-		-- ··{bar, bpm44, base, next_bar, next_bpm44, next_base}··
-		while bp < bl do
-			local bpx3 = bp * 3
-			if bpm_list[bpx3+3] > mstime then
-				return bpm_list[bpx3-2] + (mstime-bpm_list[bpx3]) * bpm_list[bpx3-1] / 240000
+		while m2p < m2l do   -- Forward Iterating
+			local m2px3 = m2p*3
+			if MergedTime2[m2px3+1] > time then
+				return MergedTime2[m2px3-1] + (time-MergedTime2[m2px3-2]) * MergedTime2[m2px3]
 			end
-			bp = bp + 1
+			m2p = m2p + 1
 		end
-	end
+	else
+		local m1lx3 = m1l*3
+		if time >= MergedTime1[m1lx3-2] then
+			return MergedTime1[m1lx3-1] + (time-MergedTime1[m1lx3-2]) * MergedTime1[m1lx3]
+		elseif time <= 0 then
+			return 0
+		end
 
-	--- Transfer a mstime to a dtime.
-	--- @param time number
-	--- @param of_layer2 boolean
-	--- @return number|nil  The dtime, or nil when querying failed
-	local function __ms_to_dt__(time, of_layer2)   -- Won't assert anything
-		if of_layer2 then   -- MergedTime*: {··, init_ms, base_dt, ratio, ··}
-			local m2lx3 = m2l*3
-			if time >= MergedTime2[m2lx3-2] then
-				return MergedTime2[m2lx3-1] + (time-MergedTime2[m2lx3-2]) * MergedTime2[m2lx3]
-			elseif time <= 0 then
-				return 0
-			end
+		while (m1p > 1) and (time < MergedTime1[m1p*3 - 2]) do   -- Regressive Iterating
+			m1p = m1p - 1
+		end
 
-			while (m2p > 1) and (time < MergedTime2[m2p*3 - 2]) do   -- Regressive Iterating
-				m2p = m2p - 1
+		while m1p < m1l do   -- Forward Iterating
+			local m1px3 = m1p*3
+			if MergedTime1[m1px3+1] > time then
+				return MergedTime1[m1px3-1] + (time-MergedTime1[m1px3-2]) * MergedTime1[m1px3]
 			end
-
-			while m2p < m2l do   -- Forward Iterating
-				local m2px3 = m2p*3
-				if MergedTime2[m2px3+1] > time then
-					return MergedTime2[m2px3-1] + (time-MergedTime2[m2px3-2]) * MergedTime2[m2px3]
-				end
-				m2p = m2p + 1
-			end
-		else
-			local m1lx3 = m1l*3
-			if time >= MergedTime1[m1lx3-2] then
-				return MergedTime1[m1lx3-1] + (time-MergedTime1[m1lx3-2]) * MergedTime1[m1lx3]
-			elseif time <= 0 then
-				return 0
-			end
-
-			while (m1p > 1) and (time < MergedTime1[m1p*3 - 2]) do   -- Regressive Iterating
-				m1p = m1p - 1
-			end
-
-			while m1p < m1l do   -- Forward Iterating
-				local m1px3 = m1p*3
-				if MergedTime1[m1px3+1] > time then
-					return MergedTime1[m1px3-1] + (time-MergedTime1[m1px3-2]) * MergedTime1[m1px3]
-				end
-				m1p = m1p + 1
-			end
+			m1p = m1p + 1
 		end
 	end
+end
 
-	--- Search the WHOLE DTime List for all mstime(s) corresponding to the given dtime.
-	--- @param dtime number
-	--- @param of_layer2 boolean
-	--- @return number[],number  mstime(s), count
-	local function __dt_to_ms__(dtime, of_layer2)   -- Won't assert anything
-		if dtime >= 0 then   -- MergedTime*: {··, init_ms, base_dt, ratio, ··}
-			if of_layer2 then
-				local m2lx3, bars, cnt = m2l*3, NewTable(m2l,0), 0
-				if dtime >= MergedTime2[m2lx3-1] then   -- The last DeltaNode
+--- Search the WHOLE DTime List for all mstime(s) corresponding to the given dtime.
+--- @param dtime number
+--- @param of_layer2 boolean
+--- @return number[],number  mstime(s), count
+local function __dt_to_ms__(dtime, of_layer2)   -- Won't assert anything
+	if dtime >= 0 then   -- MergedTime*: {··, init_ms, base_dt, ratio, ··}
+		if of_layer2 then
+			local m2lx3, bars, cnt = m2l*3, NewTable(m2l,0), 0
+			if dtime >= MergedTime2[m2lx3-1] then   -- The last DeltaNode
+				cnt = cnt + 1
+				bars[cnt] = MergedTime2[m2lx3-2] + (dtime-MergedTime2[m2lx3-1]) / MergedTime2[m2lx3]
+			end
+
+			for i=m2l-1, 1, -1 do   -- Other DeltaNode(s)
+				local ix3 = i*3
+				local current_base_dt = MergedTime2[ix3-1]
+				local ratio = (dtime-current_base_dt) / (MergedTime2[ix3+2]-current_base_dt)
+				if ratio>=0 and ratio<1 then
 					cnt = cnt + 1
-					bars[cnt] = MergedTime2[m2lx3-2] + (dtime-MergedTime2[m2lx3-1]) / MergedTime2[m2lx3]
+					local current_init_ms = MergedTime2[ix3-2]
+					bars[cnt] = current_init_ms + (MergedTime2[ix3+1] - current_init_ms) * ratio
 				end
-
-				for i=m2l-1, 1, -1 do   -- Other DeltaNode(s)
-					local ix3 = i*3
-					local current_base_dt = MergedTime2[ix3-1]
-					local ratio = (dtime-current_base_dt) / (MergedTime2[ix3+2]-current_base_dt)
-					if ratio>=0 and ratio<1 then
-						cnt = cnt + 1
-						local current_init_ms = MergedTime2[ix3-2]
-						bars[cnt] = current_init_ms + (MergedTime2[ix3+1] - current_init_ms) * ratio
-					end
-				end
-
-				return bars, cnt
-			else
-				local m1lx3, bars, cnt = m1l*3, NewTable(m1l,0), 0
-				if dtime >= MergedTime1[m1lx3-1] then   -- The last DeltaNode
-					cnt = cnt + 1
-					bars[cnt] = MergedTime1[m1lx3-2] + (dtime-MergedTime1[m1lx3-1]) / MergedTime1[m1lx3]
-				end
-
-				for i=m1l-1, 1, -1 do   -- Other DeltaNode(s)
-					local ix3 = i*3
-					local current_base_dt = MergedTime1[ix3-1]
-					local ratio = (dtime-current_base_dt) / (MergedTime1[ix3+2]-current_base_dt)
-					if ratio>=0 and ratio<1 then
-						cnt = cnt + 1
-						local current_init_ms = MergedTime1[ix3-2]
-						bars[cnt] = current_init_ms + (MergedTime1[ix3+1] - current_init_ms) * ratio
-					end
-				end
-
-				return bars, cnt
 			end
+
+			return bars, cnt
 		else
-			return {}, 0
+			local m1lx3, bars, cnt = m1l*3, NewTable(m1l,0), 0
+			if dtime >= MergedTime1[m1lx3-1] then   -- The last DeltaNode
+				cnt = cnt + 1
+				bars[cnt] = MergedTime1[m1lx3-2] + (dtime-MergedTime1[m1lx3-1]) / MergedTime1[m1lx3]
+			end
+
+			for i=m1l-1, 1, -1 do   -- Other DeltaNode(s)
+				local ix3 = i*3
+				local current_base_dt = MergedTime1[ix3-1]
+				local ratio = (dtime-current_base_dt) / (MergedTime1[ix3+2]-current_base_dt)
+				if ratio>=0 and ratio<1 then
+					cnt = cnt + 1
+					local current_init_ms = MergedTime1[ix3-2]
+					bars[cnt] = current_init_ms + (MergedTime1[ix3+1] - current_init_ms) * ratio
+				end
+			end
+
+			return bars, cnt
 		end
+	else
+		return {}, 0
 	end
+end
 
-	--- Provide the map from a bartime to a mstime.
-	--- Use the "Time {}" clause to call this, AHEAD of other prototype codes.
-	--- @param t number[]  Put bartimes and BPMs alternatively. The smallest bartime MUST be 0, and BPM value(s) MUST be positive.
-	--- @param t.offset number  Specify the mstime of bar 0; 0 by default.
-	--- @param t.ms_of_bar0 number  Alias of t.offset with a lower priority.
-	--- @param t.use_bars_per_minute boolean  If true, you state that the BPM values you stated indicate "How many BARS pass by within 1 minute", instead of "How many 4/4 BEATS pass by within 1 minute".
-	function Nemesis.Time(t)
-		assert( type(t)=="table", USE_TIME_CLAUSE )
+--- Provide the map from a bartime to a mstime.
+--- Use the "Time {}" clause to call this, AHEAD of other prototype codes.
+--- @param t number[]  Put bartimes and BPMs alternatively. The smallest bartime MUST be 0, and BPM value(s) MUST be positive.
+--- @param t.offset number  Specify the mstime of bar 0; 0 by default.
+--- @param t.ms_of_bar0 number  Alias of t.offset with a lower priority.
+--- @param t.use_bars_per_minute boolean  If true, you state that the BPM values you stated indicate "How many BARS pass by within 1 minute", instead of "How many 4/4 BEATS pass by within 1 minute".
+function Nemesis.Time(t)
+	assert( type(t)=="table", USE_TIME_CLAUSE )
 
-		bl = #t/2
-		assert( bl>0 and math_ceil(bl)==bl, BAR_BPM_ALT )
+	bl = #t/2
+	assert( bl>0 and math_ceil(bl)==bl, BAR_BPM_ALT )
 
-		local lumped = NewTable(bl, 0)
+	local lumped = NewTable(bl, 0)
+	for i=1, bl do
+		lumped[i] = { t[i*2-1], t[i*2] }
+	end
+	table_sort(lumped, SortBy1)
+	assert( lumped[1][1]==0, "The smallest bartime MUST be 0." )
+
+	bpm_list, bpm_set = NewTable(bl*3, 0), NewTable(0, bl)
+	if t.use_bars_per_minute then
 		for i=1, bl do
-			lumped[i] = { t[i*2-1], t[i*2] }
+			local current_time, current_bpm44 = lumped[i][1], lumped[i][2]*4
+			assert( current_bpm44>0, "BPM value(s) MUST be positive." )
+			bpm_list[i*3-2], bpm_list[i*3-1] = current_time, current_bpm44
+			bpm_set[current_time] = current_bpm44
 		end
-		table_sort(lumped, SortBy1)
-		assert( lumped[1][1]==0, "The smallest bartime MUST be 0." )
-
-		bpm_list, bpm_set = NewTable(bl*3, 0), NewTable(0, bl)
-		if t.use_bars_per_minute then
-			for i=1, bl do
-				local current_time, current_bpm44 = lumped[i][1], lumped[i][2]*4
-				assert( current_bpm44>0, "BPM value(s) MUST be positive." )
-				bpm_list[i*3-2], bpm_list[i*3-1] = current_time, current_bpm44
-				bpm_set[current_time] = current_bpm44
-			end
-		else
-			for i=1, bl do
-				local current_time, current_bpm44 = lumped[i][1], lumped[i][2]
-				assert( current_bpm44>0, "BPM value(s) MUST be positive." )
-				bpm_list[i*3-2], bpm_list[i*3-1] = current_time, current_bpm44
-				bpm_set[current_time] = current_bpm44
-			end
+	else
+		for i=1, bl do
+			local current_time, current_bpm44 = lumped[i][1], lumped[i][2]
+			assert( current_bpm44>0, "BPM value(s) MUST be positive." )
+			bpm_list[i*3-2], bpm_list[i*3-1] = current_time, current_bpm44
+			bpm_set[current_time] = current_bpm44
 		end
-
-		bpm_list[3] = (t.offset or t.ms_of_bar0 or 0) + 0   -- The "Offset".
-		for i=6, bl*3, 3 do
-			-- ··{last_bar, last_bpm44, last_base, bar, bpm44, base}··
-			bpm_list[i] = bpm_list[i-3] + ( bpm_list[i-2] - bpm_list[i-5] ) * 240000 / ( bpm_list[i-4] )
-		end
-
-		bar_to_ms, ms_to_bar = __bar_to_ms__, __ms_to_bar__
-		ms_to_dt, dt_to_ms = __ms_to_dt__, __dt_to_ms__
 	end
 
-	--- Set the speed ratio of Layer 1.
-	--- Use the "ScLayer1 {}" clause to call this, AHEAD of other prototype codes.
-	--- @param t number[]  Put bartimes and ratios alternatively. The smallest bartime MUST be 0, and the 1st/last ratio(s) MUST be non-negative.
-	function Nemesis.ScLayer1(t)
-		assert( bpm_list, USE_TIME_CLAUSE )
-		assert( type(t)=="table", USE_SC_CLAUSE )
-
-		local tbllen_ = #t/2
-		assert( tbllen_>0 and math_ceil(tbllen_)==tbllen_, BAR_RAT_ALT )
-
-		-- Don't want the user to state sacles like "[bar1]=scvalue1, [bar2]=scvalue2", so we make the sc_set internally.
-		--
-		local bar_set, sc_set = NewTable(0, bl+tbllen_), NewTable(0, tbllen_)
-		for i=1, bl*3, 3 do
-			bar_set[ bpm_list[i] ] = true
-		end
-		for i=1, tbllen_*2, 2 do
-			bar_set[ t[i] ] = true
-			sc_set[ t[i] ] = t[i+1]
-		end
-
-		-- Lump bars in the bar_set into an Array of {bar, bpm_at_the_bar?, scale_at_the_bar?}.
-		--
-		local m_lumped = {}   -- Cannot use # to acquire the size of bar_set, for bar_set is not an Array-like Table.
-		local m_lumped_len, bar_set_key = 0, next(bar_set, nil)   -- Use next(t,k) to avoid the closure cost of pairs
-		while bar_set_key do
-			m_lumped_len = m_lumped_len + 1   -- m_lumped_len is used only as the insertion position.
-			m_lumped[m_lumped_len] = {bar_set_key, bpm_set[bar_set_key], sc_set[bar_set_key]}
-			bar_set_key = next(bar_set, bar_set_key)
-		end
-		table_sort(m_lumped, SortBy1)
-		assert( m_lumped[1][1]==0, "Bartime(s) MUST be non-negative." )
-
-		-- Fill lacked BPM value(s) & scales.
-		--
-		if not m_lumped[1][3] then   -- m_lumped[1][1] must be 0, and there must be a BPM value at bar 0 for m_lumped[1][2].
-			m_lumped[1][3] = 1
-		end
-		for i=2, m_lumped_len do
-			if not m_lumped[i][2] then   -- From bpm_list: with BPM, without ratio
-				m_lumped[i][2] = m_lumped[i-1][2]
-			elseif not m_lumped[i][3] then   -- From t: with scale, without BPM
-				m_lumped[i][3] = m_lumped[i-1][3]
-			end
-		end
-		assert( m_lumped[1][3]>=0, SPEED_0_NON_NEG )
-
-		-- Calculate Ratio, Discard adjecent-and-duplicated ratios, and that's the final result.
-		-- MergedTime*: {··, init_ms, base_dt, ratio, ··}
-		--
-		m1l = 1
-		local first_ratio = m_lumped[1][2] * m_lumped[1][3] / 15000
-		assert( first_ratio<=32, "SC Ratio out of range." )
-		MergedTime1[3] = first_ratio   -- 1st Line of MergedTime*: init_ms==0; base_dt==0; ratio set here
-		for i=2, m_lumped_len do
-			local ratio = m_lumped[i][2] * m_lumped[i][3] / 15000   -- Ratio: BPM * scale / 15000
-			if ratio ~= MergedTime1[m1l*3] then
-				assert( ratio>=-32 and ratio<=32, "SC Ratio out of range." )
-				m1l = m1l + 1
-
-				local m1lx3, new_ms = m1l*3, bar_to_ms( m_lumped[i][1] )   -- m1lx3 is the index of the new ratio
-				MergedTime1[m1lx3-2] = new_ms   -- New initms
-				MergedTime1[m1lx3] = ratio      -- New ratio
-
-				-- New base_dt: last_base_dt + (new_init_ms - last_init_ms) * last_ratio
-				local new_base_dt = MergedTime1[m1lx3-4] + (new_ms - MergedTime1[m1lx3-5]) * MergedTime1[m1lx3-3]
-				assert( new_base_dt>=0 and new_base_dt<=131072, "Base DTime out of range." )
-				MergedTime1[m1lx3-1] = new_base_dt
-			end
-		end
-		assert( MergedTime1[m1l*3]>=0, SPEED_L_NON_NEG )
+	bpm_list[3] = (t.offset or t.ms_of_bar0 or 0) + 0   -- The "Offset".
+	for i=6, bl*3, 3 do
+		-- ··{last_bar, last_bpm44, last_base, bar, bpm44, base}··
+		bpm_list[i] = bpm_list[i-3] + ( bpm_list[i-2] - bpm_list[i-5] ) * 240000 / ( bpm_list[i-4] )
 	end
 
-	--- Set the speed ratio of Layer 2.
-	--- Use the "ScLayer2 {}" clause to call this, AHEAD of other prototype codes.
-	--- @param t number[]  Put bartimes and ratios alternatively. The smallest bartime MUST be 0, and the 1st/last ratio(s) MUST be non-negative.
-	function Nemesis.ScLayer2(t)
-		assert( bpm_list, USE_TIME_CLAUSE )
-		assert( type(t)=="table", USE_SC2_CLAUSE )
+	bar_to_ms, ms_to_bar = __bar_to_ms__, __ms_to_bar__
+	ms_to_dt, dt_to_ms = __ms_to_dt__, __dt_to_ms__
+end
 
-		local tbllen_ = #t/2
-		assert( tbllen_>0 and math_ceil(tbllen_)==tbllen_, BAR_RAT_ALT )
+--- Set the speed ratio of Layer 1.
+--- Use the "ScLayer1 {}" clause to call this, AHEAD of other prototype codes.
+--- @param t number[]  Put bartimes and ratios alternatively. The smallest bartime MUST be 0, and the 1st/last ratio(s) MUST be non-negative.
+function Nemesis.ScLayer1(t)
+	assert( bpm_list, USE_TIME_CLAUSE )
+	assert( type(t)=="table", USE_SC_CLAUSE )
 
-		-- Don't want the user to state sacles like "[bar1]=scvalue1, [bar2]=scvalue2", so we make the sc_set internally.
-		--
-		local bar_set, sc_set = NewTable(0, bl+tbllen_), NewTable(0, tbllen_)
-		for i=1, bl*3, 3 do
-			bar_set[ bpm_list[i] ] = true
-		end
-		for i=1, tbllen_*2, 2 do
-			bar_set[ t[i] ] = true
-			sc_set[ t[i] ] = t[i+1]
-		end
+	local tbllen_ = #t/2
+	assert( tbllen_>0 and math_ceil(tbllen_)==tbllen_, BAR_RAT_ALT )
 
-		-- Lump bars in the bar_set into an Array of {bar, bpm_at_the_bar?, scale_at_the_bar?}.
-		--
-		local m_lumped = {}   -- Cannot use # to acquire the size of bar_set, for bar_set is not an Array-like Table.
-		local m_lumped_len, bar_set_key = 0, next(bar_set, nil)   -- Use next(t,k) to avoid the closure cost of pairs
-		while bar_set_key do
-			m_lumped_len = m_lumped_len + 1   -- m_lumped_len is used only as the insertion position.
-			m_lumped[m_lumped_len] = {bar_set_key, bpm_set[bar_set_key], sc_set[bar_set_key]}
-			bar_set_key = next(bar_set, bar_set_key)
-		end
-		table_sort(m_lumped, SortBy1)
-		assert( m_lumped[1][1]==0, "Bartime(s) MUST be non-negative." )
-
-		-- Fill lacked BPM value(s) & scales.
-		--
-		if not m_lumped[1][3] then   -- m_lumped[1][1] must be 0, and there must be a BPM value at bar 0 for m_lumped[1][2].
-			m_lumped[1][3] = 1
-		end
-		for i=2, m_lumped_len do
-			if not m_lumped[i][2] then   -- From bpm_list: with BPM, without ratio
-				m_lumped[i][2] = m_lumped[i-1][2]
-			elseif not m_lumped[i][3] then   -- From t: with scale, without BPM
-				m_lumped[i][3] = m_lumped[i-1][3]
-			end
-		end
-		assert( m_lumped[1][3]>=0, SPEED_0_NON_NEG )
-
-		-- Calculate Ratio, Discard adjecent-and-duplicated ratios, and that's the final result.
-		-- MergedTime*: {··, init_ms, base_dt, ratio, ··}
-		--
-		m2l = 1
-		local first_ratio = m_lumped[1][2] * m_lumped[1][3] / 15000
-		assert( first_ratio<=32, "SC Ratio out of range." )
-		MergedTime2[3] = first_ratio   -- 1st Line of MergedTime*, init_ms==0; base_dt==0
-		for i=2, m_lumped_len do
-			local ratio = m_lumped[i][2] * m_lumped[i][3] / 15000   -- Ratio: BPM * scale / 15000
-			if ratio ~= MergedTime2[m2l*3] then
-				assert( ratio>=-32 and ratio<=32, "SC Ratio out of range." )
-				m2l = m2l + 1
-
-				local m2lx3, new_ms = m2l*3, bar_to_ms( m_lumped[i][1] )   -- m2lx3 is the index of the new ratio
-				MergedTime2[m2lx3-2] = new_ms   -- New initms
-				MergedTime2[m2lx3] = ratio      -- New ratio
-
-				-- New base_dt: last_base_dt + (new_init_ms - last_init_ms) * last_ratio
-				local new_base_dt = MergedTime2[m2lx3-4] + (new_ms - MergedTime2[m2lx3-5]) * MergedTime2[m2lx3-3]
-				assert( new_base_dt>=0 and new_base_dt<=131072, "Base DTime out of range." )
-				MergedTime2[m2lx3-1] = new_base_dt
-			end
-		end
-		assert( MergedTime2[m2l*3]>=0, SPEED_L_NON_NEG )
-	end
-
-
-	-- L3: Local Wish Operands
+	-- Don't want the user to state sacles like "[bar1]=scvalue1, [bar2]=scvalue2", so we make the sc_set internally.
 	--
-	local __interpolate__ = {
-		[0] = function(current_value)                                                  -- STATIC
-			return current_value
-		end,
-
-		[1] = function(current_value, next_value, ratio)                               -- LINEAR
-			return current_value + (next_value - current_value) * ratio
-		end,
-
-		[2] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- OUTSINE
-			if curve_init==0 and curve_end==1 then
-				real_ratio = math_sin(real_ratio * HALF_PI)
-				return current_value + (next_value - current_value) * real_ratio
-			else
-				local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
-					  fci, fce, fcr = math_sin(curve_init*HALF_PI), math_sin(curve_end*HALF_PI), math_sin(real_ratio*HALF_PI)
-				return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
-			end
-		end,
-
-		[3] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- INSINE
-			if curve_init==0 and curve_end==1 then
-				real_ratio = 1 - math_cos(real_ratio * HALF_PI)
-				return current_value + (next_value - current_value) * real_ratio
-			else
-				local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
-					  fci, fce, fcr = 1-math_cos(curve_init*HALF_PI), 1-math_cos(curve_end*HALF_PI), 1-math_cos(real_ratio*HALF_PI)
-				return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
-			end
-		end,
-
-		[4] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- INQUAD
-			if curve_init==0 and curve_end==1 then
-				return current_value + (next_value - current_value) * real_ratio * real_ratio
-			else
-				local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
-					  fci, fce, fcr = curve_init*curve_init, curve_end*curve_end, fcr*fcr
-				return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
-			end
-		end,
-
-		[5] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- OUTQUAD
-			if curve_init==0 and curve_end==1 then
-				real_ratio = real_ratio * (2-real_ratio)
-				return current_value + (next_value - current_value) * real_ratio
-			else
-				local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
-					  fci, fce, fcr = curve_init * (2-curve_init), curve_end * (2-curve_end), fcr * (2-fcr)
-				return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
-			end
-		end
-	}
-
-	--- Get the X Position at the bartime specified of a Wish.
-	--- @param o Wish|Echo
-	--- @param bartime number
-	--- @return number|nil  The X Position value, or nil when querying failed
-	local function get_x(o, bartime)   -- Won't assert anything
-		if o.is_wish then
-			local xy = o.nodeset[bartime]
-			if xy then
-				return xy[1]
-			else
-				local nodes, nl, np = o.nodes, o.nl, o.np   -- Node: {bar, x, y, easetype, curve_init, curve_end, insert_order}
-				if bartime>=nodes[1][1] and bartime<nodes[nl][1] then
-					while np>1 and bartime<nodes[np][1] do   -- Regressive Iterating
-						np = np-1
-					end
-
-					while np < nl do   -- Forward Iterating
-						if bartime < nodes[np+1][1] then
-							o.np = np
-							local node_c, node_n = nodes[np], nodes[np+1]
-							local current_bar, current_x, next_x = node_c[1], node_c[2], node_n[2]
-
-							local real_ratio = (bartime-current_bar) / (node_n[1]-current_bar)
-							return __interpolate__[ node_c[4] ](current_x, next_x, real_ratio, node_c[5], node_c[6])
-						end
-							np = np+1
-					end
-				end
-			end
-		else   -- Echo: {t,x,y}
-			return o[2]+0
-		end
+	local bar_set, sc_set = NewTable(0, bl+tbllen_), NewTable(0, tbllen_)
+	for i=1, bl*3, 3 do
+		bar_set[ bpm_list[i] ] = true
+	end
+	for i=1, tbllen_*2, 2 do
+		bar_set[ t[i] ] = true
+		sc_set[ t[i] ] = t[i+1]
 	end
 
-	--- Get the Y Position at the bartime specified of a Wish.
-	--- @param o Wish|Echo
-	--- @param bartime number
-	--- @return number|nil  The Y Position value, or nil when querying failed
-	local function get_y(o, bartime)   -- Won't assert anything
-		if o.is_wish then
-			local xy = o.nodeset[bartime]
-			if xy then
-				return xy[2]
-			else
-				local nodes, nl, np = o.nodes, o.nl, o.np   -- Node: {bar, x, y, easetype, curve_init, curve_end, insert_order}
-				if bartime>=nodes[1][1] and bartime<nodes[nl][1] then
-					while np>1 and bartime<nodes[np][1] do   -- Regressive Iterating
-						np = np-1
-					end
+	-- Lump bars in the bar_set into an Array of {bar, bpm_at_the_bar?, scale_at_the_bar?}.
+	--
+	local m_lumped = {}   -- Cannot use # to acquire the size of bar_set, for bar_set is not an Array-like Table.
+	local m_lumped_len, bar_set_key = 0, next(bar_set, nil)   -- Use next(t,k) to avoid the closure cost of pairs
+	while bar_set_key do
+		m_lumped_len = m_lumped_len + 1   -- m_lumped_len is used only as the insertion position.
+		m_lumped[m_lumped_len] = {bar_set_key, bpm_set[bar_set_key], sc_set[bar_set_key]}
+		bar_set_key = next(bar_set, bar_set_key)
+	end
+	table_sort(m_lumped, SortBy1)
+	assert( m_lumped[1][1]==0, "Bartime(s) MUST be non-negative." )
 
-					while np < nl do   -- Forward Iterating
-						if bartime < nodes[np+1][1] then
-							o.np = np
-							local node_c, node_n = nodes[np], nodes[np+1]
-							local current_bar, current_y, next_y = node_c[1], node_c[3], node_n[3]
-
-							local easetype = node_c[4]
-							if easetype==2 then			easetype = 3   -- LCIRC -> ECOS(INSINE)
-							elseif easetype==3 then		easetype = 2   -- RCIRC -> ESIN(OUTSINE)
-							end
-
-							local real_ratio = (bartime-current_bar) / (node_n[1]-current_bar)
-							return __interpolate__[easetype](current_y, next_y, real_ratio, node_c[5], node_c[6])
-						end
-							np = np+1
-					end
-				end
-			end
-		else   -- Echo: {t,x,y}
-			return o[3]+0
+	-- Fill lacked BPM value(s) & scales.
+	--
+	if not m_lumped[1][3] then   -- m_lumped[1][1] must be 0, and there must be a BPM value at bar 0 for m_lumped[1][2].
+		m_lumped[1][3] = 1
+	end
+	for i=2, m_lumped_len do
+		if not m_lumped[i][2] then   -- From bpm_list: with BPM, without ratio
+			m_lumped[i][2] = m_lumped[i-1][2]
+		elseif not m_lumped[i][3] then   -- From t: with scale, without BPM
+			m_lumped[i][3] = m_lumped[i-1][3]
 		end
 	end
+	assert( m_lumped[1][3]>=0, SPEED_0_NON_NEG )
 
-	--- Insert a new PosNode with the bartime specified. Used only by the compiler to keep the bartime-mstime coherency.
-	--- Avoid calling this with bartime 0, safe though.
-	--- @param w Wish
-	--- @param bartime number
-	local function try_interpolate(w, bartime)   -- Won't assert anything
-		if not w.nodeset[bartime] then
-			local nodes, nl, np = w.nodes, w.nl, w.np   -- Node: {bar, x, y, easetype, curve_init, curve_end, insert_order}
+	-- Calculate Ratio, Discard adjecent-and-duplicated ratios, and that's the final result.
+	-- MergedTime*: {··, init_ms, base_dt, ratio, ··}
+	--
+	m1l = 1
+	local first_ratio = m_lumped[1][2] * m_lumped[1][3] / 15000
+	assert( first_ratio<=32, "SC Ratio out of range." )
+	MergedTime1[3] = first_ratio   -- 1st Line of MergedTime*: init_ms==0; base_dt==0; ratio set here
+	for i=2, m_lumped_len do
+		local ratio = m_lumped[i][2] * m_lumped[i][3] / 15000   -- Ratio: BPM * scale / 15000
+		if ratio ~= MergedTime1[m1l*3] then
+			assert( ratio>=-32 and ratio<=32, "SC Ratio out of range." )
+			m1l = m1l + 1
+
+			local m1lx3, new_ms = m1l*3, bar_to_ms( m_lumped[i][1] )   -- m1lx3 is the index of the new ratio
+			MergedTime1[m1lx3-2] = new_ms   -- New initms
+			MergedTime1[m1lx3] = ratio      -- New ratio
+
+			-- New base_dt: last_base_dt + (new_init_ms - last_init_ms) * last_ratio
+			local new_base_dt = MergedTime1[m1lx3-4] + (new_ms - MergedTime1[m1lx3-5]) * MergedTime1[m1lx3-3]
+			assert( new_base_dt>=0 and new_base_dt<=131072, "Base DTime out of range." )
+			MergedTime1[m1lx3-1] = new_base_dt
+		end
+	end
+	assert( MergedTime1[m1l*3]>=0, SPEED_L_NON_NEG )
+end
+
+--- Set the speed ratio of Layer 2.
+--- Use the "ScLayer2 {}" clause to call this, AHEAD of other prototype codes.
+--- @param t number[]  Put bartimes and ratios alternatively. The smallest bartime MUST be 0, and the 1st/last ratio(s) MUST be non-negative.
+function Nemesis.ScLayer2(t)
+	assert( bpm_list, USE_TIME_CLAUSE )
+	assert( type(t)=="table", USE_SC2_CLAUSE )
+
+	local tbllen_ = #t/2
+	assert( tbllen_>0 and math_ceil(tbllen_)==tbllen_, BAR_RAT_ALT )
+
+	-- Don't want the user to state sacles like "[bar1]=scvalue1, [bar2]=scvalue2", so we make the sc_set internally.
+	--
+	local bar_set, sc_set = NewTable(0, bl+tbllen_), NewTable(0, tbllen_)
+	for i=1, bl*3, 3 do
+		bar_set[ bpm_list[i] ] = true
+	end
+	for i=1, tbllen_*2, 2 do
+		bar_set[ t[i] ] = true
+		sc_set[ t[i] ] = t[i+1]
+	end
+
+	-- Lump bars in the bar_set into an Array of {bar, bpm_at_the_bar?, scale_at_the_bar?}.
+	--
+	local m_lumped = {}   -- Cannot use # to acquire the size of bar_set, for bar_set is not an Array-like Table.
+	local m_lumped_len, bar_set_key = 0, next(bar_set, nil)   -- Use next(t,k) to avoid the closure cost of pairs
+	while bar_set_key do
+		m_lumped_len = m_lumped_len + 1   -- m_lumped_len is used only as the insertion position.
+		m_lumped[m_lumped_len] = {bar_set_key, bpm_set[bar_set_key], sc_set[bar_set_key]}
+		bar_set_key = next(bar_set, bar_set_key)
+	end
+	table_sort(m_lumped, SortBy1)
+	assert( m_lumped[1][1]==0, "Bartime(s) MUST be non-negative." )
+
+	-- Fill lacked BPM value(s) & scales.
+	--
+	if not m_lumped[1][3] then   -- m_lumped[1][1] must be 0, and there must be a BPM value at bar 0 for m_lumped[1][2].
+		m_lumped[1][3] = 1
+	end
+	for i=2, m_lumped_len do
+		if not m_lumped[i][2] then   -- From bpm_list: with BPM, without ratio
+			m_lumped[i][2] = m_lumped[i-1][2]
+		elseif not m_lumped[i][3] then   -- From t: with scale, without BPM
+			m_lumped[i][3] = m_lumped[i-1][3]
+		end
+	end
+	assert( m_lumped[1][3]>=0, SPEED_0_NON_NEG )
+
+	-- Calculate Ratio, Discard adjecent-and-duplicated ratios, and that's the final result.
+	-- MergedTime*: {··, init_ms, base_dt, ratio, ··}
+	--
+	m2l = 1
+	local first_ratio = m_lumped[1][2] * m_lumped[1][3] / 15000
+	assert( first_ratio<=32, "SC Ratio out of range." )
+	MergedTime2[3] = first_ratio   -- 1st Line of MergedTime*, init_ms==0; base_dt==0
+	for i=2, m_lumped_len do
+		local ratio = m_lumped[i][2] * m_lumped[i][3] / 15000   -- Ratio: BPM * scale / 15000
+		if ratio ~= MergedTime2[m2l*3] then
+			assert( ratio>=-32 and ratio<=32, "SC Ratio out of range." )
+			m2l = m2l + 1
+
+			local m2lx3, new_ms = m2l*3, bar_to_ms( m_lumped[i][1] )   -- m2lx3 is the index of the new ratio
+			MergedTime2[m2lx3-2] = new_ms   -- New initms
+			MergedTime2[m2lx3] = ratio      -- New ratio
+
+			-- New base_dt: last_base_dt + (new_init_ms - last_init_ms) * last_ratio
+			local new_base_dt = MergedTime2[m2lx3-4] + (new_ms - MergedTime2[m2lx3-5]) * MergedTime2[m2lx3-3]
+			assert( new_base_dt>=0 and new_base_dt<=131072, "Base DTime out of range." )
+			MergedTime2[m2lx3-1] = new_base_dt
+		end
+	end
+	assert( MergedTime2[m2l*3]>=0, SPEED_L_NON_NEG )
+end
+
+
+-- L3: Local Wish Operands
+--
+local __interpolate__ = {
+	[0] = function(current_value)                                                  -- STATIC
+		return current_value
+	end,
+
+	[1] = function(current_value, next_value, ratio)                               -- LINEAR
+		return current_value + (next_value - current_value) * ratio
+	end,
+
+	[2] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- OUTSINE
+		if curve_init==0 and curve_end==1 then
+			real_ratio = math_sin(real_ratio * HALF_PI)
+			return current_value + (next_value - current_value) * real_ratio
+		else
+			local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
+				  fci, fce, fcr = math_sin(curve_init*HALF_PI), math_sin(curve_end*HALF_PI), math_sin(real_ratio*HALF_PI)
+			return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
+		end
+	end,
+
+	[3] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- INSINE
+		if curve_init==0 and curve_end==1 then
+			real_ratio = 1 - math_cos(real_ratio * HALF_PI)
+			return current_value + (next_value - current_value) * real_ratio
+		else
+			local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
+				  fci, fce, fcr = 1-math_cos(curve_init*HALF_PI), 1-math_cos(curve_end*HALF_PI), 1-math_cos(real_ratio*HALF_PI)
+			return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
+		end
+	end,
+
+	[4] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- INQUAD
+		if curve_init==0 and curve_end==1 then
+			return current_value + (next_value - current_value) * real_ratio * real_ratio
+		else
+			local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
+				  fci, fce, fcr = curve_init*curve_init, curve_end*curve_end, fcr*fcr
+			return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
+		end
+	end,
+
+	[5] = function(current_value, next_value, real_ratio, curve_init, curve_end)   -- OUTQUAD
+		if curve_init==0 and curve_end==1 then
+			real_ratio = real_ratio * (2-real_ratio)
+			return current_value + (next_value - current_value) * real_ratio
+		else
+			local fcr, fci, fce = curve_init + (curve_end - curve_init) * real_ratio
+				  fci, fce, fcr = curve_init * (2-curve_init), curve_end * (2-curve_end), fcr * (2-fcr)
+			return ( (fce-fcr)*current_value + (fcr-fci)*next_value ) / (fce-fci)
+		end
+	end
+}
+
+--- Get the X Position at the bartime specified of a Wish.
+--- @param o Wish|Echo
+--- @param bartime number
+--- @return number|nil  The X Position value, or nil when querying failed
+local function get_x(o, bartime)   -- Won't assert anything
+	if o.is_wish then
+		local xy = o.nodeset[bartime]
+		if xy then
+			return xy[1]
+		else
+			local nodes, nl, np = o.nodes, o.nl, o.np   -- Node: {bar, x, y, easetype, curve_init, curve_end, insert_order}
 			if bartime>=nodes[1][1] and bartime<nodes[nl][1] then
 				while np>1 and bartime<nodes[np][1] do   -- Regressive Iterating
 					np = np-1
@@ -613,403 +543,544 @@ function NemesisInitialize()
 
 				while np < nl do   -- Forward Iterating
 					if bartime < nodes[np+1][1] then
+						o.np = np
 						local node_c, node_n = nodes[np], nodes[np+1]
-						local current_bar, current_x, current_y, ci, ce = node_c[1], node_c[2], node_c[3], node_c[5], node_c[6]
-						local next_x, next_y = node_n[2], node_n[3]
-
-						local easetype_x = node_c[4]
-						local easetype_y = easetype_x
-						if easetype_y==2 then			easetype_y = 3   -- LCIRC -> ECOS(INSINE)
-						elseif easetype_y==3 then		easetype_y = 2   -- RCIRC -> ESIN(OUTSINE)
-						end
+						local current_bar, current_x, next_x = node_c[1], node_c[2], node_n[2]
 
 						local real_ratio = (bartime-current_bar) / (node_n[1]-current_bar)
-						local new_x = __interpolate__[easetype_x](current_x, next_x, real_ratio, ci, ce)
-						local new_y = __interpolate__[easetype_y](current_y, next_y, real_ratio, ci, ce)
-
-						local curve_ratio = ci + (ce-ci) * real_ratio
-						local node_to_insert = {bartime, new_x, new_y, easetype_x, curve_ratio, ce, 65536}
-						table_insert(nodes, np+1, node_to_insert)   -- List, Pos, Value  /  A series of shallow copy
-						node_c[6] = curve_ratio
-
-						w.nodeset[bartime] = {new_x, new_y}
-						w.nl = w.nl+1
-						w.np = np
-						return
+						return __interpolate__[ node_c[4] ](current_x, next_x, real_ratio, node_c[5], node_c[6])
 					end
 						np = np+1
 				end
 			end
 		end
+	else   -- Echo: {t,x,y}
+		return o[2]+0
 	end
+end
 
-	--- Move the calling Wish (also its WishChilds, AngleNodes and related Hints) / Echo, with delta arguments specified.
-	--- @param o Wish|Echo
-	--- @param delta_bar number|nil
-	--- @param dx number|nil
-	--- @param dy number|nil
-	local function move(o, delta_bar, dx, dy)
-		delta_bar = delta_bar or 0
-		dx = dx or 0
-		dy = dy or 0
-
-		if o.is_wish then
-			-- Move Hints
-			--
-			local hints = o.hints
-			for i=1, o.hl do
-				local new_bar = hints[i]+delta_bar
-				assert( new_bar>=0, BAR_NON_NEG )
-				hints[i] = new_bar
-			end
-
-			local sh_bar = o.special_hint
-			if sh_bar then
-				sh_bar = sh_bar+delta_bar
-				assert( sh_bar>=0, BAR_NON_NEG )
-				o.special_hint = sh_bar
-			end
-
-			-- Move Nodes & Create the new NodeSet
-			--
-			local nodes = o.nodes
-			local new_nodeset = NewTable(0, o.nl)
-			do   -- Only do new_bar>=0 assertion for the 1st Node.
-				local current_node = nodes[1]
-				local new_bar, new_x, new_y = current_node[1]+delta_bar, current_node[2]+dx, current_node[3]+dy
-				assert( new_bar>=0, BAR_NON_NEG )
-				assert( new_x>=-128 and new_x<=128, MX_OUT_OF_RANGE )
-				assert( new_y>=-64 and new_y<=64, MY_OUT_OF_RANGE )
-				current_node[1], current_node[2], current_node[3] = new_bar, new_x, new_y
-				new_nodeset[new_bar] = {new_x, new_y}
-			end
-			for i=2, o.nl do
-				local current_node = nodes[i]
-				local new_bar, new_x, new_y = current_node[1]+delta_bar, current_node[2]+dx, current_node[3]+dy
-				assert( new_x>=-128 and new_x<=128, MX_OUT_OF_RANGE )
-				assert( new_y>=-64 and new_y<=64, MY_OUT_OF_RANGE )
-				current_node[1], current_node[2], current_node[3] = new_bar, new_x, new_y
-				new_nodeset[new_bar] = {new_x, new_y}
-			end
-			o.nodeset = new_nodeset
-
-			-- Move Childs
-			--
-			local childs = o.wishchilds
-			for i=1, o.wcl do
-				local current_child = childs[i]
-				do   -- Only do new_bar>=0 assertion for the 1st Bartime.
-					local new_bar = childs[1]+delta_bar
-					assert( new_bar>=0, BAR_NON_NEG )
-					childs[1] = new_bar
-				end
-				for j=2, current_child.bl do
-					childs[j] = childs[j]+delta_bar
-				end
-
-				local anodes = current_child.angle
-				if anodes[1][1] > 0 then   -- Only move absolute bartime(s).
-					do   -- Only do new_bar>=0 assertion for the 1st Bartime.
-						local new_bar = anodes[1][1]+delta_bar
-						assert( new_bar>=0, BAR_NON_NEG )
-						anodes[1][1] = new_bar
-					end
-					for j=2, current_child.al do
-						anodes[j][1] = anodes[j][1]+delta_bar
-					end
-				end
-			end
-
-			childs = o.echochilds
-			for i=1, o.ecl do
-				local current_child = childs[i]
-				do   -- Only do new_bar>=0 assertion for the 1st Bartime.
-					local new_bar = childs[1]+delta_bar
-					assert( new_bar>=0, BAR_NON_NEG )
-					childs[1] = new_bar
-				end
-				for j=2, current_child.bl do
-					childs[j] = childs[j]+delta_bar
-				end
-
-				local anodes = current_child.angle
-				if anodes[1][1] > 0 then   -- Only move absolute bartime(s).
-					do   -- Only do new_bar>=0 assertion for the 1st Bartime.
-						local new_bar = anodes[1][1]+delta_bar
-						assert( new_bar>=0, BAR_NON_NEG )
-						anodes[1][1] = new_bar
-					end
-					for j=2, current_child.al do
-						anodes[j][1] = anodes[j][1]+delta_bar
-					end
-				end
-			end
+--- Get the Y Position at the bartime specified of a Wish.
+--- @param o Wish|Echo
+--- @param bartime number
+--- @return number|nil  The Y Position value, or nil when querying failed
+local function get_y(o, bartime)   -- Won't assert anything
+	if o.is_wish then
+		local xy = o.nodeset[bartime]
+		if xy then
+			return xy[2]
 		else
-			local newbar, newx, newy = o[1]+delta_bar, o[2]+dx, o[3]+dy
-			assert( newbar>=0, "The new bartime MUST be non-negative." )
-			assert( newx>=-128 and newx<=128, "New X-Axis position out of range." )
-			assert( newy>=-64 and newy<=64, "New Y-Axis position out of range." )
-			o[1], o[2], o[3] = newbar, newx, newy
-		end
-	end
-
-	--- Turn the Wish mirrored along the Y-Axis.
-	--- @param o Wish|Echo
-	local function mirror_lr(o)
-		if o.is_wish then
-			-- Mirror Nodes & Create the new NodeSet
-			--
-			local nodes = o.nodes
-			local new_nodeset = NewTable(0, o.nl)
-			for i=1, o.nl do
-				local current_node = nodes[i]
-				local new_x = 16 - current_node[2]
-				new_nodeset[ current_node[1] ] = { new_x, current_node[3] }
-				current_node[2] = new_x
-			end
-			o.nodeset = new_nodeset
-
-			-- Mirror Childs
-			--
-			local childs = o.wishchilds
-			for i=1, o.wcl do
-				local anodes = childs[i].angle
-				for j=1, childs[i].al do
-					anodes[j][2] = 180 - anodes[j][2]
+			local nodes, nl, np = o.nodes, o.nl, o.np   -- Node: {bar, x, y, easetype, curve_init, curve_end, insert_order}
+			if bartime>=nodes[1][1] and bartime<nodes[nl][1] then
+				while np>1 and bartime<nodes[np][1] do   -- Regressive Iterating
+					np = np-1
 				end
-			end
 
-			childs = o.echochilds
-			for i=1, o.ecl do
-				local anodes = childs[i].angle
-				for j=1, childs[i].al do
-					anodes[j][2] = 180 - anodes[j][2]
-				end
-			end
-		else
-			o[2] = 16 - o[1]
-		end
-	end
+				while np < nl do   -- Forward Iterating
+					if bartime < nodes[np+1][1] then
+						o.np = np
+						local node_c, node_n = nodes[np], nodes[np+1]
+						local current_bar, current_y, next_y = node_c[1], node_c[3], node_n[3]
 
-	--- Turn the Wish mirrored along the X-Axis.
-	--- @param o Wish|Echo
-	local function mirror_ud(o)
-		if o.is_wish then
-			-- Mirror Nodes & Create the new NodeSet
-			--
-			local nodes = o.nodes
-			local new_nodeset = NewTable(0, o.nl)
-			for i=1, o.nl do
-				local current_node = nodes[i]
-				local new_y = 8 - current_node[3]
-				new_nodeset[ current_node[1] ] = { current_node[2], new_y }
-				current_node[3] = new_y
-			end
-			o.nodeset = new_nodeset
+						local easetype = node_c[4]
+						if easetype==2 then			easetype = 3   -- LCIRC -> ECOS(INSINE)
+						elseif easetype==3 then		easetype = 2   -- RCIRC -> ESIN(OUTSINE)
+						end
 
-			-- Mirror Childs
-			--
-			local childs = o.wishchilds
-			for i=1, o.wcl do
-				local anodes = childs[i].angle
-				for j=1, childs[i].al do
-					anodes[j][2] = -anodes[j][2]
-				end
-			end
-
-			childs = o.echochilds
-			for i=1, o.ecl do
-				local anodes = childs[i].angle
-				for j=1, childs[i].al do
-					anodes[j][2] = -anodes[j][2]
-				end
-			end
-		else
-			o[3] = 8 - o[3]
-		end
-	end
-
-
-	-- L4: Element Stating Methods
-	--
-	local WM = {
-		__index = {
-			is_wish = true,
-			MirrorLR = mirror_lr,
-			MirrorUD = mirror_ud,
-			Move = move
-		}
-	}
-
-	--- Insert WishChild(s). Use the "WishChild {}" clause to call this, or use "WishChild(bar)" as a shorthand of "WishChild {angle=90, bar}".
-	--- @param w Wish
-	--- @param t number|table
-	--- @param t.angle number|number[]|nil  State AngleNodes like this: {··bar1,degree1,easetype1,bartime2,degree2,easetype2··}; Let EVERY bartime be a positive number as absolute bartime, or a negative number as relative bartime. Easetypes Provided: STATIC, LINEAR, INSINE, OUTSINE, INQUAD, OUTQUAD. Pass a single number in as a shorthand of {0,t.angle,STATIC}; a nil in as a shorthand of {0,90,STATIC}.
-	local function wishchild(w, t)
-		local wcl = w.wcl
-		if type(t)=="table" then
-			-- Bartime(s)
-			--
-			table_sort(t)
-			assert( t[1]>=0, "Bartime(s) MUST be non-negative." )
-			local barcnt = #t
-
-			-- Add bartime(s) into Hints Table
-			--
-			local hints, hl = w.hints, w.hl
-			for i=1, barcnt do
-				hints[hl+i] = t[i]
-			end
-			w.hl = hl + barcnt
-			t.bl = barcnt
-
-			-- AngleNode(s)
-			--
-			if t.angle then
-				local agl = t.angle
-				if type(agl)=="table" then
-					local agllen_ = #agl / 3
-					assert( math_ceil(agllen_)==agllen_, BAR_DEG_ET_ALT )
-
-					local lumped = NewTable(agllen_, 0)
-					for i=1, agllen_ do
-						local ix3 = i*3
-						local bar, degree, easetype = agl[ix3-2], agl[ix3-1], math_ceil( agl[ix3] )
-						assert( degree>=-32580 and degree<=32580, "Invalid Degree." )
-						assert( easetype>=0 and easetype<=5, "Invalid Easetype." )
-						lumped[i] = {bar, degree, easetype}
+						local real_ratio = (bartime-current_bar) / (node_n[1]-current_bar)
+						return __interpolate__[easetype](current_y, next_y, real_ratio, node_c[5], node_c[6])
 					end
-					table_sort(lumped, SortBy1)
-					assert( lumped[1][1]*lumped[agllen_][1]>=0, DONT_ABS_REL_SIM )
-
-					t.angle = lumped
-					t.al = agllen_
-				else
-					t.angle = { {0,agl,0} }
-					t.al = 1
+						np = np+1
 				end
-			else
-				t.angle = { {0,90,0} }
-				t.al = 1
+			end
+		end
+	else   -- Echo: {t,x,y}
+		return o[3]+0
+	end
+end
+
+--- Insert a new PosNode with the bartime specified. Used only by the compiler to keep the bartime-mstime coherency.
+--- Avoid calling this with bartime 0, safe though.
+--- @param w Wish
+--- @param bartime number
+local function try_interpolate(w, bartime)   -- Won't assert anything
+	if not w.nodeset[bartime] then
+		local nodes, nl, np = w.nodes, w.nl, w.np   -- Node: {bar, x, y, easetype, curve_init, curve_end, insert_order}
+		if bartime>=nodes[1][1] and bartime<nodes[nl][1] then
+			while np>1 and bartime<nodes[np][1] do   -- Regressive Iterating
+				np = np-1
 			end
 
-			wcl = wcl+1
-			w.wishchilds[wcl] = t
-			w.wcl = wcl
-		else
-			t = t+0
-			wcl = wcl+1
-			w.wishchilds[wcl] = {angle={{0,90,0}}, al=1, bl=1, t}   -- Member angle, al(AngleNodes count), bl(bartimes count); Bartime array
-			w.wcl = wcl
+			while np < nl do   -- Forward Iterating
+				if bartime < nodes[np+1][1] then
+					local node_c, node_n = nodes[np], nodes[np+1]
+					local current_bar, current_x, current_y, ci, ce = node_c[1], node_c[2], node_c[3], node_c[5], node_c[6]
+					local next_x, next_y = node_n[2], node_n[3]
 
-			local hints_insert_pos = w.hl+1
-			w.hints[hints_insert_pos] = t
-			w.hl = hints_insert_pos
-		end
-	end
-
-	--- Insert EchoChild(s). Use the "EchoChild {}" clause to call this, or use "EchoChild(bar)" as a shorthand of "EchoChild {angle=90, bar}".
-	--- @param w Wish
-	--- @param t number|table
-	--- @param t.angle number|number[]|nil  State AngleNodes like this: {··bar1,degree1,easetype1,bartime2,degree2,easetype2··}; Let EVERY bartime be a positive number as absolute bartime, or a negative number as relative bartime. Easetypes Provided: STATIC, LINEAR, INSINE, OUTSINE, INQUAD, OUTQUAD. Pass a single number in as a shorthand of {0,t.angle,STATIC}; a nil in as a shorthand of {0,90,STATIC}.
-	local function echochild(w, t)
-		local ecl = w.ecl
-		if type(t)=="table" then
-			-- Bartime(s)
-			--
-			table_sort(t)
-			assert( t[1]>=0, "Bartime(s) MUST be non-negative." )
-			t.bl = #t
-
-			-- AngleNode(s)
-			--
-			if t.angle then
-				local agl = t.angle
-				if type(agl)=="table" then
-					local agllen_ = #agl / 3
-					assert( math_ceil(agllen_)==agllen_, BAR_DEG_ET_ALT )
-
-					local lumped = NewTable(agllen_, 0)
-					for i=1, agllen_ do
-						local ix3 = i*3
-						local bar, degree, easetype = agl[ix3-2], agl[ix3-1], agl[ix3]
-						assert( degree>=-32580 and degree<=32580, "Invalid Degree." )
-						assert( easetype>=0 and easetype<=5, "Invalid Easetype." )
-						lumped[i] = {bar, degree, easetype}
+					local easetype_x = node_c[4]
+					local easetype_y = easetype_x
+					if easetype_y==2 then			easetype_y = 3   -- LCIRC -> ECOS(INSINE)
+					elseif easetype_y==3 then		easetype_y = 2   -- RCIRC -> ESIN(OUTSINE)
 					end
-					table_sort(lumped, SortBy1)
-					assert( lumped[1][1]*lumped[agllen_][1]>=0, DONT_ABS_REL_SIM )
 
-					t.angle = lumped
-					t.al = agllen_
-				else
-					t.angle = { {0,agl,0} }
-					t.al = 1
+					local real_ratio = (bartime-current_bar) / (node_n[1]-current_bar)
+					local new_x = __interpolate__[easetype_x](current_x, next_x, real_ratio, ci, ce)
+					local new_y = __interpolate__[easetype_y](current_y, next_y, real_ratio, ci, ce)
+
+					local curve_ratio = ci + (ce-ci) * real_ratio
+					local node_to_insert = {bartime, new_x, new_y, easetype_x, curve_ratio, ce, 65536}
+					table_insert(nodes, np+1, node_to_insert)   -- List, Pos, Value  /  A series of shallow copy
+					node_c[6] = curve_ratio
+
+					w.nodeset[bartime] = {new_x, new_y}
+					w.nl = w.nl+1
+					w.np = np
+					return
 				end
-			else
-				t.angle = { {0,90,0} }
-				t.al = 1
+					np = np+1
 			end
-
-			ecl = ecl+1
-			w.echochilds[ecl] = t
-			w.ecl = ecl
-		else
-			ecl = ecl+1
-			w.echochilds[ecl] = {angle={{0,90,0}}, al=1, bl=1, t+0}   -- Member angle, al(AngleNodes count), bl(bartimes count); Bartime array
-			w.ecl = ecl
 		end
 	end
+end
 
-	--- Manually Create Manual Hint(s) for the Wish passed in. Use the "ManualHint(w) {}" clause to call this, or "ManualHint(w)(bar)" as a shorthand of "ManualHint(w) {bar}". If arg w is omitted, the last Wish stated will be picked.
-	--- @param w Wish
-	--- @param t number|number[]  Bartime or bartimes
-	local function manual_hint(w, t)
-		local hl = w.hl
-		if type(t)=="table" then
-			local tbllen = #t
-			for i=1, tbllen do
-				local time = t[i]
-				assert( time>=0, "Bartime(s) MUST be non-negative." )
-				w.hints[hl+i] = time
-			end
-			w.hl = hl + tbllen
-		else
-			assert( t>=0, "Bartime(s) MUST be non-negative." )
-			hl = hl + 1
-			w.hints[hl] = t
-			w.hl = hl
-		end
-	end
+--- Move the calling Wish (also its WishChilds, AngleNodes and related Hints) / Echo, with delta arguments specified.
+--- @param o Wish|Echo
+--- @param delta_bar number|nil
+--- @param dx number|nil
+--- @param dy number|nil
+local function move(o, delta_bar, dx, dy)
+	delta_bar = delta_bar or 0
+	dx = dx or 0
+	dy = dy or 0
 
-	--- Create a new Wish and tell Nemesis what Nodes are contained within.
-	--- Use the "Wish {··,t,x,y,e,··}" style to call this. Easetypes Provided: STATIC, LINEAR, LCIRC, RCIRC, INQUAD, OUTQUAD.
-	--- @param t table
-	--- @param t.layer number  Which layer the Wish created belongs to (Layer 1 or Layer 2), 1 by default
-	--- @param t.temporary boolean  If true, the Wish created will be discarded by Arf3.MakeArf()
-	--- @param t.max_visible_distance number  Range [[0,16]], 7 by default
-	--- @return Wish,Wish  Bind this to a var as a ref of the Wish you created. / For temporary Wish(es), you may want to write something like "Tx,Ty = Wish {···}", and the redundant return value gives you some convenience to achieve this.
-	function Nemesis.Wish(t)
-		assert( type(t)=="table", USE_WISH_CLAUSE )
-
-		local mvd = t.max_visible_distance
-		if type(mvd)=="number" then
-			if mvd > 16 then		mvd = 16
-			elseif mvd < 0 then		mvd = 0
-			end
-		else 						mvd = 7
-		end
-
-		-- Lump & Sort Nodes
+	if o.is_wish then
+		-- Move Hints
 		--
-		local tbllen_ = #t/4
-		assert( math_ceil(tbllen_)==tbllen_, BAR_X_Y_ET_ALT )
-		assert( tbllen_>1, AT_LEAST_2_NODES_REQUIRED )
+		local hints = o.hints
+		for i=1, o.hl do
+			local new_bar = hints[i]+delta_bar
+			assert( new_bar>=0, BAR_NON_NEG )
+			hints[i] = new_bar
+		end
 
-		local nodes, nodeset = NewTable(tbllen_, 0), NewTable(0, tbllen_)
+		local sh_bar = o.special_hint
+		if sh_bar then
+			sh_bar = sh_bar+delta_bar
+			assert( sh_bar>=0, BAR_NON_NEG )
+			o.special_hint = sh_bar
+		end
+
+		-- Move Nodes & Create the new NodeSet
+		--
+		local nodes = o.nodes
+		local new_nodeset = NewTable(0, o.nl)
+		do   -- Only do new_bar>=0 assertion for the 1st Node.
+			local current_node = nodes[1]
+			local new_bar, new_x, new_y = current_node[1]+delta_bar, current_node[2]+dx, current_node[3]+dy
+			assert( new_bar>=0, BAR_NON_NEG )
+			assert( new_x>=-128 and new_x<=128, MX_OUT_OF_RANGE )
+			assert( new_y>=-64 and new_y<=64, MY_OUT_OF_RANGE )
+			current_node[1], current_node[2], current_node[3] = new_bar, new_x, new_y
+			new_nodeset[new_bar] = {new_x, new_y}
+		end
+		for i=2, o.nl do
+			local current_node = nodes[i]
+			local new_bar, new_x, new_y = current_node[1]+delta_bar, current_node[2]+dx, current_node[3]+dy
+			assert( new_x>=-128 and new_x<=128, MX_OUT_OF_RANGE )
+			assert( new_y>=-64 and new_y<=64, MY_OUT_OF_RANGE )
+			current_node[1], current_node[2], current_node[3] = new_bar, new_x, new_y
+			new_nodeset[new_bar] = {new_x, new_y}
+		end
+		o.nodeset = new_nodeset
+
+		-- Move Childs
+		--
+		local childs = o.wishchilds
+		for i=1, o.wcl do
+			local current_child = childs[i]
+			do   -- Only do new_bar>=0 assertion for the 1st Bartime.
+				local new_bar = childs[1]+delta_bar
+				assert( new_bar>=0, BAR_NON_NEG )
+				childs[1] = new_bar
+			end
+			for j=2, current_child.bl do
+				childs[j] = childs[j]+delta_bar
+			end
+
+			local anodes = current_child.angle
+			if anodes[1][1] > 0 then   -- Only move absolute bartime(s).
+				do   -- Only do new_bar>=0 assertion for the 1st Bartime.
+					local new_bar = anodes[1][1]+delta_bar
+					assert( new_bar>=0, BAR_NON_NEG )
+					anodes[1][1] = new_bar
+				end
+				for j=2, current_child.al do
+					anodes[j][1] = anodes[j][1]+delta_bar
+				end
+			end
+		end
+
+		childs = o.echochilds
+		for i=1, o.ecl do
+			local current_child = childs[i]
+			do   -- Only do new_bar>=0 assertion for the 1st Bartime.
+				local new_bar = childs[1]+delta_bar
+				assert( new_bar>=0, BAR_NON_NEG )
+				childs[1] = new_bar
+			end
+			for j=2, current_child.bl do
+				childs[j] = childs[j]+delta_bar
+			end
+
+			local anodes = current_child.angle
+			if anodes[1][1] > 0 then   -- Only move absolute bartime(s).
+				do   -- Only do new_bar>=0 assertion for the 1st Bartime.
+					local new_bar = anodes[1][1]+delta_bar
+					assert( new_bar>=0, BAR_NON_NEG )
+					anodes[1][1] = new_bar
+				end
+				for j=2, current_child.al do
+					anodes[j][1] = anodes[j][1]+delta_bar
+				end
+			end
+		end
+	else
+		local newbar, newx, newy = o[1]+delta_bar, o[2]+dx, o[3]+dy
+		assert( newbar>=0, "The new bartime MUST be non-negative." )
+		assert( newx>=-128 and newx<=128, "New X-Axis position out of range." )
+		assert( newy>=-64 and newy<=64, "New Y-Axis position out of range." )
+		o[1], o[2], o[3] = newbar, newx, newy
+	end
+end
+
+--- Turn the Wish mirrored along the Y-Axis.
+--- @param o Wish|Echo
+local function mirror_lr(o)
+	if o.is_wish then
+		-- Mirror Nodes & Create the new NodeSet
+		--
+		local nodes = o.nodes
+		local new_nodeset = NewTable(0, o.nl)
+		for i=1, o.nl do
+			local current_node = nodes[i]
+			local new_x = 16 - current_node[2]
+			new_nodeset[ current_node[1] ] = { new_x, current_node[3] }
+			current_node[2] = new_x
+		end
+		o.nodeset = new_nodeset
+
+		-- Mirror Childs
+		--
+		local childs = o.wishchilds
+		for i=1, o.wcl do
+			local anodes = childs[i].angle
+			for j=1, childs[i].al do
+				anodes[j][2] = 180 - anodes[j][2]
+			end
+		end
+
+		childs = o.echochilds
+		for i=1, o.ecl do
+			local anodes = childs[i].angle
+			for j=1, childs[i].al do
+				anodes[j][2] = 180 - anodes[j][2]
+			end
+		end
+	else
+		o[2] = 16 - o[1]
+	end
+end
+
+--- Turn the Wish mirrored along the X-Axis.
+--- @param o Wish|Echo
+local function mirror_ud(o)
+	if o.is_wish then
+		-- Mirror Nodes & Create the new NodeSet
+		--
+		local nodes = o.nodes
+		local new_nodeset = NewTable(0, o.nl)
+		for i=1, o.nl do
+			local current_node = nodes[i]
+			local new_y = 8 - current_node[3]
+			new_nodeset[ current_node[1] ] = { current_node[2], new_y }
+			current_node[3] = new_y
+		end
+		o.nodeset = new_nodeset
+
+		-- Mirror Childs
+		--
+		local childs = o.wishchilds
+		for i=1, o.wcl do
+			local anodes = childs[i].angle
+			for j=1, childs[i].al do
+				anodes[j][2] = -anodes[j][2]
+			end
+		end
+
+		childs = o.echochilds
+		for i=1, o.ecl do
+			local anodes = childs[i].angle
+			for j=1, childs[i].al do
+				anodes[j][2] = -anodes[j][2]
+			end
+		end
+	else
+		o[3] = 8 - o[3]
+	end
+end
+
+
+-- L4: Element Stating Methods
+--
+local WM = {
+	__index = {
+		is_wish = true,
+		MirrorLR = mirror_lr,
+		MirrorUD = mirror_ud,
+		Move = move
+	}
+}
+
+--- Insert WishChild(s). Use the "WishChild {}" clause to call this, or use "WishChild(bar)" as a shorthand of "WishChild {angle=90, bar}".
+--- @param w Wish
+--- @param t number|table
+--- @param t.angle number|number[]|nil  State AngleNodes like this: {··bar1,degree1,easetype1,bartime2,degree2,easetype2··}; Let EVERY bartime be a positive number as absolute bartime, or a negative number as relative bartime. Easetypes Provided: STATIC, LINEAR, INSINE, OUTSINE, INQUAD, OUTQUAD. Pass a single number in as a shorthand of {0,t.angle,STATIC}; a nil in as a shorthand of {0,90,STATIC}.
+local function wishchild(w, t)
+	local wcl = w.wcl
+	if type(t)=="table" then
+		-- Bartime(s)
+		--
+		table_sort(t)
+		assert( t[1]>=0, "Bartime(s) MUST be non-negative." )
+		local barcnt = #t
+
+		-- Add bartime(s) into Hints Table
+		--
+		local hints, hl = w.hints, w.hl
+		for i=1, barcnt do
+			hints[hl+i] = t[i]
+		end
+		w.hl = hl + barcnt
+		t.bl = barcnt
+
+		-- AngleNode(s)
+		--
+		if t.angle then
+			local agl = t.angle
+			if type(agl)=="table" then
+				local agllen_ = #agl / 3
+				assert( math_ceil(agllen_)==agllen_, BAR_DEG_ET_ALT )
+
+				local lumped = NewTable(agllen_, 0)
+				for i=1, agllen_ do
+					local ix3 = i*3
+					local bar, degree, easetype = agl[ix3-2], agl[ix3-1], math_ceil( agl[ix3] )
+					assert( degree>=-32580 and degree<=32580, "Invalid Degree." )
+					assert( easetype>=0 and easetype<=5, "Invalid Easetype." )
+					lumped[i] = {bar, degree, easetype}
+				end
+				table_sort(lumped, SortBy1)
+				assert( lumped[1][1]*lumped[agllen_][1]>=0, DONT_ABS_REL_SIM )
+
+				t.angle = lumped
+				t.al = agllen_
+			else
+				t.angle = { {0,agl,0} }
+				t.al = 1
+			end
+		else
+			t.angle = { {0,90,0} }
+			t.al = 1
+		end
+
+		wcl = wcl+1
+		w.wishchilds[wcl] = t
+		w.wcl = wcl
+	else
+		t = t+0
+		wcl = wcl+1
+		w.wishchilds[wcl] = {angle={{0,90,0}}, al=1, bl=1, t}   -- Member angle, al(AngleNodes count), bl(bartimes count); Bartime array
+		w.wcl = wcl
+
+		local hints_insert_pos = w.hl+1
+		w.hints[hints_insert_pos] = t
+		w.hl = hints_insert_pos
+	end
+end
+
+--- Insert EchoChild(s). Use the "EchoChild {}" clause to call this, or use "EchoChild(bar)" as a shorthand of "EchoChild {angle=90, bar}".
+--- @param w Wish
+--- @param t number|table
+--- @param t.angle number|number[]|nil  State AngleNodes like this: {··bar1,degree1,easetype1,bartime2,degree2,easetype2··}; Let EVERY bartime be a positive number as absolute bartime, or a negative number as relative bartime. Easetypes Provided: STATIC, LINEAR, INSINE, OUTSINE, INQUAD, OUTQUAD. Pass a single number in as a shorthand of {0,t.angle,STATIC}; a nil in as a shorthand of {0,90,STATIC}.
+local function echochild(w, t)
+	local ecl = w.ecl
+	if type(t)=="table" then
+		-- Bartime(s)
+		--
+		table_sort(t)
+		assert( t[1]>=0, "Bartime(s) MUST be non-negative." )
+		t.bl = #t
+
+		-- AngleNode(s)
+		--
+		if t.angle then
+			local agl = t.angle
+			if type(agl)=="table" then
+				local agllen_ = #agl / 3
+				assert( math_ceil(agllen_)==agllen_, BAR_DEG_ET_ALT )
+
+				local lumped = NewTable(agllen_, 0)
+				for i=1, agllen_ do
+					local ix3 = i*3
+					local bar, degree, easetype = agl[ix3-2], agl[ix3-1], agl[ix3]
+					assert( degree>=-32580 and degree<=32580, "Invalid Degree." )
+					assert( easetype>=0 and easetype<=5, "Invalid Easetype." )
+					lumped[i] = {bar, degree, easetype}
+				end
+				table_sort(lumped, SortBy1)
+				assert( lumped[1][1]*lumped[agllen_][1]>=0, DONT_ABS_REL_SIM )
+
+				t.angle = lumped
+				t.al = agllen_
+			else
+				t.angle = { {0,agl,0} }
+				t.al = 1
+			end
+		else
+			t.angle = { {0,90,0} }
+			t.al = 1
+		end
+
+		ecl = ecl+1
+		w.echochilds[ecl] = t
+		w.ecl = ecl
+	else
+		ecl = ecl+1
+		w.echochilds[ecl] = {angle={{0,90,0}}, al=1, bl=1, t+0}   -- Member angle, al(AngleNodes count), bl(bartimes count); Bartime array
+		w.ecl = ecl
+	end
+end
+
+--- Manually Create Manual Hint(s) for the Wish passed in. Use the "ManualHint(w) {}" clause to call this, or "ManualHint(w)(bar)" as a shorthand of "ManualHint(w) {bar}". If arg w is omitted, the last Wish stated will be picked.
+--- @param w Wish
+--- @param t number|number[]  Bartime or bartimes
+local function manual_hint(w, t)
+	local hl = w.hl
+	if type(t)=="table" then
+		local tbllen = #t
+		for i=1, tbllen do
+			local time = t[i]
+			assert( time>=0, "Bartime(s) MUST be non-negative." )
+			w.hints[hl+i] = time
+		end
+		w.hl = hl + tbllen
+	else
+		assert( t>=0, "Bartime(s) MUST be non-negative." )
+		hl = hl + 1
+		w.hints[hl] = t
+		w.hl = hl
+	end
+end
+
+--- Create a new Wish and tell Nemesis what Nodes are contained within.
+--- Use the "Wish {··,t,x,y,e,··}" style to call this. Easetypes Provided: STATIC, LINEAR, LCIRC, RCIRC, INQUAD, OUTQUAD.
+--- @param t table
+--- @param t.layer number  Which layer the Wish created belongs to (Layer 1 or Layer 2), 1 by default
+--- @param t.temporary boolean  If true, the Wish created will be discarded by Arf3.MakeArf()
+--- @param t.max_visible_distance number  Range [[0,16]], 7 by default
+--- @return Wish,Wish  Bind this to a var as a ref of the Wish you created. / For temporary Wish(es), you may want to write something like "Tx,Ty = Wish {···}", and the redundant return value gives you some convenience to achieve this.
+function Nemesis.Wish(t)
+	assert( type(t)=="table", USE_WISH_CLAUSE )
+
+	local mvd = t.max_visible_distance
+	if type(mvd)=="number" then
+		if mvd > 16 then		mvd = 16
+		elseif mvd < 0 then		mvd = 0
+		end
+	else 						mvd = 7
+	end
+
+	-- Lump & Sort Nodes
+	--
+	local tbllen_ = #t/4
+	assert( math_ceil(tbllen_)==tbllen_, BAR_X_Y_ET_ALT )
+	assert( tbllen_>1, AT_LEAST_2_NODES_REQUIRED )
+
+	local nodes, nodeset = NewTable(tbllen_, 0), NewTable(0, tbllen_)
+	for i=1, tbllen_ do
+		local ix4 = i*4
+		local bar, xsrc, ysrc, easetype, curve_init, curve_end = t[ix4-3], t[ix4-2], t[ix4-1], t[ix4], 0, 1
+
+		if type(xsrc)=="table" then
+			xsrc = get_x(xsrc, bar)
+			assert( xsrc, FAIL_GET_X )
+		else
+			assert( xsrc>=-128 and xsrc<=128, "X-Axis position out of range." )
+		end
+
+		if type(ysrc)=="table" then
+			ysrc = get_y(ysrc, bar)
+			assert( ysrc, FAIL_GET_Y )
+		else
+			assert( ysrc>=-64 and ysrc<=64, "Y-Axis position out of range." )
+		end
+
+		if type(easetype)=="table" then
+			local e1, e2, e3 = easetype[1], easetype[2], easetype[3]
+			assert( e1>=0 and e1<=5, "Invalid Easetype." )
+			assert( e2>=0 and e2<=1, "Invalid Curve Init Ratio." )
+			assert( e3>=0 and e3<=1, "Invalid Curve End Ratio." )
+			assert( e2<e3, CI_SMALLER_THAN_CE )
+			curve_init, curve_end = e2, e3
+			easetype = math_ceil(e1)
+		else
+			assert( easetype>=0 and easetype<=5, "Invalid Easetype." )
+			easetype = math_ceil(easetype)
+		end
+
+		-- Introduced the "Node Set" to improve the speed of Interpolation Funcs.
+		assert( not nodeset[bar], PROHIBIT_DUPLICATE_BARS )
+		nodes[i], nodeset[bar] = {bar, xsrc, ysrc, easetype, curve_init, curve_end, i}, {xsrc, ysrc}
+	end
+	table_sort(nodes, SortNodes)
+	assert( nodes[1][1]>=0, "Bartime(s) MUST be non-negative." )
+
+	--- @class Wish
+	local new_wish = {
+		of_layer2 = t.layer==2 or false,
+		temporary = t.temporary or false,
+		max_visible_distance = mvd,
+		hints = {}, hl = 0,
+		nodes = nodes, np = 0,             -- Nodes Sequence, Node Iteration Progress
+		nodeset = nodeset, nl = tbllen_,   -- Node Set, Node Count
+		wishchilds = {}, wcl = 0,
+		echochilds = {}, ecl = 0,
+		special_hint = nil   -- For code highlighting usage
+	}
+	setmetatable(new_wish, WM)
+
+	-- Append the Wish
+	--
+	wl, vl = wl+1, vl+1
+	Wishes[wl], current_verse[vl], current_wish = new_wish, new_wish, new_wish
+	return new_wish, new_wish
+end
+
+--- Create a new Echo, or a series of Echoes.
+--- Use the "Echo {··,t,x,y,··}" style to call this for a series of Echoes, or "Echo(t,x,y)" for just 1 Echo.
+--- @param t table
+--- @param x number|Wish|Echo|nil
+--- @param y number|Wish|Echo|nil
+--- @return Echo[]  Refs of Echoes created.
+function Nemesis.Echo(t, x, y)
+	if type(t)=="table" then
+		local tbllen_ = #t/3
+		assert( math_ceil(tbllen_)==tbllen_, BAR_X_Y_ALT )
+
+		local new_echoes, nel = NewTable(tbllen_, 0), 0
 		for i=1, tbllen_ do
-			local ix4 = i*4
-			local bar, xsrc, ysrc, easetype, curve_init, curve_end = t[ix4-3], t[ix4-2], t[ix4-1], t[ix4], 0, 1
+			local ix3 = i*3
+			local bar, xsrc, ysrc = t[ix3-2], t[ix3-1], t[ix3]
+			assert( bar>=0, "Bartime(s) MUST be non-negative." )
 
 			if type(xsrc)=="table" then
 				xsrc = get_x(xsrc, bar)
@@ -1025,564 +1096,501 @@ function NemesisInitialize()
 				assert( ysrc>=-64 and ysrc<=64, "Y-Axis position out of range." )
 			end
 
-			if type(easetype)=="table" then
-				local e1, e2, e3 = easetype[1], easetype[2], easetype[3]
-				assert( e1>=0 and e1<=5, "Invalid Easetype." )
-				assert( e2>=0 and e2<=1, "Invalid Curve Init Ratio." )
-				assert( e3>=0 and e3<=1, "Invalid Curve End Ratio." )
-				assert( e2<e3, CI_SMALLER_THAN_CE )
-				curve_init, curve_end = e2, e3
-				easetype = math_ceil(e1)
-			else
-				assert( easetype>=0 and easetype<=5, "Invalid Easetype." )
-				easetype = math_ceil(easetype)
-			end
-
-			-- Introduced the "Node Set" to improve the speed of Interpolation Funcs.
-			assert( not nodeset[bar], PROHIBIT_DUPLICATE_BARS )
-			nodes[i], nodeset[bar] = {bar, xsrc, ysrc, easetype, curve_init, curve_end, i}, {xsrc, ysrc}
+			el, vl, nel = el+1, vl+1, nel+1
+			local new_echo = {bar, xsrc, ysrc}
+			Echoes[el], current_verse[vl], new_echoes[nel] = new_echo, new_echo, new_echo
 		end
-		table_sort(nodes, SortNodes)
-		assert( nodes[1][1]>=0, "Bartime(s) MUST be non-negative." )
 
-		--- @class Wish
-		local new_wish = {
-			of_layer2 = t.layer==2 or false,
-			temporary = t.temporary or false,
-			max_visible_distance = mvd,
-			hints = {}, hl = 0,
-			nodes = nodes, np = 0,             -- Nodes Sequence, Node Iteration Progress
-			nodeset = nodeset, nl = tbllen_,   -- Node Set, Node Count
-			wishchilds = {}, wcl = 0,
-			echochilds = {}, ecl = 0,
-			special_hint = nil   -- For code highlighting usage
+		return new_echoes
+	else
+		assert( t>=0, "Bartime(s) MUST be non-negative." )
+
+		if type(x)=="table" then
+			x = get_x(x, t)
+			assert( x, FAIL_GET_X )
+		else
+			assert( x>=-128 and x<=128, "X-Axis position out of range." )
+		end
+
+		if type(y)=="table" then
+			y = get_y(y, t)
+			assert( y, FAIL_GET_Y )
+		else
+			assert( y>=-64 and y<=64, "Y-Axis position out of range." )
+		end
+
+		el, vl = el+1, vl+1
+		local new_echo = {t, x, y}   --- @class Echo
+		Echoes[el], current_verse[vl] = new_echo, new_echo
+		return {new_echo}
+	end
+end
+
+--- @param t Wish|table
+function Nemesis.WishChild(t)
+	if t.is_wish then
+		--- @param tparam number|table
+		return function(tparam)
+			wishchild(t, tparam)
+		end
+	else
+		assert( current_wish and current_wish.is_wish, STATE_A_WISH_WC )
+		wishchild(current_wish, t)
+	end
+end
+
+--- @param t Wish|table
+function Nemesis.EchoChild(t)
+	if t.is_wish then
+		--- @param tbl table
+		return function(tbl)
+			echochild(t, tbl)
+		end
+	else
+		assert( current_wish and current_wish.is_wish, STATE_A_WISH_EC )
+		echochild(current_wish, t)
+	end
+end
+
+--- @param t Wish|number|number[]
+function Nemesis.ManualHint(t)
+	if t.is_wish then
+		--- @param tparam number|number[]
+		return function(tparam)
+			manual_hint(t, tparam)
+		end
+	else
+		assert( current_wish and current_wish.is_wish, STATE_A_WISH_MH )
+		manual_hint(current_wish, t)
+	end
+end
+
+--- Declare a Special Hint for some special usages. Undefined behavior happens when stating more than 1 Special Hint.
+--- @param wish Wish
+--- @param bartime number
+function Nemesis.SpecialHint(wish, bartime)
+	if wish.is_wish then
+		local nodes = wish.nodes
+		local first_bar, last_bar = nodes[1][1], nodes[wish.nl][1]
+		if bartime>=first_bar and bartime<=last_bar then
+			wish.special_hint = bartime
+		end
+	end
+end
+
+
+-- L5: Map Utils
+--
+Nemesis.MirrorLR = mirror_lr   --- @type fun(w:Wish):void
+Nemesis.MirrorUD = mirror_ud   --- @type fun(w:Wish):void
+
+--- Get the Wish-moving lambda function to be called by the Map{} method.
+--- @param delta_bar number
+--- @param dx number
+--- @param dy number
+--- @return function  Lambda function to be called by the Map{} method.
+function Nemesis.Move(delta_bar, dx, dy)
+	return function(w)
+		move(w, delta_bar, dx, dy)
+	end
+end
+
+--- Discard the former Verse, and create a new Verse for the usege of the Map function.
+function Nemesis.NewVerse()
+	for i=1, vl do
+		current_verse[i] = nil
+	end
+	vl = 0
+end
+
+--- Use the "Map {}" clause to do transformations to all Wishes of the last Verse.
+--- @param t table  What to do for each Wish/Echo of the last Verse. Functions Provided: MirrorLR, MirrorUD, Move(delta_bar,dx,dy).
+function Nemesis.Map(t)
+	assert( type(t)=="table", USE_MAP_CLAUSE )
+
+	local map_len = #t
+	for i=1, #current_verse do
+		for mi=1, map_len do
+			t[mi](current_verse[i])
+		end
+	end
+end
+
+
+-- L6: User Utils
+--
+--- @param bar number
+--- @param distance number
+--- @param of_layer2 boolean
+local function pick_a_safe_before_bar(bar, distance, of_layer2)
+	local current_ms, return_ms = bar_to_ms(bar)
+	local mstimes, count = dt_to_ms( ms_to_dt(current_ms, of_layer2)-distance )
+	for i=1, count do
+		return_ms = mstimes[i]
+		if current_ms-return_ms >= 600 then
+			break
+		end
+	end
+	return ms_to_bar(return_ms)
+end
+local nemesis_wish = Nemesis.Wish
+
+Nemesis.PushWish = push_wish   --- @type fun():void
+Nemesis.PopWish = pop_wish     --- @type fun():void
+
+--- Create a collider with args specified. Use the "SomeFrom(obj_toward, bar_at)" style to call the collider created.
+--- @param x number|Wish|Echo  Initial X-Axis Position
+--- @param y number|Wish|Echo  Initial Y-Axis Position
+--- @param e number|table  LINEAR by default
+--- @param layer number  1 or 2, 1 by default
+function Nemesis.From(x, y, e, layer)
+	layer = layer==2 and 2 or 1
+	--- @param bar_at number
+	--- @param obj_toward Wish|Echo
+	return function(obj_toward, bar_at)
+		push_wish()
+		local xto, yto = get_x(obj_toward, bar_at), get_y(obj_toward, bar_at)
+		local xfrom, yfrom, local1, local2
+
+		if type(x)=="table" then
+			xfrom = get_x(x, bar_at)
+			assert( xfrom, FAIL_GET_X )
+		else
+			xfrom = x
+		end
+
+		if type(y)=="table" then
+			yfrom = get_y(y, bar_at)
+			assert( yfrom, FAIL_GET_Y )
+		else
+			yfrom = y
+		end
+
+		local1 = xto - xfrom
+		local1 = local1 * local1
+		local2 = yto - yfrom
+		local2 = local2 * local2
+		local1 = pick_a_safe_before_bar( bar_at, math_sqrt(local1+local2), layer==2 )
+
+		local w = nemesis_wish {
+			layer = layer,
+			local1, xfrom, yfrom, e,
+			bar_at, xto, yto, e
 		}
-		setmetatable(new_wish, WM)
-
-		-- Append the Wish
-		--
-		wl, vl = wl+1, vl+1
-		Wishes[wl], current_verse[vl], current_wish = new_wish, new_wish, new_wish
-		return new_wish, new_wish
+		manual_hint(w, bar_at)
+		pop_wish()
 	end
+end
 
-	--- Create a new Echo, or a series of Echoes.
-	--- Use the "Echo {··,t,x,y,··}" style to call this for a series of Echoes, or "Echo(t,x,y)" for just 1 Echo.
+--- Create a collider with final X-Axis Position & final Y-Axis Position specified. Use the "SomeTo {··t, distance, degree, easetype··}" style to call the collider created.
+--- @param x number|Wish|Echo
+--- @param y number|Wish|Echo
+--- @param layer number  1 or 2, 1 by default.
+function Nemesis.To(x, y, layer)
+	layer = layer==2 and 2 or 1
 	--- @param t table
-	--- @param x number|Wish|Echo|nil
-	--- @param y number|Wish|Echo|nil
-	--- @return Echo[]  Refs of Echoes created.
-	function Nemesis.Echo(t, x, y)
-		if type(t)=="table" then
-			local tbllen_ = #t/3
-			assert( math_ceil(tbllen_)==tbllen_, BAR_X_Y_ALT )
-
-			local new_echoes, nel = NewTable(tbllen_, 0), 0
-			for i=1, tbllen_ do
-				local ix3 = i*3
-				local bar, xsrc, ysrc = t[ix3-2], t[ix3-1], t[ix3]
-				assert( bar>=0, "Bartime(s) MUST be non-negative." )
-
-				if type(xsrc)=="table" then
-					xsrc = get_x(xsrc, bar)
-					assert( xsrc, FAIL_GET_X )
-				else
-					assert( xsrc>=-128 and xsrc<=128, "X-Axis position out of range." )
-				end
-
-				if type(ysrc)=="table" then
-					ysrc = get_y(ysrc, bar)
-					assert( ysrc, FAIL_GET_Y )
-				else
-					assert( ysrc>=-64 and ysrc<=64, "Y-Axis position out of range." )
-				end
-
-				el, vl, nel = el+1, vl+1, nel+1
-				local new_echo = {bar, xsrc, ysrc}
-				Echoes[el], current_verse[vl], new_echoes[nel] = new_echo, new_echo, new_echo
-			end
-
-			return new_echoes
-		else
-			assert( t>=0, "Bartime(s) MUST be non-negative." )
+	return function(t)
+		push_wish()
+		local tbllen_ = #t/4
+		assert( math_ceil(tbllen_)==tbllen_, BAR_RAD_DEG_ET_ALT )
+		for i=1, tbllen_ do
+			local ix4, barfrom, xfrom, yfrom, xfinal, yfinal = i*4
+			local bar, radius, radian, easetype = t[ix4-3], t[ix4-2], t[ix4-1]*HALF_PI/90, t[ix4]
 
 			if type(x)=="table" then
-				x = get_x(x, t)
-				assert( x, FAIL_GET_X )
+				xfinal = get_x(x, bar)
+				assert( xfinal, FAIL_GET_X )
 			else
-				assert( x>=-128 and x<=128, "X-Axis position out of range." )
+				xfinal = x
 			end
 
 			if type(y)=="table" then
-				y = get_y(y, t)
-				assert( y, FAIL_GET_Y )
+				yfinal = get_y(y, bar)
+				assert( yfinal, FAIL_GET_Y )
 			else
-				assert( y>=-64 and y<=64, "Y-Axis position out of range." )
+				yfinal = y
 			end
 
-			el, vl = el+1, vl+1
-			local new_echo = {t, x, y}   --- @class Echo
-			Echoes[el], current_verse[vl] = new_echo, new_echo
-			return {new_echo}
-		end
-	end
-
-	--- @param t Wish|table
-	function Nemesis.WishChild(t)
-		if t.is_wish then
-			--- @param tparam number|table
-			return function(tparam)
-				wishchild(t, tparam)
-			end
-		else
-			assert( current_wish and current_wish.is_wish, STATE_A_WISH_WC )
-			wishchild(current_wish, t)
-		end
-	end
-
-	--- @param t Wish|table
-	function Nemesis.EchoChild(t)
-		if t.is_wish then
-			--- @param tbl table
-			return function(tbl)
-				echochild(t, tbl)
-			end
-		else
-			assert( current_wish and current_wish.is_wish, STATE_A_WISH_EC )
-			echochild(current_wish, t)
-		end
-	end
-
-	--- @param t Wish|number|number[]
-	function Nemesis.ManualHint(t)
-		if t.is_wish then
-			--- @param tparam number|number[]
-			return function(tparam)
-				manual_hint(t, tparam)
-			end
-		else
-			assert( current_wish and current_wish.is_wish, STATE_A_WISH_MH )
-			manual_hint(current_wish, t)
-		end
-	end
-
-	--- Declare a Special Hint for some special usages. Undefined behavior happens when stating more than 1 Special Hint.
-	--- @param wish Wish
-	--- @param bartime number
-	function Nemesis.SpecialHint(wish, bartime)
-		if wish.is_wish then
-			local nodes = wish.nodes
-			local first_bar, last_bar = nodes[1][1], nodes[wish.nl][1]
-			if bartime>=first_bar and bartime<=last_bar then
-				wish.special_hint = bartime
-			end
-		end
-	end
-
-
-	-- L5: Map Utils
-	--
-	Nemesis.MirrorLR = mirror_lr   --- @type fun(w:Wish):void
-	Nemesis.MirrorUD = mirror_ud   --- @type fun(w:Wish):void
-
-	--- Get the Wish-moving lambda function to be called by the Map{} method.
-	--- @param delta_bar number
-	--- @param dx number
-	--- @param dy number
-	--- @return function  Lambda function to be called by the Map{} method.
-	function Nemesis.Move(delta_bar, dx, dy)
-		return function(w)
-			move(w, delta_bar, dx, dy)
-		end
-	end
-
-	--- Discard the former Verse, and create a new Verse for the usege of the Map function.
-	function Nemesis.NewVerse()
-		for i=1, vl do
-			current_verse[i] = nil
-		end
-		vl = 0
-	end
-
-	--- Use the "Map {}" clause to do transformations to all Wishes of the last Verse.
-	--- @param t table  What to do for each Wish/Echo of the last Verse. Functions Provided: MirrorLR, MirrorUD, Move(delta_bar,dx,dy).
-	function Nemesis.Map(t)
-		assert( type(t)=="table", USE_MAP_CLAUSE )
-
-		local map_len = #t
-		for i=1, #current_verse do
-			for mi=1, map_len do
-				t[mi](current_verse[i])
-			end
-		end
-	end
-
-
-	-- L6: User Utils
-	--
-	--- @param bar number
-	--- @param distance number
-	--- @param of_layer2 boolean
-	local function pick_a_safe_before_bar(bar, distance, of_layer2)
-		local current_ms, return_ms = bar_to_ms(bar)
-		local mstimes, count = dt_to_ms( ms_to_dt(current_ms, of_layer2)-distance )
-		for i=1, count do
-			return_ms = mstimes[i]
-			if current_ms-return_ms >= 600 then
-				break
-			end
-		end
-		return ms_to_bar(return_ms)
-	end
-	local nemesis_wish = Nemesis.Wish
-
-	Nemesis.PushWish = push_wish   --- @type fun():void
-	Nemesis.PopWish = pop_wish     --- @type fun():void
-
-	--- Create a collider with args specified. Use the "SomeFrom(obj_toward, bar_at)" style to call the collider created.
-	--- @param x number|Wish|Echo  Initial X-Axis Position
-	--- @param y number|Wish|Echo  Initial Y-Axis Position
-	--- @param e number|table  LINEAR by default
-	--- @param layer number  1 or 2, 1 by default
-	function Nemesis.From(x, y, e, layer)
-		layer = layer==2 and 2 or 1
-		--- @param bar_at number
-		--- @param obj_toward Wish|Echo
-		return function(obj_toward, bar_at)
-			push_wish()
-			local xto, yto = get_x(obj_toward, bar_at), get_y(obj_toward, bar_at)
-			local xfrom, yfrom, local1, local2
-
-			if type(x)=="table" then
-				xfrom = get_x(x, bar_at)
-				assert( xfrom, FAIL_GET_X )
-			else
-				xfrom = x
-			end
-
-			if type(y)=="table" then
-				yfrom = get_y(y, bar_at)
-				assert( yfrom, FAIL_GET_Y )
-			else
-				yfrom = y
-			end
-
-			local1 = xto - xfrom
-			local1 = local1 * local1
-			local2 = yto - yfrom
-			local2 = local2 * local2
-			local1 = pick_a_safe_before_bar( bar_at, math_sqrt(local1+local2), layer==2 )
+			barfrom = pick_a_safe_before_bar(bar, radius, layer==2) or (bar-radius/16)
+			xfrom = xfinal + radius * math_cos(radian)
+			yfrom = yfinal + radius * math_sin(radian)
 
 			local w = nemesis_wish {
 				layer = layer,
-				local1, xfrom, yfrom, e,
-				bar_at, xto, yto, e
+				barfrom, xfrom, yfrom, easetype,
+				bar, xfinal, yfinal, easetype
 			}
-			manual_hint(w, bar_at)
-			pop_wish()
+			manual_hint(w, bar)
 		end
+		pop_wish()
 	end
+end
 
-	--- Create a collider with final X-Axis Position & final Y-Axis Position specified. Use the "SomeTo {··t, distance, degree, easetype··}" style to call the collider created.
-	--- @param x number|Wish|Echo
-	--- @param y number|Wish|Echo
-	--- @param layer number  1 or 2, 1 by default.
-	function Nemesis.To(x, y, layer)
-		layer = layer==2 and 2 or 1
-		--- @param t table
-		return function(t)
-			push_wish()
-			local tbllen_ = #t/4
-			assert( math_ceil(tbllen_)==tbllen_, BAR_RAD_DEG_ET_ALT )
-			for i=1, tbllen_ do
-				local ix4, barfrom, xfrom, yfrom, xfinal, yfinal = i*4
-				local bar, radius, radian, easetype = t[ix4-3], t[ix4-2], t[ix4-1]*HALF_PI/90, t[ix4]
+--- State a static rail and add some "Notes" onto, in a very optimized way.
+--- @param x number|nil  8 by default
+--- @param y number|nil  0.5 by default
+--- @param angle number|nil  90 by default
+--- @param layer number|nil  1 or 2, 1 by default
+--- @param max_visible_distance number|nil  7 by default
+function Nemesis.Rail(x, y, angle, layer, max_visible_distance)
+	x = x or 8
+	y = y or 0.5
+	max_visible_distance = max_visible_distance and max_visible_distance+0 or 7
+	angle = angle or 90
 
-				if type(x)=="table" then
-					xfinal = get_x(x, bar)
-					assert( xfinal, FAIL_GET_X )
-				else
-					xfinal = x
-				end
+	layer = layer==2 and 2 or 1
+	local ofl2 = layer==2
 
-				if type(y)=="table" then
-					yfinal = get_y(y, bar)
-					assert( yfinal, FAIL_GET_Y )
-				else
-					yfinal = y
-				end
-
-				barfrom = pick_a_safe_before_bar(bar, radius, layer==2) or (bar-radius/16)
-				xfrom = xfinal + radius * math_cos(radian)
-				yfrom = yfinal + radius * math_sin(radian)
-
-				local w = nemesis_wish {
-					layer = layer,
-					barfrom, xfrom, yfrom, easetype,
-					bar, xfinal, yfinal, easetype
-				}
-				manual_hint(w, bar)
-			end
-			pop_wish()
-		end
-	end
-
-	--- State a static rail and add some "Notes" onto, in a very optimized way.
-	--- @param x number|nil  8 by default
-	--- @param y number|nil  0.5 by default
-	--- @param angle number|nil  90 by default
-	--- @param layer number|nil  1 or 2, 1 by default
-	--- @param max_visible_distance number|nil  7 by default
-	function Nemesis.Rail(x, y, angle, layer, max_visible_distance)
-		x = x or 8
-		y = y or 0.5
-		max_visible_distance = max_visible_distance and max_visible_distance+0 or 7
-		angle = angle or 90
-
-		layer = layer==2 and 2 or 1
-		local ofl2 = layer==2
-
-		--- @param t table  State Bartime(s) of WishChild(s) like 1,2,3···, of EchoChild(s) like -1,-2,-3···
-		return function(t)
-			push_wish()
-			local tlen, clen = #t, 0
-			local childs_to_add = NewTable(tlen, 0)
-			for i=1, tlen do
-				clen = clen+1
-				local ct = t[i]
-				if ct < 0 then
-					ct = -ct
-					childs_to_add[clen] = { ct, true, ms_to_dt( bar_to_ms(ct), ofl2 ) }
-				else
-					childs_to_add[clen] = { ct, false, ms_to_dt( bar_to_ms(ct), ofl2 ) }
-				end
-			end
-			table_sort(childs_to_add, SortBy3)
-
-			if clen>0 then
-				local groups, group_lens, group_count = { {childs_to_add[1]} }, {1}, 1
-				for i=2, clen do
-					if childs_to_add[i][3] - childs_to_add[i-1][3] > max_visible_distance then
-						group_count = group_count + 1
-						group_lens[group_count] = 0
-						groups[group_count] = {}
-					end
-
-					local insert_pos = group_lens[group_count] + 1
-					groups[group_count][insert_pos] = childs_to_add[i]
-					group_lens[group_count] = insert_pos
-				end
-
-				for i=1, group_count do
-					local current_group, current_group_len, current_max_bar = groups[i], group_lens[i], 0
-					for j=1, current_group_len do
-						local current_bar = current_group[j][1]
-						if current_bar > current_max_bar then
-							current_max_bar = current_bar
-						end
-					end
-
-					local wish_c = nemesis_wish {
-						layer = layer,
-						max_visible_distance = max_visible_distance,
-						pick_a_safe_before_bar(current_group[1][1], max_visible_distance, ofl2), x, y, 0,
-						current_max_bar, x, y, 0
-					}
-
-					local wc, wc_bl = {angle={{0,angle,0}}, al=1}, 0
-					local ec, ec_bl = {angle={{0,angle,0}}, al=1}, 0
-					for j=1, current_group_len do
-						if current_group[j][2] then   -- EchoChild
-							ec_bl = ec_bl+1
-							ec[ec_bl] = current_group[j][1]
-						else   -- WishChild
-							wc_bl = wc_bl+1
-							wc[wc_bl] = current_group[j][1]
-						end
-					end
-
-					wc.bl, ec.bl = wc_bl, ec_bl
-					wish_c.wishchilds, wish_c.wcl = {wc}, 1
-					wish_c.echochilds, wish_c.ecl = {ec}, 1
-				end
-			end
-			pop_wish()
-		end
-	end
-
-
-	-- L7: Shared-with-Viewer Stuff
-	   -- See how we restrict the user to only call Nemesis APIs,
-	   -- Deal with the upvalue size limit, and catch errs without stopping the env.
-	--
-	local header = [[
-	local REQUIRE, Time, ScLayer1, ScLayer2 = REQUIRE, Time, ScLayer1, ScLayer2
-	local Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint = Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint
-	local MirrorLR, MirrorUD, Move, NewVerse, Map = MirrorLR, MirrorUD, Move, NewVerse, Map
-	local PushWish, PopWish, From, To, Rail = PushWish, PopWish, From, To, Rail
-	local STATIS, LINEAR, LCIRC, RCIRC, INQUAD, OUTQUAD, INSINE, OUTSINE = 0, 1, 2, 3, 4, 5, 3, 2
-	return function() ]]      --- @type string
-	BarToMs = __bar_to_ms__   --- @type fun(bartime:number):(number|nil)  Shared with the Viewer for seek-by-bar usage.
-	MsToBar = __ms_to_bar__   --- @type fun(mstime:number):(number|nil)   Shared with the Viewer for bartime displaying usage.
-
-	--- Compiling Function called by the Viewer.
-	--- @param path string  The path of the user Lua script
-	--- @return number  Max mstime
-	--- @return number  Object(Hint, Echo & EchoChild) Count
-	--- @return number  How many Wish GOs are required
-	--- @return number  How many Hint GOs are required
-	--- @return number  How many Echo GOs are required
-	function NemesisCompile(path)
-		-- Execute the Lua Script provided by the user.
-		--
-		local file = io.open(path, "r")
-		assert( file, "Failed to open the *.lua file." )
-
-		local compile_func_str = table.concat{header, file:read("*a"), " end"}
-		local compile_func = loadstring(compile_func_str)       -- Header included here
-			  compile_func = setfenv(compile_func, Nemesis)()   -- Alter the Env, and then expose the compile function with no header.
-			  compile_func = compile_func()                     -- Execute the compile function, and then discard it.
-		file:close()
-
-		-- Do Wish Related.
-		--
-		local bar_of_ms0 = bpm_list[3]<0 and ms_to_bar(0) or false
-		for a=1, wl do
-			local wish_c = Wishes[a]
-			local of_layer2 = wish_c.of_layer2
-			if not wish_c.temporary then
-				-- Nodes: Interpolate; Convert bartimes into mstimes; Do assertions
-				--
-				if bar_of_ms0 then	try_interpolate(wish_c, bar_of_ms0)			end
-				for b=2, bl do		try_interpolate(wish_c, bpm_list[b*3-2])	end
-
-				local nodes, nl = wish_c.nodes, wish_c.nl
-				for b=1, nl do
-					local current_node_bar = nodes[b][1]
-					nodes[b][1] = bar_to_ms(current_node_bar)
-				end
-
-				local first_ms, last_ms = nodes[1][1], nodes[nl][1]
-				assert( last_ms>0 and last_ms<=512000, "Mstime of Wish Node(s) out of range." )   -- Yes. Last ms.
-
-				-- Hints: Convert bartimes into mstimes; Get X/Y
-				--
-				local hints = wish_c.hints
-				for b=1, wish_c.hl do
-					local current_hint_bar = hints[b]
-					local current_x = get_x(wish_c, current_hint_bar)
-					if current_x then
-						hints[b] = {bar_to_ms(current_hint_bar), current_x, get_y(current_wish,current_hint_bar)}
-					else
-						hints[b] = false
-					end
-				end
-				wish_c.hl = table_sort(hints, SortHints)   -- nil
-
-				local sh_bar = wish_c.special_hint
-				if sh_bar then
-					wish_c.special_hint = {bar_to_ms(sh_bar), get_x(wish_c, sh_bar), get_y(wish_c, sh_bar)}
-				end
-
-				-- WishChilds / EchoChilds: Unpack AngleNodes; Convert bartimes into mstimes / DTimes
-				--
-				do
-					local wishchilds, new_wishchilds, nwcl = wish_c.wishchilds, {}, 1
-					for b=1, wish_c.wcl do   -- AngleNode: {time, degree, easetype}
-						local current_wishchild_g = wishchilds[b]
-						local template_anodes, tal = current_wishchild_g.angle, current_wishchild_g.al
-						if template_anodes[1][1] > 0 then   -- Absolute
-							for c=1, tal do
-								local current_anode_bar = template_anodes[c][1]
-								template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
-							end
-							table_sort(template_anodes, SortBy1)
-
-							for c=1, current_wishchild_g.bl do
-								nwcl = nwcl + 1
-								local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
-								new_wishchilds[nwcl] = {current_dt, template_anodes}
-							end
-						else   -- Relative
-							for c=1, current_wishchild_g.bl do
-								local current_wc_bar, anodes = current_wishchild_g[c], NewTable(tal,0)
-								for d=1, tal do
-									local current_tanode = template_anodes[d]
-									local current_anode_bar = current_wc_bar + current_tanode[1]
-									anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
-								end
-								table_sort(anodes, SortBy1)
-
-								nwcl = nwcl + 1
-								local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
-								new_wishchilds[nwcl] = {current_dt, anodes}
-							end
-						end
-					end
-
-					wish_c.wishchilds, wish_c.wcl = new_wishchilds, table_sort(new_wishchilds, SortBy1)   -- Table, Nil
-				end
-
-				do
-					local echochilds, new_echochilds, necl = wish_c.echochilds, {}, 1
-					for b=1, wish_c.ecl do   -- AngleNode: {time, degree, easetype}
-						local current_echochild_g = echochilds[b]
-						local template_anodes, tal = current_echochild_g.angle, current_echochild_g.al
-						if template_anodes[1][1] > 0 then   -- Absolute
-							for c=1, tal do
-								local current_anode_bar = template_anodes[c][1]
-								template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
-							end
-							table_sort(template_anodes, SortBy1)
-
-							for c=1, current_echochild_g.bl do
-								local current_ms = bar_to_ms(current_echochild_g[c])
-								assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
-
-								necl = necl + 1
-								local current_dt = ms_to_dt(current_ms, of_layer2)
-								new_echochilds[necl] = {current_dt, template_anodes, current_ms}
-							end
-						else   -- Relative
-							for c=1, current_echochild_g.bl do
-								local current_wc_bar, anodes = current_echochild_g[c], NewTable(tal,0)
-								for d=1, tal do
-									local current_tanode = template_anodes[d]
-									local current_anode_bar = current_wc_bar + current_tanode[1]
-									anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
-								end
-								table_sort(anodes, SortBy1)
-
-								local current_ms = bar_to_ms(current_echochild_g[c])
-								assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
-
-								necl = necl + 1
-								local current_dt = ms_to_dt(current_ms, of_layer2)
-								new_echochilds[necl] = {current_dt, anodes, current_ms}
-							end
-						end
-					end
-
-					wish_c.echochilds, wish_c.ecl = new_echochilds, table_sort(new_echochilds, SortBy1)   -- Table, Nil
-				end
+	--- @param t table  State Bartime(s) of WishChild(s) like 1,2,3···, of EchoChild(s) like -1,-2,-3···
+	return function(t)
+		push_wish()
+		local tlen, clen = #t, 0
+		local childs_to_add = NewTable(tlen, 0)
+		for i=1, tlen do
+			clen = clen+1
+			local ct = t[i]
+			if ct < 0 then
+				ct = -ct
+				childs_to_add[clen] = { ct, true, ms_to_dt( bar_to_ms(ct), ofl2 ) }
 			else
-				Wishes[a] = false
+				childs_to_add[clen] = { ct, false, ms_to_dt( bar_to_ms(ct), ofl2 ) }
 			end
 		end
+		table_sort(childs_to_add, SortBy3)
 
-		-- Discard Temporary Wishes.
-		-- Echoes: Convert bartimes into mstimes.
-		-- Let Arf3.MakeArf() handle other work.
-		--
-		table_sort(Wishes, SortWishes)
-		for i=wl, 1, -1 do
-			if not Wishes[i] then	Wishes[i] = nil
-			else					break
+		if clen>0 then
+			local groups, group_lens, group_count = { {childs_to_add[1]} }, {1}, 1
+			for i=2, clen do
+				if childs_to_add[i][3] - childs_to_add[i-1][3] > max_visible_distance then
+					group_count = group_count + 1
+					group_lens[group_count] = 0
+					groups[group_count] = {}
+				end
+
+				local insert_pos = group_lens[group_count] + 1
+				groups[group_count][insert_pos] = childs_to_add[i]
+				group_lens[group_count] = insert_pos
+			end
+
+			for i=1, group_count do
+				local current_group, current_group_len, current_max_bar = groups[i], group_lens[i], 0
+				for j=1, current_group_len do
+					local current_bar = current_group[j][1]
+					if current_bar > current_max_bar then
+						current_max_bar = current_bar
+					end
+				end
+
+				local wish_c = nemesis_wish {
+					layer = layer,
+					max_visible_distance = max_visible_distance,
+					pick_a_safe_before_bar(current_group[1][1], max_visible_distance, ofl2), x, y, 0,
+					current_max_bar, x, y, 0
+				}
+
+				local wc, wc_bl = {angle={{0,angle,0}}, al=1}, 0
+				local ec, ec_bl = {angle={{0,angle,0}}, al=1}, 0
+				for j=1, current_group_len do
+					if current_group[j][2] then   -- EchoChild
+						ec_bl = ec_bl+1
+						ec[ec_bl] = current_group[j][1]
+					else   -- WishChild
+						wc_bl = wc_bl+1
+						wc[wc_bl] = current_group[j][1]
+					end
+				end
+
+				wc.bl, ec.bl = wc_bl, ec_bl
+				wish_c.wishchilds, wish_c.wcl = {wc}, 1
+				wish_c.echochilds, wish_c.ecl = {ec}, 1
 			end
 		end
-
-		for i=1, el do				Echoes[i][1] = bar_to_ms( Echoes[i][1] )	end
-		local Before, ObjectCount, HgoRequired = Arf3.MakeArf(MergedTime1, MergedTime2, WgoRequired, EgoRequired, Wishes, Echoes)
-		return Before, ObjectCount, WgoRequired, HgoRequired, EgoRequired
+		pop_wish()
 	end
+end
+
+
+-- L7: Shared-with-Viewer Stuff
+   -- See how we restrict the user to only call Nemesis APIs,
+   -- Deal with the upvalue size limit, and catch errs without stopping the env.
+--
+local header = [[
+local REQUIRE, Time, ScLayer1, ScLayer2 = REQUIRE, Time, ScLayer1, ScLayer2
+local Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint = Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint
+local MirrorLR, MirrorUD, Move, NewVerse, Map = MirrorLR, MirrorUD, Move, NewVerse, Map
+local PushWish, PopWish, From, To, Rail = PushWish, PopWish, From, To, Rail
+local STATIS, LINEAR, LCIRC, RCIRC, INQUAD, OUTQUAD, INSINE, OUTSINE = 0, 1, 2, 3, 4, 5, 3, 2
+return function() ]]      --- @type string
+BarToMs = __bar_to_ms__   --- @type fun(bartime:number):(number|nil)  Shared with the Viewer for seek-by-bar usage.
+MsToBar = __ms_to_bar__   --- @type fun(mstime:number):(number|nil)   Shared with the Viewer for bartime displaying usage.
+
+--- Compiling function called by the Viewer.
+--- @param path string  The path of the user Lua script
+--- @return number  Max mstime
+--- @return number  Object(Hint, Echo & EchoChild) Count
+--- @return number  How many Wish GOs are required
+--- @return number  How many Hint GOs are required
+--- @return number  How many Echo GOs are required
+function NemesisCompile(path)
+	-- Reset Env Vars
+	--
+	Wishes, Echoes = {}, {}
+	WgoRequired, EgoRequired = 1024, 1024
+	current_verse, current_wish, pushed_wish = {}
+	MergedTime1, MergedTime2 = {0,0,1}, {0,0,1}
+	bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0
+	bpm_set, bpm_list = nil, nil
+	bp, m1p, m2p = 1, 1, 1
+
+	-- Execute the Lua Script provided by the user.
+	--
+	local file = io.open(path, "r")
+	assert( file, "Failed to open the *.lua file." )
+
+	local compile_func_str = table.concat{header, file:read("*a"), " end"}
+	local compile_func = loadstring(compile_func_str)       -- Header included here
+		  compile_func = setfenv(compile_func, Nemesis)()   -- Alter the Env, and then expose the compile function with no header.
+		  compile_func = compile_func()                     -- Execute the compile function, and then discard it.
+	file:close()
+
+	-- Do Wish Related.
+	--
+	local bar_of_ms0 = bpm_list[3]<0 and ms_to_bar(0) or false
+	for a=1, wl do
+		local wish_c = Wishes[a]
+		local of_layer2 = wish_c.of_layer2
+		if not wish_c.temporary then
+			-- Nodes: Interpolate; Convert bartimes into mstimes; Do assertions
+			--
+			if bar_of_ms0 then	try_interpolate(wish_c, bar_of_ms0)			end
+			for b=2, bl do		try_interpolate(wish_c, bpm_list[b*3-2])	end
+
+			local nodes, nl = wish_c.nodes, wish_c.nl
+			for b=1, nl do
+				local current_node_bar = nodes[b][1]
+				nodes[b][1] = bar_to_ms(current_node_bar)
+			end
+
+			local first_ms, last_ms = nodes[1][1], nodes[nl][1]
+			assert( last_ms>0 and last_ms<=512000, "Mstime of Wish Node(s) out of range." )   -- Yes. Last ms.
+
+			-- Hints: Convert bartimes into mstimes; Get X/Y
+			--
+			local hints = wish_c.hints
+			for b=1, wish_c.hl do
+				local current_hint_bar = hints[b]
+				local current_x = get_x(wish_c, current_hint_bar)
+				if current_x then
+					hints[b] = {bar_to_ms(current_hint_bar), current_x, get_y(current_wish,current_hint_bar)}
+				else
+					hints[b] = false
+				end
+			end
+			wish_c.hl = table_sort(hints, SortHints)   -- nil
+
+			local sh_bar = wish_c.special_hint
+			if sh_bar then
+				wish_c.special_hint = {bar_to_ms(sh_bar), get_x(wish_c, sh_bar), get_y(wish_c, sh_bar)}
+			end
+
+			-- WishChilds / EchoChilds: Unpack AngleNodes; Convert bartimes into mstimes / DTimes
+			--
+			do
+				local wishchilds, new_wishchilds, nwcl = wish_c.wishchilds, {}, 1
+				for b=1, wish_c.wcl do   -- AngleNode: {time, degree, easetype}
+					local current_wishchild_g = wishchilds[b]
+					local template_anodes, tal = current_wishchild_g.angle, current_wishchild_g.al
+					if template_anodes[1][1] > 0 then   -- Absolute
+						for c=1, tal do
+							local current_anode_bar = template_anodes[c][1]
+							template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
+						end
+						table_sort(template_anodes, SortBy1)
+
+						for c=1, current_wishchild_g.bl do
+							nwcl = nwcl + 1
+							local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
+							new_wishchilds[nwcl] = {current_dt, template_anodes}
+						end
+					else   -- Relative
+						for c=1, current_wishchild_g.bl do
+							local current_wc_bar, anodes = current_wishchild_g[c], NewTable(tal,0)
+							for d=1, tal do
+								local current_tanode = template_anodes[d]
+								local current_anode_bar = current_wc_bar + current_tanode[1]
+								anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
+							end
+							table_sort(anodes, SortBy1)
+
+							nwcl = nwcl + 1
+							local current_dt = ms_to_dt( bar_to_ms(current_wishchild_g[c]), of_layer2 )
+							new_wishchilds[nwcl] = {current_dt, anodes}
+						end
+					end
+				end
+
+				wish_c.wishchilds, wish_c.wcl = new_wishchilds, table_sort(new_wishchilds, SortBy1)   -- Table, Nil
+			end
+
+			do
+				local echochilds, new_echochilds, necl = wish_c.echochilds, {}, 1
+				for b=1, wish_c.ecl do   -- AngleNode: {time, degree, easetype}
+					local current_echochild_g = echochilds[b]
+					local template_anodes, tal = current_echochild_g.angle, current_echochild_g.al
+					if template_anodes[1][1] > 0 then   -- Absolute
+						for c=1, tal do
+							local current_anode_bar = template_anodes[c][1]
+							template_anodes[c][1] = ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 )
+						end
+						table_sort(template_anodes, SortBy1)
+
+						for c=1, current_echochild_g.bl do
+							local current_ms = bar_to_ms(current_echochild_g[c])
+							assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
+
+							necl = necl + 1
+							local current_dt = ms_to_dt(current_ms, of_layer2)
+							new_echochilds[necl] = {current_dt, template_anodes, current_ms}
+						end
+					else   -- Relative
+						for c=1, current_echochild_g.bl do
+							local current_wc_bar, anodes = current_echochild_g[c], NewTable(tal,0)
+							for d=1, tal do
+								local current_tanode = template_anodes[d]
+								local current_anode_bar = current_wc_bar + current_tanode[1]
+								anodes[d] = {ms_to_dt( bar_to_ms(current_anode_bar), of_layer2 ), current_tanode[2], current_tanode[3]}
+							end
+							table_sort(anodes, SortBy1)
+
+							local current_ms = bar_to_ms(current_echochild_g[c])
+							assert( current_ms>=first_ms and current_ms<=last_ms, "Mstime of Echochild(s) out of range." )
+
+							necl = necl + 1
+							local current_dt = ms_to_dt(current_ms, of_layer2)
+							new_echochilds[necl] = {current_dt, anodes, current_ms}
+						end
+					end
+				end
+
+				wish_c.echochilds, wish_c.ecl = new_echochilds, table_sort(new_echochilds, SortBy1)   -- Table, Nil
+			end
+		else
+			Wishes[a] = false
+		end
+	end
+
+	-- Discard Temporary Wishes.
+	-- Echoes: Convert bartimes into mstimes.
+	-- Let Arf3.MakeArf() handle other work.
+	--
+	table_sort(Wishes, SortWishes)
+	for i=wl, 1, -1 do
+		if not Wishes[i] then	Wishes[i] = nil
+		else					break
+		end
+	end
+
+	for i=1, el do				Echoes[i][1] = bar_to_ms( Echoes[i][1] )	end
+	local Before, ObjectCount, HgoRequired = Arf3.MakeArf(MergedTime1, MergedTime2, WgoRequired, EgoRequired, Wishes, Echoes)
+	return Before, ObjectCount, WgoRequired, HgoRequired, EgoRequired
 end
