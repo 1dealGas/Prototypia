@@ -478,12 +478,12 @@ end
 
 --- Set the bar offset to avoid duplicated bartime inputs.
 --- Example:
----     Bar(10)			-> 10
----     #1/16			-> 10.0625
----     Bar(12) + 1/4	-> 12.25
----     #1/2			-> 12.5
+---     print( Bar(10) )		 -> 10
+---     print( #1/16 )			 -> 10.0625
+---     print( Bar(12) + 1/4 )   -> 12.25
+---     print( #1/2 )			 -> 12.5
 --- @param bar number
---- @return number  A zero value for some convenience.
+--- @return number  The original bartime value for some convenience.
 function Nemesis.Bar(bar)
 	assert( bar>=0, BAR_NON_NEG )
 	obar = bar
