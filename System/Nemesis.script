@@ -107,9 +107,16 @@ local bp, m1p, m2p = 1, 1, 1						--- @type number  Iteration Progress Value
 local bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0	--- @type number  Length Value
 local current_wish, pushed_wish						--- @type Wish|nil
 local current_verse									--- @type (Wish|Echo)[]
+local obar, nmr										--- @type number
 
---- Will be binded after the "Time {}" call, to reduce some assertions.
-local bar_to_ms, ms_to_bar, ms_to_dt, dt_to_ms
+-- Local vars for special usages.
+--
+local bar_to_ms, ms_to_bar, ms_to_dt, dt_to_ms		--- Will be binded after the "Time {}" call, to reduce some assertions.
+local divtbl = setmetatable({}, {
+	__div = function(_, dnm)
+		return obar + nmr / dnm
+	end
+})
 
 --- Push (max 1) Wish into the cache. Used to prevent breaking the ref of the last Wish stated by the user.
 local function push_wish()
@@ -468,6 +475,24 @@ function Nemesis.ScLayer2(t)
 	end
 	assert( MergedTime2[m2l*3]>=0, SPEED_L_NON_NEG )
 end
+
+--- Set the bar offset to avoid duplicated bartime inputs.
+--- Examples after calling Bar(10):
+---     #1/16            -> 10.0625
+---     Bar(12) + #1/4   -> 12.25
+--- @param bar number
+--- @return number  A zero value for some convenience.
+function Nemesis.Bar(bar)
+	assert( bar>=0, BAR_NON_NEG )
+	obar = bar
+	return 0
+end
+debug.setmetatable(1, {
+	__len = function(lennum)
+		nmr = lennum
+		return divtbl
+	end
+})
 
 
 -- L3: Local Wish Operands
@@ -1415,7 +1440,7 @@ end
    -- Deal with the upvalue size limit, and catch errs without stopping the env.
 --
 local header = [[
-local REQUIRE, Time, ScLayer1, ScLayer2 = REQUIRE, Time, ScLayer1, ScLayer2
+local REQUIRE, Time, Bar, ScLayer1, ScLayer2 = REQUIRE, Time, Bar, ScLayer1, ScLayer2
 local Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint = Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint
 local MirrorLR, MirrorUD, Move, NewVerse, Map = MirrorLR, MirrorUD, Move, NewVerse, Map
 local PushWish, PopWish, From, To, Rail = PushWish, PopWish, From, To, Rail
@@ -1441,6 +1466,7 @@ function NemesisCompile(path)
 	MergedTime1, MergedTime2 = {0,0,1}, {0,0,1}
 	bl, m1l, m2l, wl, el, vl = 0, 0, 0, 0, 0, 0
 	bp, m1p, m2p = 1, 1, 1
+	obar, nmr = 0, 1
 
 	-- Execute the Lua Script provided by the user.
 	--
