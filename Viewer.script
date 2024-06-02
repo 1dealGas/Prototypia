@@ -10,4 +10,84 @@
 --    Nemesis Context
 ------------------------------------
 
--- "[*] Nemesis Compiler Error:\n"
+
+-- L0: Caches
+--
+local hash = hash
+
+-- Hash & String Caches
+--
+local CreateWish, CreateHint, CreateEcho, CreateAnim, ViewerUI
+local GUI_NEW_MSG, GUI_SHOW_PLAY, GUI_SHOW_PAUSE = hash("GUI_NEW_MSG"), hash("GUI_SHOW_PLAY"), hash("GUI_SHOW_PAUSE")
+local enable, disable, touch = hash("enable"), hash("disable"), hash("touch")
+local Sprite, tint_w, tint = hash("Sprite"), hash("tint.w"), hash("tint")
+
+local modification = "modification"
+local nemesis_compiler_error = "[*] Nemesis Compiler Error:\n"
+local msfmt, msbarfmt = "[#]  %d(%d ms)", "[#]  %d(%d ms)  ·  %d(%d Bar)"
+local titlefmt = "[%d][%d]  Prototypia Viewer  --  %s  --  %d Objects"
+
+
+-- L1: Context
+--
+
+-- Environment Vars
+-- Global: Message, UserInput
+--
+local Path = sys.get_save_file("Prototypia Works", "")
+
+
+-- L2: Lifecycle Funcs
+--
+function init()
+end
+
+function update()
+end
+
+function fixed_update()
+end
+
+
+-- L3: User Actions
+--
+local Actions = {   -- WIP
+	[hash "GUI_LOAD"] = nil,
+	[hash "GUI_SEEK_BAR"] = nil, 
+	[hash "GUI_SEEK_MS"] = nil,
+	[hash "BUTTON_C"] = nil,
+	[hash "BUTTON_A"] = nil, 
+	[hash "SCROLL_UP"] = nil,
+	[hash "SCROLL_DOWN"] = nil, 
+	[hash "GUI_XD"] = nil, 
+	[hash "GUI_YD"] = nil,
+	[hash "GUI_XS"] = nil, 
+	[hash "GUI_YS"] = nil,
+	[hash "GUI_DEG"] = nil, 
+	[hash "GUI_EXPORT"] = nil,
+
+	[hash "GUI_OWV"] = (sys.get_sys_info().system_name == "Darwin")
+	and function()	os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )		end
+	or function()	os.execute( "explorer " .. Path )							end
+	,
+
+	[hash "GUI_PLAY"] = nil
+}
+
+
+-- L4: User Action Dispatchers
+--
+local function Default(message) end
+local function ClearMSG(action, action_id)
+	if action_id == touch and action.released then
+		if context_opened then
+			-- WIP
+		else
+			Message = "[#]  0(0 ms)"
+		end
+		msg.post(ViewerUI, GUI_NEW_MSG)
+	end
+end
+
+function on_message(self, message_id, message)		(Actions[message_id] or Default)(message)				end
+function on_input(self, action_id, action)			(Actions[action_id] or ClearMSG)(action, action_id)		end

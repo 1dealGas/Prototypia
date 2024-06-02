@@ -1442,7 +1442,7 @@ end
    -- Deal with the upvalue size limit, and catch errs without stopping the env.
 --
 local header = [[
-local REQUIRE, Time, Bar, ScLayer1, ScLayer2 = REQUIRE, Time, Bar, ScLayer1, ScLayer2
+local REQUIRE, Time, ScLayer1, ScLayer2, Bar = REQUIRE, Time, ScLayer1, ScLayer2, Bar
 local Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint = Wish, Echo, WishChild, EchoChild, ManualHint, SpecialHint
 local MirrorLR, MirrorUD, Move, NewVerse, Map = MirrorLR, MirrorUD, Move, NewVerse, Map
 local PushWish, PopWish, From, To, Rail = PushWish, PopWish, From, To, Rail

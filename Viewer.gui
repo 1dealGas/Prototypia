@@ -42,7 +42,7 @@ nodes {
   }
   type: TYPE_TEXT
   blend_mode: BLEND_MODE_ALPHA
-  text: "[#]  0(0 ms)  \302\267  0(0 Bar)"
+  text: "[#]  0(0 ms)"
   font: "larryfont"
   id: "Message"
   xanchor: XANCHOR_LEFT
