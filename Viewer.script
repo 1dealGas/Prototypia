@@ -21,6 +21,7 @@ local sys_set_update_frequency = sys.set_update_frequency
 local lfs_attributes = lfs.attributes
 local string_format = string.format
 
+local GetTime = AcAudio.GetTime
 local CheckPlaying = AcAudio.CheckPlaying
 local UpdateArf = Arf3.UpdateArf
 local SetCam = Arf3.SetCam
@@ -71,120 +72,24 @@ local ScrollState
 
 -- L2: Context Methods
 --
-local function InitFumenContext(wgo_required, hgo_required, ego_required)
-	local nt, vmath_vector4, factory_create = Arf3.NewTable, vmath.vector4, factory.create
-	local ago_required = hgo_required + ego_required
-
-	-- Create Tables
-	--
-	WGOs, HGOs, EGOs, AlGOs, ArGOs = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0), nt(ago_required, 0)
-	WishSprites, HintSprites, EchoSprites, AlSprites, ArSprites = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0), nt(ago_required, 0)
-	WishTints, HintTints, EchoTints, AnimTints = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0)
-
-	-- Fill Tables
-	--
-	for i = 1, wgo_required do
-		local W = factory_create(CreateWish)
-		WGOs[i], WishSprites[i] = W, msg_url(Prototypia, W, Sprite)
-		msg_post(W, Disable)
-	end
-
-	for i = 1, hgo_required do
-		local H = factory_create(CreateHint)
-		HGOs[i], HintSprites[i], HintTints[i] = H, msg_url(Prototypia, H, Sprite), vmath_vector4(0,0,0,1)
-		msg_post(H, Disable)
-	end
-
-	for i = 1, ego_required do
-		local E = factory_create(CreateEcho)
-		EGOs[i], EchoSprites[i], EchoTints[i] = E, msg_url(Prototypia, E, Sprite), vmath_vector4()
-		msg_post(E, Disable)
-	end
-
-	for i = 1, ago_required do
-		local AL, AR = factory_create(CreateAnim), factory_create(CreateAnim)
-		AlGOs[i], ArGOs[i], AlSprites[i], ArSprites[i], AnimTints[i] = AL, AR, msg_url(Prototypia, AL, Sprite), msg_url(Prototypia, AR, Sprite), vmath_vector4()
-		msg_post(AL, Disable)	msg_post(AR, Disable)
-	end
-end
-
-local function UpdateFumenContext()
-	if ContextType then
-		SetCam(XScale, YScale, XDelta, YDelta, Rotdeg)
-		local _,_, wgo_used, hgo_used, ego_used, ago_used = UpdateArf(ContextMs, WGOs, HGOs, EGOs, AlGOs, ArGOs, WishTints, HintTints, EchoTints, AnimTints)
-
-		-- Mutate Tints
-		--
-		for i = 1, wgo_used do	go_set(WishSprites[i], tint_w, WishTints[i])	end
-		for i = 1, hgo_used do	go_set(HintSprites[i], tint, HintTints[i])		end
-		for i = 1, ego_used do	go_set(EchoSprites[i], tint, EchoTints[i])		end
-		for i = 1, ago_used do
-			go_set(AlSprites[i], tint, AnimTints[i])
-			go_set(ArSprites[i], tint, AnimTints[i])
-		end
-
-		-- Enable & Disable Components
-		--
-		if wgo_used > LastWgoUsed then
-			for i = LastWgoUsed+1, wgo_used do		msg_post(WishSprites[i], Enable)		end
-			if wgo_used > MaxWU then				MaxWU = wgo_used						end
-		elseif wgo_used < LastWgoUsed then
-			for i = wgo_used+1, LastWgoUsed do
-				msg_post(WishSprites[i], Disable)
-			end
-		end
-
-		if hgo_used > LastHgoUsed then
-			for i = LastHgoUsed+1, hgo_used do
-				msg_post(HGOs[i], Enable)
-			end
-		elseif hgo_used < LastHgoUsed then
-			for i = hgo_used+1, LastHgoUsed do
-				msg_post(HGOs[i], Disable)
-			end
-		end
-
-		if ego_used > LastEgoUsed then
-			for i = LastEgoUsed+1, ego_used do		msg_post(EGOs[i], Enable)			end
-			if ego_used > MaxEU then				MaxEU = ego_used					end
-		elseif ego_used < LastEgoUsed then
-			for i = ego_used+1, LastEgoUsed do
-				msg_post(EGOs[i], Disable)
-			end
-		end
-
-		if ago_used > LastAgoUsed then
-			for i = LastAgoUsed+1, ago_used do
-				msg_post(AlSprites[i], Enable)
-				msg_post(ArSprites[i], Enable)
-			end
-		elseif ago_used < LastAgoUsed then
-			for i = ago_used+1, LastAgoUsed do
-				msg_post(AlSprites[i], Disable)
-				msg_post(ArSprites[i], Disable)
-			end
-		end
-
-		LastWgoUsed, LastEgoUsed = wgo_used, ego_used
-		LastHgoUsed, LastAgoUsed = hgo_used, ago_used
-	end
-end
-
--- Context Open & Close Methods
---
-local function CloseAudioContext()
+local function CloseAudioContext()   -- No memory leaking risk; don't manually call this outside the OpenAudioContext() func.
 	AudioLen = 0
 	CurrentAudioUnit = AcAudio.ReleaseUnit(CurrentAudioUnit) and nil
 	CurrentAudioRes = AcAudio.ReleaseResource(CurrentAudioRes) and nil
 end
 
-local function CloseFumenContext()
+local function CloseFumenContext(deep)
 	-- Clear Scalars
 	--
 	Before, ObjCount, MaxWU, MaxEU, BarBefore = 0, 0, 0, 0, 0
 	LastMs, LastWgoUsed, LastHgoUsed, LastEgoUsed, LastAgoUsed = 0, 0, 0, 0, 0
 	XScale, YScale, XDelta, YDelta, Rotdeg = 1, 1, 0, 0, 0
 
+	if deep then
+		FumenPath, FumenModification = nil, nil
+		ContextType, ContextMs = false, 0
+	end
+	
 	-- Do Other Work
 	-- No need to manually nullify tables.
 	--
@@ -275,33 +180,62 @@ local function LoadFumenContext()   -- Considering Both Opening & Reloading Usag
 			if OK then
 				BarBefore = MsToBar(Before) or 0
 			else
-				CloseFumenContext()
+				CloseFumenContext(true)
 				return false, nemesis_error .. Before   -- The 2nd arg is the error message here.
 			end
 		end
 
 		if OK then
-			InitFumenContext(wgo_required, hgo_required, ego_required)
+			local ago_required = hgo_required + ego_required
+			local nt, vmath_vector4, factory_create = Arf3.NewTable, vmath.vector4, factory.create
+
+			-- Create Tables
+			--
+			WGOs, HGOs, EGOs, AlGOs, ArGOs = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0), nt(ago_required, 0)
+			WishSprites, HintSprites, EchoSprites, AlSprites, ArSprites = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0), nt(ago_required, 0)
+			WishTints, HintTints, EchoTints, AnimTints = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0)
+
+			-- Fill Tables
+			--
+			for i = 1, wgo_required do
+				local W = factory_create(CreateWish)
+				WGOs[i], WishSprites[i] = W, msg_url(Prototypia, W, Sprite)
+				msg_post(W, Disable)
+			end
+
+			for i = 1, hgo_required do
+				local H = factory_create(CreateHint)
+				HGOs[i], HintSprites[i], HintTints[i] = H, msg_url(Prototypia, H, Sprite), vmath_vector4(0,0,0,1)
+				msg_post(H, Disable)
+			end
+
+			for i = 1, ego_required do
+				local E = factory_create(CreateEcho)
+				EGOs[i], EchoSprites[i], EchoTints[i] = E, msg_url(Prototypia, E, Sprite), vmath_vector4()
+				msg_post(E, Disable)
+			end
+
+			for i = 1, ago_required do
+				local AL, AR = factory_create(CreateAnim), factory_create(CreateAnim)
+				AlGOs[i], ArGOs[i], AlSprites[i], ArSprites[i], AnimTints[i] = AL, AR, msg_url(Prototypia, AL, Sprite), msg_url(Prototypia, AR, Sprite), vmath_vector4()
+				msg_post(AL, Disable)	msg_post(AR, Disable)
+			end
+
 			FumenModification = current_modification
 			return true
 		else
-			CloseFumenContext()   -- For error handling usages.
+			CloseFumenContext(true)   -- For error handling usages.
 			return false, "[!]  Fumen Loading Failed."
 		end
 	end
 
-	CloseFumenContext()   -- For error handling usages.
+	CloseFumenContext(true)   -- For error handling usages.
 	return false, "[!]  Fumen Loading Failed."
 end
 
 local function OpenFumenContext()
 	local base_path = sys.get_save_file(PrototypiaWorks, Message)
-
-	-- Close the former Fumen Context, with metadatas.
-	--
-	CloseFumenContext()
-	FumenPath, FumenModification = nil, nil
-	ContextType, ContextMs = false, 0
+	CloseFumenContext(true)
 
 	-- Try *.lua first.
 	--
@@ -327,12 +261,71 @@ local function OpenFumenContext()
 		return LoadFumenContext()
 	end
 
-	ContextMs, FumenPath, FumenModification = 0, nil, nil
 	return false, "[!]  Fumen Loading Failed."
 end
 
--- Utils
---
+local function UpdateFumenContext()
+	if ContextType then
+		SetCam(XScale, YScale, XDelta, YDelta, Rotdeg)
+		local _,_, wgo_used, hgo_used, ego_used, ago_used = UpdateArf(ContextMs, WGOs, HGOs, EGOs, AlGOs, ArGOs, WishTints, HintTints, EchoTints, AnimTints)
+
+		-- Mutate Tints
+		--
+		for i = 1, wgo_used do	go_set(WishSprites[i], tint_w, WishTints[i])	end
+		for i = 1, hgo_used do	go_set(HintSprites[i], tint, HintTints[i])		end
+		for i = 1, ego_used do	go_set(EchoSprites[i], tint, EchoTints[i])		end
+		for i = 1, ago_used do
+			go_set(AlSprites[i], tint, AnimTints[i])
+			go_set(ArSprites[i], tint, AnimTints[i])
+		end
+
+		-- Enable & Disable Components
+		--
+		if wgo_used > LastWgoUsed then
+			for i = LastWgoUsed+1, wgo_used do		msg_post(WishSprites[i], Enable)		end
+			if wgo_used > MaxWU then				MaxWU = wgo_used						end
+		elseif wgo_used < LastWgoUsed then
+			for i = wgo_used+1, LastWgoUsed do
+				msg_post(WishSprites[i], Disable)
+			end
+		end
+
+		if hgo_used > LastHgoUsed then
+			for i = LastHgoUsed+1, hgo_used do
+				msg_post(HGOs[i], Enable)
+			end
+		elseif hgo_used < LastHgoUsed then
+			for i = hgo_used+1, LastHgoUsed do
+				msg_post(HGOs[i], Disable)
+			end
+		end
+
+		if ego_used > LastEgoUsed then
+			for i = LastEgoUsed+1, ego_used do		msg_post(EGOs[i], Enable)			end
+			if ego_used > MaxEU then				MaxEU = ego_used					end
+		elseif ego_used < LastEgoUsed then
+			for i = ego_used+1, LastEgoUsed do
+				msg_post(EGOs[i], Disable)
+			end
+		end
+
+		if ago_used > LastAgoUsed then
+			for i = LastAgoUsed+1, ago_used do
+				msg_post(AlSprites[i], Enable)
+				msg_post(ArSprites[i], Enable)
+			end
+		elseif ago_used < LastAgoUsed then
+			for i = ago_used+1, LastAgoUsed do
+				msg_post(AlSprites[i], Disable)
+				msg_post(ArSprites[i], Disable)
+			end
+		end
+
+		LastWgoUsed, LastEgoUsed = wgo_used, ego_used
+		LastHgoUsed, LastAgoUsed = hgo_used, ago_used
+	end
+end
+
 local function ShowTime()
 	if ContextType then
 		if ContextType < 2 then
@@ -344,12 +337,6 @@ local function ShowTime()
 		Message = "[#]  0(0 ms)"
 	end
 	msg_post(ViewerUI, GUI_NEW_MSG)
-end
-
-local function InputShowTime(action, action_id)
-	if action_id == Touch and action.released then
-		ShowTime()
-	end
 end
 
 
@@ -386,10 +373,64 @@ function init()
 	collectgarbage("setpause", 1048576)
 end
 
-function update()   -- WIP
+function update()
+	if ContextType then
+		-- Sync Context Time if Audio is Playing
+		--
+		if CheckPlaying(CurrentAudioUnit) then
+			ContextMs = GetTime(CurrentAudioUnit)   -- There will be an offset value added
+			ContextMs = ContextMs>Before and Before or ContextMs
+		end
+
+		-- Update Context
+		--
+		if ContextMs ~= LastMs then
+			UpdateFumenContext()
+			defos_set_window_title( string_format(titlefmt, MaxWU, MaxEU, FumenPath, ObjCount) )
+			LastMs = ContextMs
+			ShowTime()
+		end
+	end
 end
 
-function fixed_update()   -- WIP
+function fixed_update()
+	-- File Listening
+	--
+	if ContextType then
+		local mdf = lfs_attributes(FumenPath, modification)
+		if mdf and mdf~=FumenModification then
+			local OK =		CloseFumenContext(false)   -- Shallow, for this is a file-listening behavior.
+			OK, Message =	LoadFumenContext()
+
+			if OK then
+				FumenModification = mdf
+				defos_set_window_title( string_format(titlefmt, MaxWU, MaxEU, FumenPath, ObjCount) )
+				UpdateFumenContext()
+			else
+				CloseFumenContext(true)
+				msg_post(ViewerUI, GUI_NEW_MSG)
+			end
+		end
+	end
+
+	-- Energy-Saving Strategy & GC
+	--
+	if CurrentAudioUnit then
+		if CheckPlaying(CurrentAudioUnit) then
+			sys_set_update_frequency(0)
+		else
+			msg_post(ViewerUI, GUI_SHOW_PLAY)
+			if ScrollState == 1 then
+				sys_set_update_frequency(0)
+				ScrollState = 2
+			elseif ScrollState == 2 then
+				ScrollState = 0
+			else
+				sys_set_update_frequency(15)
+			end
+		end
+	end
+	collectgarbage()
 end
 
 
@@ -441,7 +482,6 @@ local Actions = {   -- WIP
 			defos_set_window_title( string_format(titlefmt, MaxWU, MaxEU, FumenPath, ObjCount) )
 			ShowTime()
 		else
-			CloseAudioContext()
 			defos_set_window_title( "Prototypia Viewer  --  " .. PrototypiaWorksPath )
 			msg_post(ViewerUI, GUI_NEW_MSG)
 		end
@@ -468,5 +508,11 @@ local Actions = {   -- WIP
 -- L5: User Action Dispatchers
 --
 local function Default(message) end
+local function InputShowTime(action, action_id)
+	if action_id == Touch and action.released then
+		ShowTime()
+	end
+end
+
 function on_message(self, message_id, message)		(Actions[message_id] or Default)(message)					end
 function on_input(self, action_id, action)			(Actions[action_id] or InputShowTime)(action, action_id)	end
