@@ -20,6 +20,8 @@ local defos_set_window_title = defos.set_window_title
 local sys_set_update_frequency = sys.set_update_frequency
 local lfs_attributes = lfs.attributes
 local string_format = string.format
+
+local CheckPlaying = AcAudio.CheckPlaying
 local UpdateArf = Arf3.UpdateArf
 local SetCam = Arf3.SetCam
 
@@ -268,6 +270,7 @@ local function LoadFumenContext()   -- Considering Both Opening & Reloading Usag
 				OK, Before, ObjCount, wgo_required, hgo_required, ego_required = pcall(Arf3.InitArf3, buf, true)
 			end
 		else   -- *.lua
+			defos_set_window_title( string_format(compilingfmt, FumenPath) )
 			OK, Before, ObjCount, wgo_required, hgo_required, ego_required = pcall(NemesisCompile, FumenPath)
 			if OK then
 				BarBefore = MsToBar(Before) or 0
@@ -324,8 +327,29 @@ local function OpenFumenContext()
 		return LoadFumenContext()
 	end
 
-	FumenPath, FumenModification = nil, nil
+	ContextMs, FumenPath, FumenModification = 0, nil, nil
 	return false, "[!]  Fumen Loading Failed."
+end
+
+-- Utils
+--
+local function ShowTime()
+	if ContextType then
+		if ContextType < 2 then
+			Message = string.format(msfmt, ContextMs, Before)
+		else
+			Message = string.format(msbarfmt, ContextMs, Before, MsToBar(ContextMs) or 0, BarBefore)
+		end
+	else
+		Message = "[#]  0(0 ms)"
+	end
+	msg_post(ViewerUI, GUI_NEW_MSG)
+end
+
+local function InputShowTime(action, action_id)
+	if action_id == Touch and action.released then
+		ShowTime()
+	end
 end
 
 
@@ -372,18 +396,64 @@ end
 -- L4: User Actions
 --
 local Actions = {   -- WIP
-	[hash "GUI_LOAD"] = nil,
-	[hash "GUI_SEEK_BAR"] = nil, 
+	[hash "BUTTON_C"] = function(action)
+		if action.released then
+			CtrlPressed = false
+		elseif action.pressed then
+			CtrlPressed = true
+		end
+	end,
+
+	[hash "BUTTON_A"] = function(action)
+		if action.released then
+			AltPressed = false
+		elseif action.pressed then
+			AltPressed = true
+		end
+	end,
+
+	[hash "SCROLL_UP"] = function(action)
+		if action.value == 1 then
+			if CurrentAudioUnit and not CheckPlaying(CurrentAudioUnit) then
+				local t = (CtrlPressed or AltPressed) and (ContextMs - 370) or (ContextMs - 37)
+				ContextMs = (t>0) and t or 0
+				ScrollState = 1
+			end
+		end
+	end,
+
+	[hash "SCROLL_DOWN"] = function(action)
+		if action.value == 1 then
+			if CurrentAudioUnit and not CheckPlaying(CurrentAudioUnit) then
+				local t = (CtrlPressed or AltPressed) and (ContextMs + 370) or (ContextMs + 37)
+				ContextMs = (t<AudioLen-10) and t or (AudioLen-10)
+				ScrollState = 1
+			end
+		end
+	end,
+
+	[hash "GUI_LOAD"] = function()
+		local OK do		OK, Message = OpenAudioContext()	end
+		if OK then		OK, Message = OpenFumenContext()	end
+
+		if OK then
+			UpdateFumenContext()   -- Initial Update
+			defos_set_window_title( string_format(titlefmt, MaxWU, MaxEU, FumenPath, ObjCount) )
+			ShowTime()
+		else
+			CloseAudioContext()
+			defos_set_window_title( "Prototypia Viewer  --  " .. PrototypiaWorksPath )
+			msg_post(ViewerUI, GUI_NEW_MSG)
+		end
+	end,
+
+	[hash "GUI_SEEK_BAR"] = nil,
 	[hash "GUI_SEEK_MS"] = nil,
-	[hash "BUTTON_C"] = nil,
-	[hash "BUTTON_A"] = nil, 
-	[hash "SCROLL_UP"] = nil,
-	[hash "SCROLL_DOWN"] = nil, 
-	[hash "GUI_XD"] = nil, 
+	[hash "GUI_XD"] = nil,
 	[hash "GUI_YD"] = nil,
-	[hash "GUI_XS"] = nil, 
+	[hash "GUI_XS"] = nil,
 	[hash "GUI_YS"] = nil,
-	[hash "GUI_DEG"] = nil, 
+	[hash "GUI_DEG"] = nil,
 	[hash "GUI_EXPORT"] = nil,
 
 	[hash "GUI_OWV"] = (sys.get_sys_info().system_name == "Darwin")
@@ -398,20 +468,5 @@ local Actions = {   -- WIP
 -- L5: User Action Dispatchers
 --
 local function Default(message) end
-local function ClearMSG(action, action_id)
-	if action_id == Touch and action.released then
-		if ContextType then
-			if ContextType < 2 then
-				Message = string.format(msfmt, ContextMs, Before)
-			else
-				Message = string.format(msbarfmt, ContextMs, Before, MsToBar(ContextMs) or 0, BarBefore)
-			end
-		else
-			Message = "[#]  0(0 ms)"
-		end
-		msg_post(ViewerUI, GUI_NEW_MSG)
-	end
-end
-
-function on_message(self, message_id, message)		(Actions[message_id] or Default)(message)				end
-function on_input(self, action_id, action)			(Actions[action_id] or ClearMSG)(action, action_id)		end
+function on_message(self, message_id, message)		(Actions[message_id] or Default)(message)					end
+function on_input(self, action_id, action)			(Actions[action_id] or InputShowTime)(action, action_id)	end
