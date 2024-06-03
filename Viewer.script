@@ -14,42 +14,362 @@
 -- L0: Caches
 --
 local hash = hash
+local go_set = go.set
+local msg_url, msg_post = msg.url, msg.post
+local defos_set_window_title = defos.set_window_title
+local sys_set_update_frequency = sys.set_update_frequency
+local lfs_attributes = lfs.attributes
+local string_format = string.format
+local UpdateArf = Arf3.UpdateArf
+local SetCam = Arf3.SetCam
 
 -- Hash & String Caches
 --
 local CreateWish, CreateHint, CreateEcho, CreateAnim, ViewerUI
 local GUI_NEW_MSG, GUI_SHOW_PLAY, GUI_SHOW_PAUSE = hash("GUI_NEW_MSG"), hash("GUI_SHOW_PLAY"), hash("GUI_SHOW_PAUSE")
-local enable, disable, touch = hash("enable"), hash("disable"), hash("touch")
+local Enable, Disable, Touch = hash("enable"), hash("disable"), hash("touch")
 local Sprite, tint_w, tint = hash("Sprite"), hash("tint.w"), hash("tint")
+local Prototypia = hash("Prototypia")
 
-local modification = "modification"
-local nemesis_compiler_error = "[*] Nemesis Compiler Error:\n"
+local PrototypiaWorks  = "Prototypia Works"
+local PrototypiaWorksPath = sys.get_save_file(PrototypiaWorks, "")
+local titlefmt, compilingfmt = "[%d][%d]  Prototypia Viewer  --  %s  --  %d Objects", "[Compiling]  Prototypia Viewer  --  %s"
 local msfmt, msbarfmt = "[#]  %d(%d ms)", "[#]  %d(%d ms)  ·  %d(%d Bar)"
-local titlefmt = "[%d][%d]  Prototypia Viewer  --  %s  --  %d Objects"
+local nemesis_error = "[*]  Nemesis Compiler Error:\n"
+local modification = "modification"
 
 
 -- L1: Context
 --
+local Before, ObjCount = 0, 0
+local WGOs, HGOs, EGOs, AlGOs, ArGOs
+local WishSprites, HintSprites, EchoSprites, AlSprites, ArSprites
+local WishTints, HintTints, EchoTints, AnimTints
 
--- Environment Vars
+local XScale, YScale, XDelta, YDelta, Rotdeg = 1, 1, 0, 0, 0
+local LastWgoUsed, LastHgoUsed, LastEgoUsed, LastAgoUsed = 0, 0, 0, 0
+local ContextMs, CurrentAudioRes, CurrentAudioUnit
+
+-- Viewer-Specific Context
 -- Global: Message, UserInput
 --
-local Path = sys.get_save_file("Prototypia Works", "")
+local LastMs = 0
+local AudioLen = 0   -- Adjust Before to AudioLen if Before>AudioLen
+local ContextType = false   -- false(Not Opened), 0(*.ar), 1(*.arf), 2(*.lua Nemesis User Script)
+local FumenPath, FumenModification
+local MaxWU, MaxEU, BarBefore
+
+-- Temporary Stuff
+-- No need to manually maintain them.
+--
+local PlayTimerHandle
+local CtrlPressed, AltPressed = false, false
+local ScrollState
 
 
--- L2: Lifecycle Funcs
+-- L2: Context Methods
+--
+local function InitFumenContext(wgo_required, hgo_required, ego_required)
+	local nt, vmath_vector4, factory_create = Arf3.NewTable, vmath.vector4, factory.create
+	local ago_required = hgo_required + ego_required
+
+	-- Create Tables
+	--
+	WGOs, HGOs, EGOs, AlGOs, ArGOs = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0), nt(ago_required, 0)
+	WishSprites, HintSprites, EchoSprites, AlSprites, ArSprites = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0), nt(ago_required, 0)
+	WishTints, HintTints, EchoTints, AnimTints = nt(wgo_required, 0), nt(hgo_required, 0), nt(ego_required, 0), nt(ago_required, 0)
+
+	-- Fill Tables
+	--
+	for i = 1, wgo_required do
+		local W = factory_create(CreateWish)
+		WGOs[i], WishSprites[i] = W, msg_url(Prototypia, W, Sprite)
+		msg_post(W, Disable)
+	end
+
+	for i = 1, hgo_required do
+		local H = factory_create(CreateHint)
+		HGOs[i], HintSprites[i], HintTints[i] = H, msg_url(Prototypia, H, Sprite), vmath_vector4(0,0,0,1)
+		msg_post(H, Disable)
+	end
+
+	for i = 1, ego_required do
+		local E = factory_create(CreateEcho)
+		EGOs[i], EchoSprites[i], EchoTints[i] = E, msg_url(Prototypia, E, Sprite), vmath_vector4()
+		msg_post(E, Disable)
+	end
+
+	for i = 1, ago_required do
+		local AL, AR = factory_create(CreateAnim), factory_create(CreateAnim)
+		AlGOs[i], ArGOs[i], AlSprites[i], ArSprites[i], AnimTints[i] = AL, AR, msg_url(Prototypia, AL, Sprite), msg_url(Prototypia, AR, Sprite), vmath_vector4()
+		msg_post(AL, Disable)	msg_post(AR, Disable)
+	end
+end
+
+local function UpdateFumenContext()
+	if ContextType then
+		SetCam(XScale, YScale, XDelta, YDelta, Rotdeg)
+		local _,_, wgo_used, hgo_used, ego_used, ago_used = UpdateArf(ContextMs, WGOs, HGOs, EGOs, AlGOs, ArGOs, WishTints, HintTints, EchoTints, AnimTints)
+
+		-- Mutate Tints
+		--
+		for i = 1, wgo_used do	go_set(WishSprites[i], tint_w, WishTints[i])	end
+		for i = 1, hgo_used do	go_set(HintSprites[i], tint, HintTints[i])		end
+		for i = 1, ego_used do	go_set(EchoSprites[i], tint, EchoTints[i])		end
+		for i = 1, ago_used do
+			go_set(AlSprites[i], tint, AnimTints[i])
+			go_set(ArSprites[i], tint, AnimTints[i])
+		end
+
+		-- Enable & Disable Components
+		--
+		if wgo_used > LastWgoUsed then
+			for i = LastWgoUsed+1, wgo_used do		msg_post(WishSprites[i], Enable)		end
+			if wgo_used > MaxWU then				MaxWU = wgo_used						end
+		elseif wgo_used < LastWgoUsed then
+			for i = wgo_used+1, LastWgoUsed do
+				msg_post(WishSprites[i], Disable)
+			end
+		end
+
+		if hgo_used > LastHgoUsed then
+			for i = LastHgoUsed+1, hgo_used do
+				msg_post(HGOs[i], Enable)
+			end
+		elseif hgo_used < LastHgoUsed then
+			for i = hgo_used+1, LastHgoUsed do
+				msg_post(HGOs[i], Disable)
+			end
+		end
+
+		if ego_used > LastEgoUsed then
+			for i = LastEgoUsed+1, ego_used do		msg_post(EGOs[i], Enable)			end
+			if ego_used > MaxEU then				MaxEU = ego_used					end
+		elseif ego_used < LastEgoUsed then
+			for i = ego_used+1, LastEgoUsed do
+				msg_post(EGOs[i], Disable)
+			end
+		end
+
+		if ago_used > LastAgoUsed then
+			for i = LastAgoUsed+1, ago_used do
+				msg_post(AlSprites[i], Enable)
+				msg_post(ArSprites[i], Enable)
+			end
+		elseif ago_used < LastAgoUsed then
+			for i = ago_used+1, LastAgoUsed do
+				msg_post(AlSprites[i], Disable)
+				msg_post(ArSprites[i], Disable)
+			end
+		end
+
+		LastWgoUsed, LastEgoUsed = wgo_used, ego_used
+		LastHgoUsed, LastAgoUsed = hgo_used, ago_used
+	end
+end
+
+-- Context Open & Close Methods
+--
+local function CloseAudioContext()
+	AudioLen = 0
+	CurrentAudioUnit = AcAudio.ReleaseUnit(CurrentAudioUnit) and nil
+	CurrentAudioRes = AcAudio.ReleaseResource(CurrentAudioRes) and nil
+end
+
+local function CloseFumenContext()
+	-- Clear Scalars
+	--
+	Before, ObjCount, MaxWU, MaxEU, BarBefore = 0, 0, 0, 0, 0
+	LastMs, LastWgoUsed, LastHgoUsed, LastEgoUsed, LastAgoUsed = 0, 0, 0, 0, 0
+	XScale, YScale, XDelta, YDelta, Rotdeg = 1, 1, 0, 0, 0
+
+	-- Do Other Work
+	-- No need to manually nullify tables.
+	--
+	local go_delete = go.delete
+	for i = 1, #WGOs do		go_delete(WGOs[i])								end
+	for i = 1, #HGOs do		go_delete(HGOs[i])								end
+	for i = 1, #EGOs do		go_delete(EGOs[i])								end
+	for i = 1, #AlGOs do	go_delete(AlGOs[i])		go_delete(ArGOs[i])		end
+	Arf3.FinalArf()
+end
+
+local function OpenAudioContext()
+	local base_path = sys.get_save_file(PrototypiaWorks, Message)
+	local CLEARUP = CloseAudioContext, CloseAudioContext()
+
+	-- Try *.opus first.
+	--
+	local current_path = base_path .. ".opus"
+	if lfs_attributes(current_path) then
+		local OK, buf = pcall(sys.load_buffer, current_path)
+		if OK then
+			OK, CurrentAudioRes = AcAudio.CreateResource(buf)
+			if OK then
+				OK, CurrentAudioUnit, AudioLen = AcAudio.CreateUnit(CurrentAudioRes)
+				if OK then
+					return true
+				end
+			end
+		end
+	end
+
+	-- Try *.ogg then.
+	--
+	CLEARUP()
+	current_path = base_path .. ".ogg"
+	if lfs_attributes(current_path) then
+		local OK, buf = pcall(sys.load_buffer, current_path)
+		if OK then
+			OK, CurrentAudioRes = AcAudio.CreateResource(buf)
+			if OK then
+				OK, CurrentAudioUnit, AudioLen = AcAudio.CreateUnit(CurrentAudioRes)
+				if OK then
+					return true
+				end
+			end
+		end
+	end
+
+	-- Try *.wav for the last.
+	--
+	CLEARUP()
+	current_path = base_path .. ".wav"
+	if lfs_attributes(current_path) then
+		local OK, buf = pcall(sys.load_buffer, current_path)
+		if OK then
+			OK, CurrentAudioRes = AcAudio.CreateResource(buf)
+			if OK then
+				OK, CurrentAudioUnit, AudioLen = AcAudio.CreateUnit(CurrentAudioRes)
+				if OK then
+					return true
+				end
+			end
+		end
+	end
+
+	CLEARUP()
+	return false, "[!]  Audio Loading Failed."
+end
+
+local function LoadFumenContext()   -- Considering Both Opening & Reloading Usages.
+	local current_modification = lfs_attributes(FumenPath, modification)
+	if current_modification then
+		local OK, buf, wgo_required, hgo_required, ego_required
+
+		if ContextType < 0 then   -- *.ar
+			OK, buf = pcall(sys.load_buffer, FumenPath)
+			if buf then
+				OK, Before, ObjCount, wgo_required, hgo_required, ego_required = pcall(Arf3.InitArf2, buf, true)
+			end
+		elseif ContextType == 1 then   -- *.arf
+			OK, buf = pcall(sys.load_buffer, FumenPath)
+			if buf then
+				OK, Before, ObjCount, wgo_required, hgo_required, ego_required = pcall(Arf3.InitArf3, buf, true)
+			end
+		else   -- *.lua
+			OK, Before, ObjCount, wgo_required, hgo_required, ego_required = pcall(NemesisCompile, FumenPath)
+			if OK then
+				BarBefore = MsToBar(Before) or 0
+			else
+				CloseFumenContext()
+				return false, nemesis_error .. Before   -- The 2nd arg is the error message here.
+			end
+		end
+
+		if OK then
+			InitFumenContext(wgo_required, hgo_required, ego_required)
+			FumenModification = current_modification
+			return true
+		else
+			CloseFumenContext()   -- For error handling usages.
+			return false, "[!]  Fumen Loading Failed."
+		end
+	end
+
+	CloseFumenContext()   -- For error handling usages.
+	return false, "[!]  Fumen Loading Failed."
+end
+
+local function OpenFumenContext()
+	local base_path = sys.get_save_file(PrototypiaWorks, Message)
+
+	-- Close the former Fumen Context, with metadatas.
+	--
+	CloseFumenContext()
+	FumenPath, FumenModification = nil, nil
+	ContextType, ContextMs = false, 0
+
+	-- Try *.lua first.
+	--
+	FumenPath = base_path .. ".lua"
+	if lfs_attributes(FumenPath) then
+		ContextType = 2
+		return LoadFumenContext()
+	end
+
+	-- Try *.arf then.
+	--
+	FumenPath = base_path .. ".arf"
+	if lfs_attributes(FumenPath) then
+		ContextType = 1
+		return LoadFumenContext()
+	end
+
+	-- Try *.ar for the last.
+	--
+	FumenPath = base_path .. ".ar"
+	if lfs_attributes(FumenPath) then
+		ContextType = 0
+		return LoadFumenContext()
+	end
+
+	FumenPath, FumenModification = nil, nil
+	return false, "[!]  Fumen Loading Failed."
+end
+
+
+-- L3: Lifecycle Funcs
 --
 function init()
+	-- Initial Settings
+	--
+	defos.set_window_size(nil, nil, 1200, 720)
+	defos_set_window_title( "Prototypia Viewer  --  " .. PrototypiaWorksPath )
+	collectgarbage("stop")
+
+	-- URL Preparations
+	--
+	local Viewer = hash("/Viewer")
+	CreateWish = msg_url(Prototypia, Viewer, hash "CreateWish")
+	CreateHint = msg_url(Prototypia, Viewer, hash "CreateHint")
+	CreateEcho = msg_url(Prototypia, Viewer, hash "CreateEcho")
+	CreateAnim = msg_url(Prototypia, Viewer, hash "CreateAnim")
+	ViewerUI = msg_url(Prototypia, Viewer, hash "ViewerUI")
+
+	-- Write Licenses
+	--
+	local licensefile = io.open( PrototypiaWorksPath .. "Viewer.license", "w" )
+	if licensefile then
+		licensefile:write( sys.load_resource("/Viewer.license") )
+		licensefile:close()
+	end
+
+	-- Do Energy-Saving Strategies
+	--
+	sys_set_update_frequency(15)
+	collectgarbage("setstepmul", 1)
+	collectgarbage("setpause", 1048576)
 end
 
-function update()
+function update()   -- WIP
 end
 
-function fixed_update()
+function fixed_update()   -- WIP
 end
 
 
--- L3: User Actions
+-- L4: User Actions
 --
 local Actions = {   -- WIP
 	[hash "GUI_LOAD"] = nil,
@@ -67,25 +387,29 @@ local Actions = {   -- WIP
 	[hash "GUI_EXPORT"] = nil,
 
 	[hash "GUI_OWV"] = (sys.get_sys_info().system_name == "Darwin")
-	and function()	os.execute( "open " .. string.gsub(Path, "%s", "\\ ") )		end
-	or function()	os.execute( "explorer " .. Path )							end
+	and function()	os.execute( "open " .. string.gsub( PrototypiaWorksPath, "%s", "\\ ") )	end
+	or function()	os.execute( "explorer " .. PrototypiaWorksPath )						end
 	,
 
 	[hash "GUI_PLAY"] = nil
 }
 
 
--- L4: User Action Dispatchers
+-- L5: User Action Dispatchers
 --
 local function Default(message) end
 local function ClearMSG(action, action_id)
-	if action_id == touch and action.released then
-		if context_opened then
-			-- WIP
+	if action_id == Touch and action.released then
+		if ContextType then
+			if ContextType < 2 then
+				Message = string.format(msfmt, ContextMs, Before)
+			else
+				Message = string.format(msbarfmt, ContextMs, Before, MsToBar(ContextMs) or 0, BarBefore)
+			end
 		else
 			Message = "[#]  0(0 ms)"
 		end
-		msg.post(ViewerUI, GUI_NEW_MSG)
+		msg_post(ViewerUI, GUI_NEW_MSG)
 	end
 end
 

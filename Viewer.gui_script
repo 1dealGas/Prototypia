@@ -42,7 +42,7 @@ function init(self)
 	PlayPause = gui.get_node("Play/larrylabel")
 	MainScript = msg.url("Prototypia:/Viewer#Logics")
 	msg_post(MainScript, "acquire_input_focus")
-	msg_post(".", "acquire_input_focus")   -- GUI component at the top of the stack
+	msg_post("#", "acquire_input_focus")   -- GUI component at the top of the stack
 end
 
 function on_input(self, action_id, action)   -- All Are Dirty Larry Callbacks.
