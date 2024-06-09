@@ -108,7 +108,7 @@ Arf3_API FinalArf(lua_State *L) {
 	mstime = systime = dt_p1 = dt_p2 = 0;
 
 	// Reset Judge Params
-	judge_range = 37;					object_size_x = 360.0f;						object_size_y = 450.0f;
+	judge_range = 37;					object_size_x = object_size_y = 324.0f;
 	mindt = idelta - judge_range;		mindt = (mindt < -100) ? -100 : mindt;
 	maxdt = idelta + judge_range;		maxdt = (maxdt >  100) ?  100 : maxdt;
 
