@@ -127,8 +127,12 @@
     returns:
     - name: hit
       type: number
+    - name: early
+      type: number
     - name: lost
       type: number
+    - name: special_hint_judged
+      type: boolean
     - name: wgo_used
       type: number
     - name: hgo_used

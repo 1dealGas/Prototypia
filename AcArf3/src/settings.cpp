@@ -14,9 +14,6 @@ Arf3_API SetCam(lua_State *L) {
 }
 
 #ifndef AR_BUILD_VIEWER
-	Arf3_API SetAllowAnmitsu(lua_State* L) {
-		return (allow_anmitsu = lua_toboolean(L,1), 0);
-	}
 
 	Arf3_API SetIDelta(lua_State* L) {
 		idelta = luaL_checknumber(L, 1);
