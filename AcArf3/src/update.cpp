@@ -72,7 +72,7 @@ inline JudgeResult SweepObjects(const uint16_t init_group, const uint16_t beyond
 			auto& current_hint = Arf->hint[current_hint_id];
 			const int32_t dt = mstime - current_hint.ms;
 
-			if(dt > 100) {												/* A. Sweep Lost */
+			if(dt > 101) {												/* A. Sweep Lost */
 				if( current_hint.status <= NONJUDGED_LIT )
 					result.late++, current_hint.status = LOST;
 			}
