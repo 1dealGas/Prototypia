@@ -155,7 +155,7 @@ Arf3_JUD JudgeArf(const ab* const vt, const uint8_t vtcount, const bool any_pres
 					const bool iswa = anmitsu_register(current_hint.c_dx, current_hint.c_dy);
 					if( !min_time  ||  min_time >= current_hint.ms )				/* Register */
 						min_time = current_hint.ms;
-					else if( !iswa ) {
+					else if( !iswa  ||  dt < mindt ) {   // Update: Prohibit Anmitsu Early Judging.
 						if(dt <= maxdt) {					// Update: Record the Pseudo Judged-Ms.
 							if(current_hint.judged_ms) {
 								const int32_t abs_dt	  = dt<0 ? -dt : dt;
