@@ -143,13 +143,6 @@
       type: number
 
 
-  - name: SetAllowAnmitsu
-    type: function
-    desc: Included only when the macro "AR_BUILD_VIEWER" is not defined
-    parameters:
-    - name: is_anmitsu_allowed
-      type: boolean
-
   - name: SetHintSize
     type: function
     desc: Included only when the macro "AR_BUILD_VIEWER" is not defined
