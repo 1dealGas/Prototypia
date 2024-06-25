@@ -78,25 +78,20 @@ inline JudgeResult SweepObjects(const uint16_t init_group, const uint16_t beyond
 			}
 			else if(dt > maxdt) {										/* B. Sweep Hit/Early */
 				if(current_hint.judged_ms) {
-					const int32_t judge_dt = current_hint.judged_ms - current_hint.ms;
-
 					// Status Update
+					current_hint.status = current_hint.status ? JUDGED_LIT : JUDGED;   // N:0, NL:1; Again
 					if(current_hint_id == Arf->special_hint)
 						result.sh_judged = (bool)(Arf->special_hint);
 
-					if(current_hint.status == NONJUDGED_LIT)
-						current_hint.status = JUDGED_LIT;
-					else
-						current_hint.status = JUDGED;
-
 					// Classify
-					if(judge_dt < mindt)
+					if(current_hint.judged_ms-current_hint.ms < mindt)
 						result.early++,	current_hint.elstatus = EARLY;
 					else
 						result.hit++;
 				}
 			}
-			else break;													/* C. Sweep Complete in this Group */
+			else														/* C. Sweep Complete in this Group */
+				break;
 		}
 	}
 	return result;
