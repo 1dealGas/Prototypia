@@ -72,12 +72,10 @@ inline JudgeResult SweepObjects(const uint16_t init_group, const uint16_t beyond
 			auto& current_hint = Arf->hint[current_hint_id];
 			const int32_t dt = mstime - current_hint.ms;
 
-			if(dt > 101) {												/* A. Sweep Lost */
-				if( current_hint.status <= NONJUDGED_LIT )
-					result.late++, current_hint.status = LOST;
-			}
-			else if(dt > maxdt) {										/* B. Sweep Hit/Early */
-				if(current_hint.judged_ms) {
+			if(dt <= maxdt)													/* A. Sweep Done in this Group */
+				break;
+			if(current_hint.status <= NONJUDGED_LIT) {
+				if(current_hint.judged_ms) {								/* B. Sweep Hit/Early */
 					// Status Update
 					current_hint.status = current_hint.status ? JUDGED_LIT : JUDGED;   // N:0, NL:1; Again
 					if(current_hint_id == Arf->special_hint)
@@ -89,9 +87,9 @@ inline JudgeResult SweepObjects(const uint16_t init_group, const uint16_t beyond
 					else
 						result.hit++;
 				}
+				else if(dt > 100)											/* C. Sweep Lost */
+					result.late++, current_hint.status = LOST;
 			}
-			else														/* C. Sweep Complete in this Group */
-				break;
 		}
 	}
 	return result;
