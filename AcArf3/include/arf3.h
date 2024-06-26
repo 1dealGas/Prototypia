@@ -283,7 +283,7 @@ namespace Arf3_APIs {
 #endif
 #ifndef AR_BUILD_VIEWER
 	Arf3::JudgeResult	JudgeArf			(const Arf3::ab*, uint8_t, bool, bool);
-	int					SetHintSize			(lua_State*);
+	int					SetObjectSize		(lua_State*);
 	int					SetJudgeRange		(lua_State*);
 	int					SetIDelta			(lua_State*);
 	int					JudgeArf			(lua_State*);

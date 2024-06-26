@@ -77,9 +77,6 @@
     - name: ego_required
       type: number
 
-  - name: FinalArf
-    type: function
-
 
   - name: SetDaymode
     type: function
@@ -143,7 +140,7 @@
       type: number
 
 
-  - name: SetHintSize
+  - name: SetObjectSize
     type: function
     desc: Included only when the macro "AR_BUILD_VIEWER" is not defined
     parameters:
@@ -195,3 +192,7 @@
     returns:
     - name: new_table
       type: table
+
+
+  - name: FinalArf
+    type: function

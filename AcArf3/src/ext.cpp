@@ -36,7 +36,7 @@ static const luaL_reg Arf3APIs[] = {
 	{"InitArf3", InitArf3}, {"FinalArf", FinalArf}, {"UpdateArf", UpdateArf},
 	{"SetDaymode", SetDaymode}, {"SetCam", SetCam},
 #ifndef AR_BUILD_VIEWER
-	{"SetHintSize", SetHintSize}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArf},
+	{"SetObjectSize", SetObjectSize}, {"SetIDelta", SetIDelta}, {"JudgeArf", JudgeArf},
 	{"SetJudgeRange", SetJudgeRange},
 	#ifdef AR_WITH_EXPORTER
 		{"DumpArf", DumpArf},
