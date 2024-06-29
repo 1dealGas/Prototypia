@@ -77,9 +77,9 @@ Arf3_API MakeArf(lua_State* L) {
 					lua_pop(L, 4);   // 3 Params with CURRENT_HINT
 
 					if(hint_ms>=0 && hint_ms<=512000) {
-						uint64_t k  = (uint64_t)(hint_ms*127)				<<  44	;
-								 k += (uint64_t)(hint_original_x * 1000)	<<  22	;
-								 k += (uint64_t)(hint_original_y * 1000)			;
+						const uint64_t k = ( (uint64_t)(hint_ms * 127)			<< 44 )
+										 + ( (uint64_t)(hint_original_x * 1000) << 22 )
+										 +	 (uint64_t)(hint_original_y * 1000)	;
 						hintset[k] = {
 							.ms = (uint32_t)hint_ms,
 							.c_dx = (float)((hint_original_x-8) * 112.5),
@@ -101,9 +101,9 @@ Arf3_API MakeArf(lua_State* L) {
 				lua_pop(L, 3);   // 3 Params without CURRENT_SPECIAL_HINT
 
 				if(sh_ms>=0 && sh_ms<=512000) {
-					uint64_t k  = (uint64_t)(sh_ms*127)				<<  44	;
-							 k += (uint64_t)(sh_original_x * 1000)	<<  22	;
-							 k += (uint64_t)(sh_original_y * 1000)			;
+					const uint64_t k = ( (uint64_t)(sh_ms * 127)		  << 44 )
+									 + ( (uint64_t)(sh_original_x * 1000) << 22 )
+									 +	 (uint64_t)(sh_original_y * 1000) ;
 					hintset[k] = {
 						.ms = (uint32_t)sh_ms,
 						.c_dx = (float)((sh_original_x-8) * 112.5),
@@ -379,9 +379,9 @@ Arf3_API MakeArf(lua_State* L) {
 		lua_pop(L, 4);   // 3 Params + CURRENT_ECHO
 
 		if(echo_ms>=0 && echo_ms<=512000) {
-			uint64_t k  = (uint64_t)(echo_ms*127)				<<  44	;
-					 k += (uint64_t)(echo_original_x * 1000)	<<  22	;
-					 k += (uint64_t)(echo_original_y * 1000)			;
+			const uint64_t k = ( (uint64_t)(echo_ms * 127)			<< 44 )
+							 + ( (uint64_t)(echo_original_x * 1000) << 22 )
+							 +	 (uint64_t)(echo_original_y * 1000)	;
 			echoset[k] = {
 				.ms = (uint32_t)echo_ms,
 				.c_dx = (float)((echo_original_x-8) * 112.5),
