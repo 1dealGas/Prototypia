@@ -451,7 +451,7 @@ Arf3_API MakeArf(lua_State* L) {
 
 	// Index: Reserve
 	auto& index = Arf->index;
-	const auto last_index = Arf->before>>9;
+	const auto last_index = Arf->before >> 9;
 	index.resize(last_index+1);
 	for(auto& idx : index)
 		idx.widx.reserve(1024), idx.hidx.reserve(1024), idx.eidx.reserve(1024);
@@ -463,31 +463,22 @@ Arf3_API MakeArf(lua_State* L) {
 		for(uint64_t j=init_group; j<=last_group; j++)
 			index[j].widx.push_back(i);
 	}
-	for(uint64_t i=0; i<hint_count; i++) {
-		const auto hint_index = hints[i].ms>>9;
-		if(hint_index > 0)
-			index[hint_index-1].hidx.push_back(i);
-		if(hint_index < last_index)
-			index[hint_index+1].hidx.push_back(i);
-		index[hint_index].hidx.push_back(i);
-	}
-	for(uint64_t i=0; i<echo_count; i++) {
-		const auto echo_index = echoes[i].ms>>9;
-		if(echo_index > 0)
-			index[echo_index-1].eidx.push_back(i);
-		if(echo_index < last_index)
-			index[echo_index+1].eidx.push_back(i);
-		index[echo_index].eidx.push_back(i);
-	}
+	for(uint64_t i=0; i<hint_count; i++)
+		index[( hints[i].ms>>9 )].hidx.push_back(i);
+	for(uint64_t i=0; i<echo_count; i++)
+		index[( echoes[i].ms>>9 )].eidx.push_back(i);
 
 	// Index: Sort & Determine hgo_required
-	for(auto& idx : index) {
+	for(uint64_t i=0; i<=last_index; i++) {
+		auto& idx = index[i];
 		std::sort( idx.widx.begin(), idx.widx.end() );
 		std::sort( idx.hidx.begin(), idx.hidx.end() );
 		std::sort( idx.eidx.begin(), idx.eidx.end() );
-		const auto current_hidx_size = idx.hidx.size();
-		if( current_hidx_size > Arf->hgo_required )
-			Arf->hgo_required = current_hidx_size;
+		const auto current_hr = idx.hidx.size()
+											+ ( i > 0			? index[i-1].hidx.size() : 0 )
+											+ ( i < last_index	? index[i+1].hidx.size() : 0 );
+		if( current_hr > Arf->hgo_required )
+			Arf->hgo_required = current_hr;
 	}
 
 
