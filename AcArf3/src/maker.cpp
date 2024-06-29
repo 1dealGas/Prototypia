@@ -60,12 +60,12 @@ Arf3_API MakeArf(lua_State* L) {
 			auto& current_wish = wishes[i-1];
 
 			// Meta
-			current_wish.of_layer2 = ( lua_pushstring(L, "of_layer2"), lua_rawget(L, CURRENT_WISH), lua_toboolean(L, -1) );
-			current_wish.max_visitable_distance = ( lua_pushstring(L, "max_visible_distance"), lua_rawget(L, CURRENT_WISH), lua_tonumber(L, -1) );
+			current_wish.of_layer2 = ( lua_getfield(L, CURRENT_WISH, "of_layer2"), lua_toboolean(L, -1) );
+			current_wish.max_visitable_distance = ( lua_getfield(L, CURRENT_WISH, "max_visible_distance"), lua_tonumber(L, -1) );
 			lua_pop(L, 2);
 
 			// Common Hint(s)
-			lua_pushstring(L, "hints"), lua_rawget(L, CURRENT_WISH); {
+			lua_getfield(L, CURRENT_WISH, "hints"); {
 				constexpr uint8_t CURRENT_HINTS = CURRENT_WISH + 1;
 				const uint64_t hints_size = lua_objlen(L, CURRENT_HINTS);
 				for(uint64_t j=1; j<=hints_size; j++) {
@@ -77,7 +77,9 @@ Arf3_API MakeArf(lua_State* L) {
 					lua_pop(L, 4);   // 3 Params with CURRENT_HINT
 
 					if(hint_ms>=0 && hint_ms<=512000) {
-						const uint64_t k = (uint64_t)hint_ms * 127 + (uint64_t)(hint_original_x*1009.0) + (uint64_t)(hint_original_y*1013.0);
+						uint64_t k  = (uint64_t)(hint_ms*127)				<<  44	;
+								 k += (uint64_t)(hint_original_x * 1000)	<<  22	;
+								 k += (uint64_t)(hint_original_y * 1000)			;
 						hintset[k] = {
 							.ms = (uint32_t)hint_ms,
 							.c_dx = (float)((hint_original_x-8) * 112.5),
@@ -90,7 +92,7 @@ Arf3_API MakeArf(lua_State* L) {
 			lua_pop(L, 1);
 
 			// Special Hint
-			lua_pushstring(L, "special_hint"), lua_rawget(L, CURRENT_WISH);
+			lua_getfield(L, CURRENT_WISH, "special_hint");
 			if( lua_type(L, -1) != LUA_TNIL ) {   // if( !lua_isnil(L, -1) )
 				constexpr uint8_t CURRENT_SPECIAL_HINT = CURRENT_WISH + 1;
 				const int32_t sh_ms = ( lua_rawgeti(L, CURRENT_SPECIAL_HINT, 1), lua_tonumber(L, -1) );
@@ -99,7 +101,9 @@ Arf3_API MakeArf(lua_State* L) {
 				lua_pop(L, 3);   // 3 Params without CURRENT_SPECIAL_HINT
 
 				if(sh_ms>=0 && sh_ms<=512000) {
-					const uint64_t k = (uint64_t)sh_ms * 127 + (uint64_t)(sh_original_x*1009.0) + (uint64_t)(sh_original_y*1013.0);
+					uint64_t k  = (uint64_t)(sh_ms*127)				<<  44	;
+							 k += (uint64_t)(sh_original_x * 1000)	<<  22	;
+							 k += (uint64_t)(sh_original_y * 1000)			;
 					hintset[k] = {
 						.ms = (uint32_t)sh_ms,
 						.c_dx = (float)((sh_original_x-8) * 112.5),
@@ -111,7 +115,7 @@ Arf3_API MakeArf(lua_State* L) {
 			lua_pop(L, 1);
 
 			// Nodes
-			lua_pushstring(L, "nodes"), lua_rawget(L, CURRENT_WISH); {
+			lua_getfield(L, CURRENT_WISH, "nodes"); {
 				constexpr uint8_t CURRENT_NODES = CURRENT_WISH + 1;
 				auto& nodes = current_wish.nodes;
 
@@ -265,7 +269,7 @@ Arf3_API MakeArf(lua_State* L) {
 			lua_pop(L, 1);
 
 			// WishChilds
-			lua_pushstring(L, "wishchilds"), lua_rawget(L, CURRENT_WISH); {
+			lua_getfield(L, CURRENT_WISH, "wishchilds"); {
 				constexpr uint8_t CURRENT_WISHCHILDS = CURRENT_WISH + 1;
 				auto& wishchilds = current_wish.wishchilds;
 
@@ -306,7 +310,7 @@ Arf3_API MakeArf(lua_State* L) {
 			lua_pop(L, 1);
 
 			// EchoChilds
-			lua_pushstring(L, "echochilds"), lua_rawget(L, CURRENT_WISH); {
+			lua_getfield(L, CURRENT_WISH, "echochilds"); {
 				constexpr uint8_t CURRENT_ECHOCHILDS = CURRENT_WISH + 1;
 				auto& echochilds = current_wish.echochilds;
 				auto& echochilds_ms_order = current_wish.echochilds_ms_order;
@@ -375,7 +379,9 @@ Arf3_API MakeArf(lua_State* L) {
 		lua_pop(L, 4);   // 3 Params + CURRENT_ECHO
 
 		if(echo_ms>=0 && echo_ms<=512000) {
-			const uint64_t k = (uint64_t)echo_ms * 127 + (uint64_t)(echo_original_x*1009.0) + (uint64_t)(echo_original_y*1013.0);
+			uint64_t k  = (uint64_t)(echo_ms*127)				<<  44	;
+					 k += (uint64_t)(echo_original_x * 1000)	<<  22	;
+					 k += (uint64_t)(echo_original_y * 1000)			;
 			echoset[k] = {
 				.ms = (uint32_t)echo_ms,
 				.c_dx = (float)((echo_original_x-8) * 112.5),
